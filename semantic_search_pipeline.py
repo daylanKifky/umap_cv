@@ -10,7 +10,7 @@ from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import hashlib
 from semantic_search_server import QueryEmbedder
-import umap.umap_ as umap
+import umap
 
 class ArticleEmbeddingGenerator:
     """Generate embeddings for markdown articles"""

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Semantic Article Search</title>
+    <title>3D Article Visualization</title>
     <style>
         * {
             margin: 0;
@@ -12,355 +12,293 @@
         }
         
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            overflow: hidden;
         }
         
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
+        #container {
+            width: 100vw;
+            height: 100vh;
         }
         
-        .header {
-            text-align: center;
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             color: white;
-            margin-bottom: 30px;
-        }
-        
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header p {
-            opacity: 0.9;
-        }
-        
-        .search-box {
-            background: white;
-            border-radius: 12px;
-            padding: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-        }
-        
-        .search-input-wrapper {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-        
-        input[type="text"] {
-            flex: 1;
-            padding: 15px 20px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-        
-        input[type="text"]:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        button:hover {
-            transform: translateY(-2px);
-        }
-        
-        button:active {
-            transform: translateY(0);
-        }
-        
-        .status {
-            color: #666;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
             font-size: 14px;
-            margin-top: 10px;
+            z-index: 100;
         }
         
-        .results {
-            display: grid;
-            gap: 20px;
-        }
-        
-        .result-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-        }
-        
-        .result-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        }
-        
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 15px;
-        }
-        
-        .result-title {
-            font-size: 1.3em;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .result-similarity {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-        
-        .result-content {
-            color: #555;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
-        
-        .result-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 13px;
-            color: #888;
-        }
-        
-        .no-results {
-            text-align: center;
-            padding: 60px 20px;
-            background: white;
-            border-radius: 12px;
-            color: #666;
-        }
-        
-        .loading {
-            text-align: center;
-            padding: 40px;
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
             color: white;
             font-size: 18px;
+            z-index: 200;
+        }
+        
+        .article-label {
+            color: white;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2px 6px;
+            border-radius: 3px;
+            pointer-events: none;
+            user-select: none;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🔍 Semantic Article Search</h1>
-            <p>Search articles by meaning, not just keywords</p>
-        </div>
-        
-        <div class="search-box">
-            <div class="search-input-wrapper">
-                <input type="text" id="searchInput" placeholder="Enter your search query..." value="web development">
-                <button onclick="performSearch()">Search</button>
-            </div>
-            <div class="status" id="status">Loading embeddings...</div>
-        </div>
-        
-        <div id="results"></div>
+    <div id="loading">Loading articles...</div>
+    <div id="info">
+        <div>3D Article Visualization</div>
+        <div>Mouse: Rotate | Scroll: Zoom | Right-click: Pan</div>
+        <div id="article-count">Articles: 0</div>
     </div>
+    <div id="container"></div>
+
+    <!-- THREE.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
     <script>
-        // ========================================
-        // Semantic Search Engine
-        // ========================================
-        
-        class SemanticSearchEngine {
-            constructor(serverUrl = 'http://localhost:8001') {
-                this.serverUrl = serverUrl;
-                this.isReady = false;
-                this.stats = null;
+        class ArticleVisualizer {
+            constructor() {
+                this.scene = null;
+                this.camera = null;
+                this.renderer = null;
+                this.controls = null;
+                this.articles = [];
+                this.spheres = [];
+                this.labels = [];
+                
+                this.init();
+                this.loadArticles();
             }
             
-            async checkServerHealth() {
+            init() {
+                const container = document.getElementById('container');
+                
+                // Scene
+                this.scene = new THREE.Scene();
+                this.scene.background = new THREE.Color(0x0a0a0a);
+                
+                // Camera
+                this.camera = new THREE.PerspectiveCamera(
+                    75, 
+                    window.innerWidth / window.innerHeight, 
+                    0.1, 
+                    1000
+                );
+                this.camera.position.set(20, 20, 20);
+                
+                // Renderer
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.shadowMap.enabled = true;
+                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(this.renderer.domElement);
+                
+                // Controls
+                this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+                this.controls.enableDamping = true;
+                this.controls.dampingFactor = 0.05;
+                this.controls.screenSpacePanning = false;
+                this.controls.minDistance = 5;
+                this.controls.maxDistance = 200;
+                
+                // Axis Helper
+                const axesHelper = new THREE.AxesHelper(10);
+                this.scene.add(axesHelper);
+                
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+                this.scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(50, 50, 50);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                this.scene.add(directionalLight);
+                
+                // Point lights for better illumination
+                const pointLight1 = new THREE.PointLight(0x4080ff, 0.5);
+                pointLight1.position.set(-30, 30, 30);
+                this.scene.add(pointLight1);
+                
+                const pointLight2 = new THREE.PointLight(0xff4080, 0.5);
+                pointLight2.position.set(30, -30, -30);
+                this.scene.add(pointLight2);
+                
+                // Handle window resize
+                window.addEventListener('resize', () => this.onWindowResize());
+                
+                // Start render loop
+                this.animate();
+            }
+            
+            async loadArticles() {
                 try {
-                    const response = await fetch(`${this.serverUrl}/health`);
-                    const health = await response.json();
-                    console.log('Server health:', health);
-                    return health.status === 'healthy' && health.model_loaded && health.embeddings_file_exists;
+                    const response = await fetch('embeddings.json');
+                    const data = await response.json();
+                    this.articles = data.articles;
+                    
+                    document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
+                    document.getElementById('loading').style.display = 'none';
+                    
+                    this.createArticleSpheres();
                 } catch (error) {
-                    console.error('Server health check failed:', error);
-                    return false;
+                    console.error('Error loading articles:', error);
+                    document.getElementById('loading').textContent = 'Error loading articles';
                 }
             }
             
-            async loadStats() {
-                try {
-                    const response = await fetch(`${this.serverUrl}/stats`);
-                    this.stats = await response.json();
-                    console.log('Server stats:', this.stats);
-                    return true;
-                } catch (error) {
-                    console.error('Failed to load stats:', error);
-                    return false;
-                }
-            }
-            
-            async search(query, topK = 10) {
-                try {
-                    const response = await fetch(`${this.serverUrl}/search`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            query: query,
-                            top_k: topK
-                        })
+            createArticleSpheres() {
+                // Calculate bounds for normalization
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                let minZ = Infinity, maxZ = -Infinity;
+                
+                this.articles.forEach(article => {
+                    if (article.embedding_3d) {
+                        const [x, y, z] = article.embedding_3d;
+                        minX = Math.min(minX, x);
+                        maxX = Math.max(maxX, x);
+                        minY = Math.min(minY, y);
+                        maxY = Math.max(maxY, y);
+                        minZ = Math.min(minZ, z);
+                        maxZ = Math.max(maxZ, z);
+                    }
+                });
+                
+                // Scale factor to fit in reasonable space
+                const scale = 30;
+                const centerX = (minX + maxX) / 2;
+                const centerY = (minY + maxY) / 2;
+                const centerZ = (minZ + maxZ) / 2;
+                
+                this.articles.forEach((article, index) => {
+                    if (!article.embedding_3d) return;
+                    
+                    const [x, y, z] = article.embedding_3d;
+                    
+                    // Normalize and scale coordinates
+                    const normalizedX = ((x - centerX) / (maxX - minX)) * scale;
+                    const normalizedY = ((y - centerY) / (maxY - minY)) * scale;
+                    const normalizedZ = ((z - centerZ) / (maxZ - minZ)) * scale;
+                    
+                    // Create sphere geometry and material
+                    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
+                    
+                    // Color based on article type or random
+                    const hue = (index * 137.5) % 360; // Golden angle for good distribution
+                    const color = new THREE.Color().setHSL(hue / 360, 0.7, 0.6);
+                    
+                    const material = new THREE.MeshPhongMaterial({ 
+                        color: color,
+                        shininess: 100,
+                        transparent: true,
+                        opacity: 0.9
                     });
                     
-                    if (!response.ok) {
-                        const errorData = await response.json();
-                        throw new Error(errorData.detail || 'Search failed');
-                    }
+                    const sphere = new THREE.Mesh(geometry, material);
+                    sphere.position.set(normalizedX, normalizedY, normalizedZ);
+                    sphere.castShadow = true;
+                    sphere.receiveShadow = true;
                     
-                    const results = await response.json();
-                    return results;
+                    // Store article data in userData
+                    sphere.userData = {
+                        article: article,
+                        originalIndex: index
+                    };
                     
-                } catch (error) {
-                    console.error('Search failed:', error);
-                    throw error;
-                }
-            }
-        }
-        
-        // ========================================
-        // UI Functions
-        // ========================================
-        
-        const searchEngine = new SemanticSearchEngine();
-        
-        async function initialize() {
-            const statusEl = document.getElementById('status');
-            
-            // Check server health
-            statusEl.textContent = 'Connecting to search server...';
-            const serverHealthy = await searchEngine.checkServerHealth();
-            
-            if (!serverHealthy) {
-                statusEl.textContent = '❌ Search server not available. Make sure the server is running on port 8001.';
-                statusEl.style.color = 'red';
-                return;
-            }
-            
-            // Load server stats
-            statusEl.textContent = 'Loading search index...';
-            const statsLoaded = await searchEngine.loadStats();
-            
-            if (!statsLoaded) {
-                statusEl.textContent = '❌ Failed to load search index.';
-                statusEl.style.color = 'red';
-                return;
-            }
-            
-            if (searchEngine.stats.error) {
-                statusEl.textContent = `❌ Server error: ${searchEngine.stats.error}`;
-                statusEl.style.color = 'red';
-                return;
-            }
-            
-            statusEl.textContent = `✅ Ready! ${searchEngine.stats.total_articles} articles loaded`;
-            statusEl.style.color = '#4caf50';
-            searchEngine.isReady = true;
-            
-            // Perform initial search
-            performSearch();
-        }
-        
-        async function performSearch() {
-            const query = document.getElementById('searchInput').value.trim();
-            const resultsEl = document.getElementById('results');
-            const statusEl = document.getElementById('status');
-            
-            if (!query) {
-                resultsEl.innerHTML = '<div class="no-results">Please enter a search query</div>';
-                return;
-            }
-            
-            if (!searchEngine.isReady) {
-                resultsEl.innerHTML = '<div class="no-results">Search server not ready. Please wait...</div>';
-                return;
-            }
-            
-            // Show loading
-            resultsEl.innerHTML = '<div class="loading">Searching...</div>';
-            
-            try {
-                const results = await searchEngine.search(query, 10);
-                displayResults(results, query);
-                statusEl.textContent = `Found ${results.length} results`;
-            } catch (error) {
-                console.error('Search error:', error);
-                resultsEl.innerHTML = `<div class="no-results">Error: ${error.message}</div>`;
-                statusEl.textContent = '❌ Search failed';
-                statusEl.style.color = 'red';
-            }
-        }
-        
-        function displayResults(results, query) {
-            const resultsEl = document.getElementById('results');
-            
-            if (results.length === 0) {
-                resultsEl.innerHTML = '<div class="no-results">No results found</div>';
-                return;
-            }
-            
-            const html = results.map(result => {
-                const similarityPercent = (result.similarity * 100).toFixed(1);
-                const content = result.content || result.full_content || '';
-                const preview = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                    this.scene.add(sphere);
+                    this.spheres.push(sphere);
+                    
+                    // Create text label
+                    this.createLabel(article.title, normalizedX, normalizedY, normalizedZ);
+                });
                 
-                return `
-                    <div class="result-card">
-                        <div class="result-header">
-                            <div>
-                                <div class="result-title">${result.title}</div>
-                            </div>
-                            <div class="result-similarity">${similarityPercent}% match</div>
-                        </div>
-                        <div class="result-content">${preview}</div>
-                        <div class="result-meta">
-                            <span>📄 ${result.filename}</span>
-                            ${result.is_chunk ? `<span>📑 Chunk ${result.chunk_index + 1}</span>` : ''}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+                console.log(`Created ${this.spheres.length} article spheres`);
+            }
             
-            resultsEl.innerHTML = html;
+            createLabel(text, x, y, z) {
+                // Create canvas for text texture
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = 256;
+                canvas.height = 64;
+                
+                // Draw text on canvas
+                context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+                
+                context.fillStyle = 'white';
+                context.font = '14px Arial';
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                
+                // Truncate long titles
+                const maxLength = 30;
+                const displayText = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+                context.fillText(displayText, canvas.width / 2, canvas.height / 2);
+                
+                // Create texture and material
+                const texture = new THREE.CanvasTexture(canvas);
+                const material = new THREE.MeshBasicMaterial({ 
+                    map: texture, 
+                    transparent: true,
+                    alphaTest: 0.1
+                });
+                
+                // Create plane geometry for label
+                const geometry = new THREE.PlaneGeometry(4, 1);
+                const label = new THREE.Mesh(geometry, material);
+                
+                // Position label slightly offset from sphere
+                label.position.set(x + 1.5, y + 1, z);
+                
+                // Make label always face camera
+                label.lookAt(this.camera.position);
+                
+                this.scene.add(label);
+                this.labels.push(label);
+            }
+            
+            animate() {
+                requestAnimationFrame(() => this.animate());
+                
+                // Update controls
+                this.controls.update();
+                
+                // Make labels face camera
+                this.labels.forEach(label => {
+                    label.lookAt(this.camera.position);
+                });
+                
+                // Render
+                this.renderer.render(this.scene, this.camera);
+            }
+            
+            onWindowResize() {
+                this.camera.aspect = window.innerWidth / window.innerHeight;
+                this.camera.updateProjectionMatrix();
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
         }
         
-        // Enter key support
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new ArticleVisualizer();
         });
-        
-        // Initialize on load
-        initialize();
     </script>
 </body>
 </html>
