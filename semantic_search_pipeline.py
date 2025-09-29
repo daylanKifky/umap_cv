@@ -9,6 +9,8 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import hashlib
+from semantic_search_server import QueryEmbedder
+import umap.umap_ as umap
 
 class ArticleEmbeddingGenerator:
     """Generate embeddings for markdown articles"""
@@ -75,14 +77,18 @@ class ArticleEmbeddingGenerator:
     
     def generate_embeddings(self, articles: List[Dict], 
                           use_chunking: bool = False,
-                          chunk_size: int = 500) -> Dict:
-        """Generate embeddings for all articles"""
+                          chunk_size: int = 500,
+                          reduce_dims: bool = True) -> Dict:
+        """Generate embeddings for all articles with optional UMAP dimensionality reduction"""
         
         embeddings_data = {
             'model': self.model._model_card_data.model_name if hasattr(self.model, '_model_card_data') else 'unknown',
             'embedding_dim': self.embedding_dim,
             'articles': []
         }
+        
+        # Store all embeddings for UMAP reduction
+        all_embeddings = []
         
         for idx, article in enumerate(articles):
             print(f"Processing {idx + 1}/{len(articles)}: {article['title']}")
@@ -94,7 +100,8 @@ class ArticleEmbeddingGenerator:
                 
                 # Store chunks separately
                 for chunk_idx, (chunk, embedding) in enumerate(zip(chunks, chunk_embeddings)):
-                    embeddings_data['articles'].append({
+                    all_embeddings.append(embedding)
+                    article_data = {
                         'id': f"{article['id']}_chunk_{chunk_idx}",
                         'parent_id': article['id'],
                         'title': article['title'],
@@ -104,12 +111,14 @@ class ArticleEmbeddingGenerator:
                         'is_chunk': True,
                         'chunk_index': chunk_idx,
                         'embedding': embedding.tolist()
-                    })
+                    }
+                    embeddings_data['articles'].append(article_data)
             else:
                 # Embed entire article
                 embedding = self.model.encode(article['content'], convert_to_numpy=True)
+                all_embeddings.append(embedding)
                 
-                embeddings_data['articles'].append({
+                article_data = {
                     'id': article['id'],
                     'title': article['title'],
                     'content': article['content'][:500] + '...' if len(article['content']) > 500 else article['content'],  # Store preview
@@ -118,7 +127,26 @@ class ArticleEmbeddingGenerator:
                     'filename': article['filename'],
                     'is_chunk': False,
                     'embedding': embedding.tolist()
-                })
+                }
+                embeddings_data['articles'].append(article_data)
+        
+        # Apply UMAP reduction if requested
+        if reduce_dims and all_embeddings:
+            print("\nApplying UMAP dimensionality reduction...")
+            all_embeddings_array = np.array(all_embeddings)
+            
+            # Reduce to 3D
+            reducer_3d = umap.UMAP(n_components=3, random_state=42)
+            embeddings_3d = reducer_3d.fit_transform(all_embeddings_array)
+            
+            # Reduce to 2D
+            reducer_2d = umap.UMAP(n_components=2, random_state=42)
+            embeddings_2d = reducer_2d.fit_transform(all_embeddings_array)
+            
+            # Add reduced dimensions to each article
+            for idx, article_data in enumerate(embeddings_data['articles']):
+                article_data['embedding_3d'] = embeddings_3d[idx].tolist()
+                article_data['embedding_2d'] = embeddings_2d[idx].tolist()
         
         return embeddings_data
     
@@ -170,52 +198,6 @@ def example_usage():
     # )
 
 
-# ========================================
-# OPTIONAL: Query Embedding Generator
-# ========================================
-
-class QueryEmbedder:
-    """Generate embeddings for search queries (for server-side search)"""
-    
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
-        self.model = SentenceTransformer(model_name)
-    
-    def embed_query(self, query: str) -> List[float]:
-        """Generate embedding for a search query"""
-        embedding = self.model.encode(query, convert_to_numpy=True)
-        return embedding.tolist()
-    
-    def search(self, query: str, embeddings_file: str, top_k: int = 5) -> List[Dict]:
-        """Perform semantic search"""
-        # Load embeddings
-        with open(embeddings_file, 'r') as f:
-            data = json.load(f)
-        
-        # Embed query
-        query_embedding = np.array(self.embed_query(query))
-        
-        # Calculate similarities
-        results = []
-        for article in data['articles']:
-            article_embedding = np.array(article['embedding'])
-            
-            # Cosine similarity
-            similarity = np.dot(query_embedding, article_embedding) / (
-                np.linalg.norm(query_embedding) * np.linalg.norm(article_embedding)
-            )
-            
-            results.append({
-                'id': article['id'],
-                'title': article['title'],
-                'content': article.get('content', ''),
-                'filepath': article['filepath'],
-                'similarity': float(similarity)
-            })
-        
-        # Sort by similarity
-        results.sort(key=lambda x: x['similarity'], reverse=True)
-        
-        return results[:top_k]
 
 
 # ========================================
