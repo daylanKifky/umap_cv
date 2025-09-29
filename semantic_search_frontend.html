@@ -130,6 +130,121 @@
             pointer-events: none;
             user-select: none;
         }
+        
+        /* Modal styles */
+        #article-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .modal-content {
+            background-color: #1a1a1a;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #4080ff, #3070ef);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .modal-body {
+            padding: 20px;
+            max-height: 60vh;
+            overflow-y: auto;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        
+        .modal-meta {
+            background: #2a2a2a;
+            padding: 15px 20px;
+            border-top: 1px solid #333;
+            font-size: 12px;
+            color: #aaa;
+        }
+        
+        .modal-body h1, .modal-body h2, .modal-body h3 {
+            color: #4080ff;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        
+        .modal-body h1 {
+            font-size: 24px;
+            border-bottom: 2px solid #4080ff;
+            padding-bottom: 10px;
+        }
+        
+        .modal-body h2 {
+            font-size: 20px;
+        }
+        
+        .modal-body h3 {
+            font-size: 16px;
+        }
+        
+        .modal-body p {
+            margin-bottom: 15px;
+        }
+        
+        .modal-body code {
+            background: #2a2a2a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #ff6b6b;
+        }
+        
+        .modal-body pre {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border-left: 4px solid #4080ff;
+        }
     </style>
 </head>
 <body>
@@ -151,6 +266,22 @@
     
     <div id="container"></div>
 
+    <!-- Article Modal -->
+    <div id="article-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Article Title</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-body">
+                Article content will appear here...
+            </div>
+            <div class="modal-meta" id="modal-meta">
+                <div>File: <span id="modal-filepath"></span></div>
+            </div>
+        </div>
+    </div>
+
     <!-- THREE.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -168,10 +299,13 @@
                 this.originalSizes = []; // Store original sphere sizes
                 this.searchResults = null;
                 this.apiUrl = 'http://localhost:8001';
+                this.raycaster = new THREE.Raycaster();
+                this.mouse = new THREE.Vector2();
                 
                 this.init();
                 this.loadArticles();
                 this.setupSearch();
+                this.setupModal();
             }
             
             init() {
@@ -231,6 +365,9 @@
                 
                 // Handle window resize
                 window.addEventListener('resize', () => this.onWindowResize());
+                
+                // Handle mouse clicks for sphere selection
+                this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
                 
                 // Start render loop
                 this.animate();
@@ -528,6 +665,108 @@
                     material.opacity = 0.9;
                     material.emissive.setRGB(0, 0, 0);
                 });
+            }
+            
+            onMouseClick(event) {
+                // Calculate mouse position in normalized device coordinates
+                const rect = this.renderer.domElement.getBoundingClientRect();
+                this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                // Update the raycaster
+                this.raycaster.setFromCamera(this.mouse, this.camera);
+                
+                // Calculate objects intersecting the picking ray
+                const intersects = this.raycaster.intersectObjects(this.spheres);
+                
+                if (intersects.length > 0) {
+                    const clickedSphere = intersects[0].object;
+                    const article = clickedSphere.userData.article;
+                    this.showArticleModal(article);
+                }
+            }
+            
+            setupModal() {
+                const modal = document.getElementById('article-modal');
+                const closeBtn = document.getElementById('modal-close');
+                
+                // Close modal when clicking the X button
+                closeBtn.addEventListener('click', () => this.closeModal());
+                
+                // Close modal when clicking outside the modal content
+                modal.addEventListener('click', (event) => {
+                    if (event.target === modal) {
+                        this.closeModal();
+                    }
+                });
+                
+                // Close modal with Escape key
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape') {
+                        this.closeModal();
+                    }
+                });
+            }
+            
+            showArticleModal(article) {
+                const modal = document.getElementById('article-modal');
+                const title = document.getElementById('modal-title');
+                const body = document.getElementById('modal-body');
+                const filepath = document.getElementById('modal-filepath');
+                
+                // Set modal content
+                title.textContent = article.title;
+                filepath.textContent = article.filepath;
+                
+                // Convert markdown-like content to HTML (basic conversion)
+                const content = article.full_content || article.content;
+                const htmlContent = this.markdownToHtml(content);
+                body.innerHTML = htmlContent;
+                
+                // Show modal
+                modal.style.display = 'block';
+                
+                // Prevent body scrolling when modal is open
+                document.body.style.overflow = 'hidden';
+            }
+            
+            closeModal() {
+                const modal = document.getElementById('article-modal');
+                modal.style.display = 'none';
+                
+                // Re-enable body scrolling
+                document.body.style.overflow = 'auto';
+            }
+            
+            markdownToHtml(markdown) {
+                // Basic markdown to HTML conversion
+                let html = markdown;
+                
+                // Headers
+                html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+                html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+                html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+                
+                // Bold
+                html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
+                
+                // Italic
+                html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
+                
+                // Code blocks
+                html = html.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
+                
+                // Inline code
+                html = html.replace(/`([^`]*)`/gim, '<code>$1</code>');
+                
+                // Line breaks
+                html = html.replace(/\n/gim, '<br>');
+                
+                // Clean up extra breaks
+                html = html.replace(/<br><br>/gim, '</p><p>');
+                html = '<p>' + html + '</p>';
+                
+                return html;
             }
         }
         
