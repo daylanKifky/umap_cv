@@ -9,21 +9,20 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 from typing import List, Dict
 import hashlib
-from semantic_search_server import QueryEmbedder
+from semantic_search_server import QueryEmbedder, DEFAULT_EMBEDDING_MODEL
 import umap
 
 class ArticleEmbeddingGenerator:
     """Generate embeddings for markdown articles"""
     
-    def __init__(self, model_name='all-MiniLM-L6-v2'):
+    def __init__(self, model_name=DEFAULT_EMBEDDING_MODEL):
         """
         Initialize with a sentence transformer model.
-        
-        Popular models:
-        - 'all-MiniLM-L6-v2': Fast, 384 dims, good quality (RECOMMENDED)
-        - 'all-mpnet-base-v2': Slower, 768 dims, best quality
-        - 'paraphrase-multilingual-MiniLM-L12-v2': Multilingual support
+
         """
+        # Ensure we use the string value, not the enum
+        if hasattr(model_name, 'value'):
+            model_name = model_name.value
         print(f"Loading model: {model_name}")
         self.model = SentenceTransformer(model_name)
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
@@ -180,7 +179,7 @@ class ArticleEmbeddingGenerator:
 
 def example_usage():
     # Initialize generator
-    generator = ArticleEmbeddingGenerator(model_name='all-MiniLM-L6-v2')
+    generator = ArticleEmbeddingGenerator(model_name=DEFAULT_EMBEDDING_MODEL)
     
     # Option 1: Process entire directory (no chunking - simpler)
     generator.process_directory(
@@ -207,7 +206,7 @@ def example_usage():
 if __name__ == "__main__":
     
     # Initialize generator
-    generator = ArticleEmbeddingGenerator(model_name='all-MiniLM-L6-v2')
+    generator = ArticleEmbeddingGenerator(model_name=DEFAULT_EMBEDDING_MODEL)
     
     # Option 1: Process entire directory (no chunking - simpler)
     generator.process_directory(
@@ -224,9 +223,6 @@ if __name__ == "__main__":
     #     chunk_size=500
     # )
 
-    # Generate embeddings
-    example_usage()
-    
     # Test search
     print("\n" + "="*50)
     print("Testing search functionality")
