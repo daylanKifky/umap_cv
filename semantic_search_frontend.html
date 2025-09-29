@@ -34,6 +34,83 @@
             z-index: 100;
         }
         
+        #search-container {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        #search-bar {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        #search-input {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 14px;
+            width: 250px;
+            outline: none;
+        }
+        
+        #search-input:focus {
+            background: rgba(255, 255, 255, 1);
+            box-shadow: 0 0 10px rgba(64, 128, 255, 0.5);
+        }
+        
+        #search-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #4080ff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        #search-button:hover {
+            background: #3070ef;
+        }
+        
+        #search-button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        #clear-button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            background: #666;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        #clear-button:hover {
+            background: #777;
+        }
+        
+        #search-results {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 5px;
+            padding: 10px;
+            color: white;
+            font-size: 12px;
+            max-width: 300px;
+            display: none;
+        }
+        
         #loading {
             position: absolute;
             top: 50%;
@@ -62,6 +139,16 @@
         <div>Mouse: Rotate | Scroll: Zoom | Right-click: Pan</div>
         <div id="article-count">Articles: 0</div>
     </div>
+    
+    <div id="search-container">
+        <div id="search-bar">
+            <input type="text" id="search-input" placeholder="Search articles..." />
+            <button id="search-button">Search</button>
+            <button id="clear-button">Clear</button>
+        </div>
+        <div id="search-results"></div>
+    </div>
+    
     <div id="container"></div>
 
     <!-- THREE.js -->
@@ -78,9 +165,13 @@
                 this.articles = [];
                 this.spheres = [];
                 this.labels = [];
+                this.originalSizes = []; // Store original sphere sizes
+                this.searchResults = null;
+                this.apiUrl = 'http://localhost:8001';
                 
                 this.init();
                 this.loadArticles();
+                this.setupSearch();
             }
             
             init() {
@@ -222,6 +313,7 @@
                     
                     this.scene.add(sphere);
                     this.spheres.push(sphere);
+                    this.originalSizes.push(0.5); // Store original radius
                     
                     // Create text label
                     this.createLabel(article.title, normalizedX, normalizedY, normalizedZ);
@@ -292,6 +384,150 @@
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            
+            setupSearch() {
+                const searchInput = document.getElementById('search-input');
+                const searchButton = document.getElementById('search-button');
+                const clearButton = document.getElementById('clear-button');
+                
+                // Search on button click
+                searchButton.addEventListener('click', () => this.performSearch());
+                
+                // Search on Enter key
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.performSearch();
+                    }
+                });
+                
+                // Clear search
+                clearButton.addEventListener('click', () => this.clearSearch());
+            }
+            
+            async performSearch() {
+                const searchInput = document.getElementById('search-input');
+                const searchButton = document.getElementById('search-button');
+                const searchResults = document.getElementById('search-results');
+                
+                const query = searchInput.value.trim();
+                if (!query) return;
+                
+                searchButton.disabled = true;
+                searchButton.textContent = 'Searching...';
+                searchResults.style.display = 'none';
+                
+                try {
+                    const response = await fetch(`${this.apiUrl}/search`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            query: query,
+                            top_k: 10
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const results = await response.json();
+                    this.searchResults = results;
+                    
+                    this.displaySearchResults(results);
+                    this.rescaleSpheresBasedOnSearch(results);
+                    
+                } catch (error) {
+                    console.error('Search failed:', error);
+                    searchResults.innerHTML = `<div style="color: #ff6b6b;">Search failed: ${error.message}</div>`;
+                    searchResults.style.display = 'block';
+                } finally {
+                    searchButton.disabled = false;
+                    searchButton.textContent = 'Search';
+                }
+            }
+            
+            displaySearchResults(results) {
+                const searchResults = document.getElementById('search-results');
+                
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<div>No results found</div>';
+                } else {
+                    const resultsHtml = results.map((result, index) => {
+                        return `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #333;">
+                            <div style="font-weight: bold;">${result.title}</div>
+                            <div style="color: #aaa; font-size: 11px;">Similarity: ${(result.similarity * 100).toFixed(1)}%</div>
+                        </div>`;
+                    }).join('');
+                    
+                    searchResults.innerHTML = `<div style="margin-bottom: 10px; font-weight: bold;">Found ${results.length} results:</div>${resultsHtml}`;
+                }
+                
+                searchResults.style.display = 'block';
+            }
+            
+            // Similarity-based rescaling function that amplifies differences
+            similarityToScale(similarity) {
+                // Convert similarity to 0-1 range (assuming similarity is already 0-1)
+                const normalizedSim = Math.max(0, Math.min(1, similarity));
+                
+                // Amplifying function: exponential scaling to emphasize differences
+                // Higher similarities get much larger, lower similarities get much smaller
+                const amplified = Math.pow(normalizedSim, 0.3); // Power less than 1 spreads out the values
+                
+                // Scale to reasonable sphere sizes (0.2 to 2.0)
+                const minScale = 0.2;
+                const maxScale = 4.0;
+                return minScale + (maxScale - minScale) * amplified;
+            }
+            
+            rescaleSpheresBasedOnSearch(searchResults) {
+                // Create a map of article ID to similarity
+                const similarityMap = new Map();
+                searchResults.forEach(result => {
+                    similarityMap.set(result.id, result.similarity);
+                });
+                
+                // Rescale all spheres
+                this.spheres.forEach((sphere, index) => {
+                    const article = sphere.userData.article;
+                    const similarity = similarityMap.get(article.id) || 0;
+                    
+                    // Apply similarity-based scaling
+                    const newScale = this.similarityToScale(similarity);
+                    sphere.scale.setScalar(newScale);
+                    
+                    // Also adjust material opacity and color intensity based on similarity
+                    const material = sphere.material;
+                    if (similarity > 0) {
+                        // Highlight matching articles
+                        material.opacity = 0.9;
+                        material.emissive.setRGB(similarity * 0.3, similarity * 0.3, 0);
+                    } else {
+                        // Dim non-matching articles
+                        material.opacity = 0.3;
+                        material.emissive.setRGB(0, 0, 0);
+                    }
+                });
+            }
+            
+            clearSearch() {
+                const searchInput = document.getElementById('search-input');
+                const searchResults = document.getElementById('search-results');
+                
+                searchInput.value = '';
+                searchResults.style.display = 'none';
+                this.searchResults = null;
+                
+                // Reset all spheres to original size and appearance
+                this.spheres.forEach((sphere, index) => {
+                    sphere.scale.setScalar(1.0);
+                    const material = sphere.material;
+                    material.opacity = 0.9;
+                    material.emissive.setRGB(0, 0, 0);
+                });
             }
         }
         
