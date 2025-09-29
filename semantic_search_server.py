@@ -37,7 +37,7 @@ class EmbeddingModel(str, Enum):
     OPENAI_SMALL = 'text-embedding-3-small'  # API only, 1536 dims, requires OpenAI API key
     OPENAI_LARGE = 'text-embedding-3-large'  # API only, 3072 dims, requires OpenAI API key
 
-DEFAULT_EMBEDDING_MODEL = EmbeddingModel.E5_LARGE
+DEFAULT_EMBEDDING_MODEL = EmbeddingModel.MINILM
 
 # Get model from environment or use default
 EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)
@@ -198,5 +198,5 @@ async def get_stats():
 if __name__ == "__main__":
     import uvicorn
     print("Starting Semantic Search Server...")
-    print("API Documentation available at: http://localhost:8001/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    print("API Documentation available at: http://localhost:8003/docs")
+    uvicorn.run(app, host="0.0.0.0", port=8003)
