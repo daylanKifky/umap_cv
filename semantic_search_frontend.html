@@ -245,6 +245,138 @@
             overflow-x: auto;
             border-left: 4px solid #4080ff;
         }
+        
+        /* Startup Modal styles */
+        #startup-modal {
+            display: block;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            animation: fadeIn 0.5s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .startup-modal-content {
+            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+            margin: 3% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            border: 1px solid #333;
+        }
+        
+        .startup-header {
+            background: linear-gradient(135deg, #4080ff, #6fa8ff);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .startup-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        
+        .startup-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .startup-body {
+            padding: 40px;
+            color: #e0e0e0;
+            text-align: center;
+        }
+        
+        .bruno-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 30px;
+            display: block;
+            border: 4px solid #4080ff;
+            box-shadow: 0 4px 20px rgba(64, 128, 255, 0.3);
+        }
+        
+        .startup-title {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #4080ff, #6fa8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .startup-subtitle {
+            font-size: 18px;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+        
+        .startup-description {
+            font-size: 18px;
+            line-height: 1.8;
+            margin-bottom: 30px;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .startup-instructions {
+            background: rgba(64, 128, 255, 0.1);
+            border: 1px solid rgba(64, 128, 255, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 16px;
+            color: #ccc;
+        }
+        
+        .startup-button {
+            background: linear-gradient(135deg, #4080ff, #3070ef);
+            border: none;
+            color: white;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(64, 128, 255, 0.3);
+        }
+        
+        .startup-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(64, 128, 255, 0.4);
+        }
     </style>
 </head>
 <body>
@@ -265,6 +397,33 @@
     </div>
     
     <div id="container"></div>
+
+    <!-- Startup Modal -->
+    <div id="startup-modal">
+        <div class="startup-modal-content">
+            <div class="startup-header">
+                <button class="startup-close" id="startup-close">&times;</button>
+                <h1 class="startup-title">Hi! I'm Bruno</h1>
+                <p class="startup-subtitle">Welcome to my 3D Portfolio</p>
+            </div>
+            <div class="startup-body">
+                <img src="bruno_laurencich.jpg" alt="Bruno Laurencich" class="bruno-photo">
+                
+                <div class="startup-description">
+                    What I do is kind of difficult to explain, so here's a 3D representation of my works, distributed by similarity.
+                </div>
+                
+                <div class="startup-instructions">
+                    <strong>You can explore, search, etc...</strong><br><br>
+                    • <strong>Mouse:</strong> Rotate, zoom, and pan around the space<br>
+                    • <strong>Search:</strong> Use the search bar to find specific topics<br>
+                    • <strong>Click:</strong> Click on any sphere to read the full article
+                </div>
+                
+                <button class="startup-button" id="startup-explore">Start Exploring</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Article Modal -->
     <div id="article-modal">
@@ -306,6 +465,7 @@
                 this.loadArticles();
                 this.setupSearch();
                 this.setupModal();
+                this.setupStartupModal();
             }
             
             init() {
@@ -767,6 +927,55 @@
                 html = '<p>' + html + '</p>';
                 
                 return html;
+            }
+            
+            setupStartupModal() {
+                const startupModal = document.getElementById('startup-modal');
+                const startupClose = document.getElementById('startup-close');
+                const startupExplore = document.getElementById('startup-explore');
+                
+                // Close startup modal when clicking the X button
+                startupClose.addEventListener('click', () => this.closeStartupModal());
+                
+                // Close startup modal when clicking the explore button
+                startupExplore.addEventListener('click', () => this.closeStartupModal());
+                
+                // Close startup modal when clicking outside the modal content
+                startupModal.addEventListener('click', (event) => {
+                    if (event.target === startupModal) {
+                        this.closeStartupModal();
+                    }
+                });
+                
+                // Close startup modal with Escape key
+                document.addEventListener('keydown', (event) => {
+                    if (event.key === 'Escape' && startupModal.style.display !== 'none') {
+                        this.closeStartupModal();
+                    }
+                });
+            }
+            
+            closeStartupModal() {
+                const startupModal = document.getElementById('startup-modal');
+                startupModal.style.animation = 'fadeOut 0.3s ease-out';
+                
+                setTimeout(() => {
+                    startupModal.style.display = 'none';
+                    document.body.style.overflow = 'auto';
+                }, 300);
+                
+                // Add fade out animation
+                if (!document.querySelector('#fadeOutKeyframes')) {
+                    const style = document.createElement('style');
+                    style.id = 'fadeOutKeyframes';
+                    style.textContent = `
+                        @keyframes fadeOut {
+                            from { opacity: 1; }
+                            to { opacity: 0; }
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
             }
         }
         
