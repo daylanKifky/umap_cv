@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantic Article Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+        }
+        
+        .search-box {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        
+        .search-input-wrapper {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        
+        .results {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .result-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+        
+        .result-title {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .result-similarity {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .result-content {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .result-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #888;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            background: white;
+            border-radius: 12px;
+            color: #666;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Semantic Article Search</h1>
+            <p>Search articles by meaning, not just keywords</p>
+        </div>
+        
+        <div class="search-box">
+            <div class="search-input-wrapper">
+                <input type="text" id="searchInput" placeholder="Enter your search query..." value="web development">
+                <button onclick="performSearch()">Search</button>
+            </div>
+            <div class="status" id="status">Loading embeddings...</div>
+        </div>
+        
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // ========================================
+        // Semantic Search Engine
+        // ========================================
+        
+        class SemanticSearchEngine {
+            constructor(serverUrl = 'http://localhost:8001') {
+                this.serverUrl = serverUrl;
+                this.isReady = false;
+                this.stats = null;
+            }
+            
+            async checkServerHealth() {
+                try {
+                    const response = await fetch(`${this.serverUrl}/health`);
+                    const health = await response.json();
+                    console.log('Server health:', health);
+                    return health.status === 'healthy' && health.model_loaded && health.embeddings_file_exists;
+                } catch (error) {
+                    console.error('Server health check failed:', error);
+                    return false;
+                }
+            }
+            
+            async loadStats() {
+                try {
+                    const response = await fetch(`${this.serverUrl}/stats`);
+                    this.stats = await response.json();
+                    console.log('Server stats:', this.stats);
+                    return true;
+                } catch (error) {
+                    console.error('Failed to load stats:', error);
+                    return false;
+                }
+            }
+            
+            async search(query, topK = 10) {
+                try {
+                    const response = await fetch(`${this.serverUrl}/search`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            query: query,
+                            top_k: topK
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Search failed');
+                    }
+                    
+                    const results = await response.json();
+                    return results;
+                    
+                } catch (error) {
+                    console.error('Search failed:', error);
+                    throw error;
+                }
+            }
+        }
+        
+        // ========================================
+        // UI Functions
+        // ========================================
+        
+        const searchEngine = new SemanticSearchEngine();
+        
+        async function initialize() {
+            const statusEl = document.getElementById('status');
+            
+            // Check server health
+            statusEl.textContent = 'Connecting to search server...';
+            const serverHealthy = await searchEngine.checkServerHealth();
+            
+            if (!serverHealthy) {
+                statusEl.textContent = '❌ Search server not available. Make sure the server is running on port 8001.';
+                statusEl.style.color = 'red';
+                return;
+            }
+            
+            // Load server stats
+            statusEl.textContent = 'Loading search index...';
+            const statsLoaded = await searchEngine.loadStats();
+            
+            if (!statsLoaded) {
+                statusEl.textContent = '❌ Failed to load search index.';
+                statusEl.style.color = 'red';
+                return;
+            }
+            
+            if (searchEngine.stats.error) {
+                statusEl.textContent = `❌ Server error: ${searchEngine.stats.error}`;
+                statusEl.style.color = 'red';
+                return;
+            }
+            
+            statusEl.textContent = `✅ Ready! ${searchEngine.stats.total_articles} articles loaded`;
+            statusEl.style.color = '#4caf50';
+            searchEngine.isReady = true;
+            
+            // Perform initial search
+            performSearch();
+        }
+        
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            const resultsEl = document.getElementById('results');
+            const statusEl = document.getElementById('status');
+            
+            if (!query) {
+                resultsEl.innerHTML = '<div class="no-results">Please enter a search query</div>';
+                return;
+            }
+            
+            if (!searchEngine.isReady) {
+                resultsEl.innerHTML = '<div class="no-results">Search server not ready. Please wait...</div>';
+                return;
+            }
+            
+            // Show loading
+            resultsEl.innerHTML = '<div class="loading">Searching...</div>';
+            
+            try {
+                const results = await searchEngine.search(query, 10);
+                displayResults(results, query);
+                statusEl.textContent = `Found ${results.length} results`;
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsEl.innerHTML = `<div class="no-results">Error: ${error.message}</div>`;
+                statusEl.textContent = '❌ Search failed';
+                statusEl.style.color = 'red';
+            }
+        }
+        
+        function displayResults(results, query) {
+            const resultsEl = document.getElementById('results');
+            
+            if (results.length === 0) {
+                resultsEl.innerHTML = '<div class="no-results">No results found</div>';
+                return;
+            }
+            
+            const html = results.map(result => {
+                const similarityPercent = (result.similarity * 100).toFixed(1);
+                const content = result.content || result.full_content || '';
+                const preview = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                
+                return `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <div>
+                                <div class="result-title">${result.title}</div>
+                            </div>
+                            <div class="result-similarity">${similarityPercent}% match</div>
+                        </div>
+                        <div class="result-content">${preview}</div>
+                        <div class="result-meta">
+                            <span>📄 ${result.filename}</span>
+                            ${result.is_chunk ? `<span>📑 Chunk ${result.chunk_index + 1}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            resultsEl.innerHTML = html;
+        }
+        
+        // Enter key support
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
+        // Initialize on load
+        initialize();
+    </script>
+</body>
+</html>
