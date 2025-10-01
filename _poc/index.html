@@ -562,7 +562,8 @@
             
             createArticleSpheres() {
                 // Get the embedding field name based on current method
-                const embeddingField = `embedding_${this.currentMethod}_3d`;
+                const embeddingField = `${this.currentMethod}_3d`;
+                console.log(embeddingField);
                 
                 // Check if the selected method exists in the data
                 if (!this.articles[0] || !this.articles[0][embeddingField]) {
