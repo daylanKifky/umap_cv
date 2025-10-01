@@ -59,6 +59,50 @@ class ArticleEmbeddingGenerator:
         print(f"Found {len(articles)} markdown files")
         return articles
     
+    def read_projects_from_generator(self, generator_file: str = 'articles/generate_projects.py') -> List[Dict]:
+        """Read project data from generate_projects.py and extract technologies"""
+        import importlib.util
+        import sys
+        
+        # Load the generate_projects module
+        spec = importlib.util.spec_from_file_location("generate_projects", generator_file)
+        generate_projects = importlib.util.module_from_spec(spec)
+        sys.modules["generate_projects"] = generate_projects
+        spec.loader.exec_module(generate_projects)
+        
+        projects = []
+        
+        # Combine all project categories
+        all_projects = {
+            **generate_projects.PROGRAMMING_PROJECTS,
+            **generate_projects.BLENDER_PROJECTS,
+            **generate_projects.AFTER_EFFECTS_PROJECTS,
+            **generate_projects.TRADITIONAL_ANIMATION
+        }
+        
+        for filename, project_data in all_projects.items():
+            # Generate unique ID from filename
+            article_id = hashlib.md5(filename.encode()).hexdigest()[:12]
+            
+            # Extract technologies as a string for embedding
+            technologies_text = ', '.join(project_data['technologies'])
+            
+            projects.append({
+                'id': article_id,
+                'title': project_data['title'],
+                'content': technologies_text,  # Only use technologies for embedding
+                'filepath': f"articles/{filename}",
+                'filename': filename,
+                'category': project_data['category'],
+                'technologies': project_data['technologies'],
+                'description': project_data['description'],
+                'difficulty': project_data['difficulty'],
+                'tags': project_data.get('tags', [])
+            })
+        
+        print(f"Found {len(projects)} projects from generate_projects.py")
+        return projects
+    
     def chunk_text(self, text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
         """
         Split text into overlapping chunks.
@@ -171,6 +215,19 @@ class ArticleEmbeddingGenerator:
         self.save_embeddings(embeddings_data, output_file)
         
         return embeddings_data
+    
+    def process_projects_from_generator(self, generator_file: str = 'articles/generate_projects.py', 
+                                      output_file: str = 'embeddings.json'):
+        """Complete pipeline: read projects from generator, embed technologies only, save"""
+        projects = self.read_projects_from_generator(generator_file)
+        if not projects:
+            print("No projects found in generator file!")
+            return
+        
+        embeddings_data = self.generate_embeddings(projects, use_chunking=False)
+        self.save_embeddings(embeddings_data, output_file)
+        
+        return embeddings_data
 
 
 # ========================================
@@ -181,14 +238,20 @@ def example_usage():
     # Initialize generator
     generator = ArticleEmbeddingGenerator(model_name=DEFAULT_EMBEDDING_MODEL)
     
-    # Option 1: Process entire directory (no chunking - simpler)
-    generator.process_directory(
-        directory='./articles',
-        output_file='embeddings.json',
-        use_chunking=False
+    # Option 1: Process projects from generate_projects.py (technologies only)
+    generator.process_projects_from_generator(
+        generator_file='articles/generate_projects.py',
+        output_file='embeddings.json'
     )
     
-    # Option 2: Process with chunking (better for long articles)
+    # Option 2: Process entire directory (no chunking - simpler)
+    # generator.process_directory(
+    #     directory='./articles',
+    #     output_file='embeddings.json',
+    #     use_chunking=False
+    # )
+    
+    # Option 3: Process with chunking (better for long articles)
     # generator.process_directory(
     #     directory='./articles',
     #     output_file='embeddings_chunked.json',
@@ -208,14 +271,20 @@ if __name__ == "__main__":
     # Initialize generator
     generator = ArticleEmbeddingGenerator(model_name=DEFAULT_EMBEDDING_MODEL)
     
-    # Option 1: Process entire directory (no chunking - simpler)
-    generator.process_directory(
-        directory='./articles',
-        output_file='embeddings.json',
-        use_chunking=False
+    # Process projects from generate_projects.py (technologies only)
+    generator.process_projects_from_generator(
+        generator_file='articles/generate_projects.py',
+        output_file='embeddings.json'
     )
     
-    # Option 2: Process with chunking (better for long articles)
+    # Option 2: Process entire directory (no chunking - simpler)
+    # generator.process_directory(
+    #     directory='./articles',
+    #     output_file='embeddings.json',
+    #     use_chunking=False
+    # )
+    
+    # Option 3: Process with chunking (better for long articles)
     # generator.process_directory(
     #     directory='./articles',
     #     output_file='embeddings_chunked.json',
