@@ -229,8 +229,18 @@ def main(input_file: str, output_file: str):
     tags = [i['tags'] for i in data.values()]
 
     # Generate embeddings for technologies
-    embeddings = generator.generate_embeddings(technologies)
+    embeddings_technologies = generator.generate_embeddings(technologies)
+    embeddings_descriptions = generator.generate_embeddings(descriptions)
 
+    # use just the technologies
+    embeddings = embeddings_technologies
+
+    # use the average of the technologies and descriptions
+    # embeddings = (embeddings_technologies + embeddings_descriptions) / 2
+
+    # use just the descriptions
+    # embeddings = embeddings_descriptions
+    
     # Apply dimensionality reductions
     reduced_pca_3d, pca_model_3d = generator.reduce_pca(embeddings, n_components=3)
     reduced_tsne_3d = generator.reduce_tsne(embeddings, n_components=3)
