@@ -385,6 +385,7 @@
         <div>3D Article Visualization</div>
         <div>Mouse: Rotate | Scroll: Zoom | Right-click: Pan</div>
         <div id="article-count">Articles: 0</div>
+        <div id="current-method" style="margin-top: 5px; padding: 3px 6px; background: rgba(64, 128, 255, 0.3); border-radius: 3px; display: inline-block;">Method: UMAP</div>
     </div>
     
     <div id="search-container">
@@ -392,6 +393,14 @@
             <input type="text" id="search-input" placeholder="Search articles..." />
             <button id="search-button">Search</button>
             <button id="clear-button">Clear</button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+            <label for="reduction-method" style="color: white; font-size: 14px;">View:</label>
+            <select id="reduction-method" style="padding: 8px 12px; border: none; border-radius: 5px; background: rgba(255, 255, 255, 0.9); color: #333; font-size: 14px; cursor: pointer;">
+                <option value="umap">UMAP</option>
+                <option value="pca">PCA</option>
+                <option value="tsne">t-SNE</option>
+            </select>
         </div>
         <div id="search-results"></div>
     </div>
@@ -460,12 +469,14 @@
                 this.apiUrl = 'http://localhost:8003';
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
+                this.currentMethod = 'umap'; // Default reduction method
                 
                 this.init();
                 this.loadArticles();
                 this.setupSearch();
                 this.setupModal();
                 this.setupStartupModal();
+                this.setupReductionMethodSelector();
             }
             
             init() {
@@ -550,14 +561,28 @@
             }
             
             createArticleSpheres() {
+                // Get the embedding field name based on current method
+                const embeddingField = `embedding_${this.currentMethod}_3d`;
+                
+                // Check if the selected method exists in the data
+                if (!this.articles[0] || !this.articles[0][embeddingField]) {
+                    console.warn(`Embedding field '${embeddingField}' not found, falling back to embedding_3d`);
+                    // Fall back to default embedding_3d (which is usually UMAP)
+                    return this.createArticleSpheresWithField('embedding_3d');
+                }
+                
+                return this.createArticleSpheresWithField(embeddingField);
+            }
+            
+            createArticleSpheresWithField(embeddingField) {
                 // Calculate bounds for normalization
                 let minX = Infinity, maxX = -Infinity;
                 let minY = Infinity, maxY = -Infinity;
                 let minZ = Infinity, maxZ = -Infinity;
                 
                 this.articles.forEach(article => {
-                    if (article.embedding_3d) {
-                        const [x, y, z] = article.embedding_3d;
+                    if (article[embeddingField]) {
+                        const [x, y, z] = article[embeddingField];
                         minX = Math.min(minX, x);
                         maxX = Math.max(maxX, x);
                         minY = Math.min(minY, y);
@@ -574,9 +599,9 @@
                 const centerZ = (minZ + maxZ) / 2;
                 
                 this.articles.forEach((article, index) => {
-                    if (!article.embedding_3d) return;
+                    if (!article[embeddingField]) return;
                     
-                    const [x, y, z] = article.embedding_3d;
+                    const [x, y, z] = article[embeddingField];
                     
                     // Normalize and scale coordinates
                     const normalizedX = ((x - centerX) / (maxX - minX)) * scale;
@@ -975,6 +1000,52 @@
                         }
                     `;
                     document.head.appendChild(style);
+                }
+            }
+            
+            setupReductionMethodSelector() {
+                const selector = document.getElementById('reduction-method');
+                
+                selector.addEventListener('change', (e) => {
+                    this.currentMethod = e.target.value;
+                    console.log(`Switching to ${this.currentMethod.toUpperCase()} visualization`);
+                    
+                    // Update the info panel
+                    const methodDisplay = document.getElementById('current-method');
+                    methodDisplay.textContent = `Method: ${this.currentMethod.toUpperCase()}`;
+                    
+                    this.updateVisualization();
+                });
+            }
+            
+            updateVisualization() {
+                // Remove existing spheres and labels
+                this.spheres.forEach(sphere => {
+                    this.scene.remove(sphere);
+                    sphere.geometry.dispose();
+                    sphere.material.dispose();
+                });
+                
+                this.labels.forEach(label => {
+                    this.scene.remove(label);
+                    label.geometry.dispose();
+                    label.material.dispose();
+                    if (label.material.map) {
+                        label.material.map.dispose();
+                    }
+                });
+                
+                // Clear arrays
+                this.spheres = [];
+                this.labels = [];
+                this.originalSizes = [];
+                
+                // Recreate spheres with new method
+                this.createArticleSpheres();
+                
+                // If there was a search active, re-apply it
+                if (this.searchResults) {
+                    this.rescaleSpheresBasedOnSearch(this.searchResults);
                 }
             }
         }

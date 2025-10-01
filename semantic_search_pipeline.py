@@ -11,6 +11,52 @@ from typing import List, Dict
 import hashlib
 from semantic_search_server import QueryEmbedder, DEFAULT_EMBEDDING_MODEL
 import umap
+from sklearn.decomposition import PCA
+from sklearn.manifold import TSNE
+from sklearn.preprocessing import StandardScaler
+
+# ========================================
+# GLOBAL CONFIGURATION
+# ========================================
+"""
+DIMENSIONALITY REDUCTION CONFIGURATION:
+
+This module supports three methods for reducing high-dimensional embeddings:
+1. PCA (Principal Component Analysis) - Fast, linear, preserves global structure
+2. t-SNE (t-Distributed Stochastic Neighbor Embedding) - Slow, non-linear, preserves local structure
+3. UMAP (Uniform Manifold Approximation and Projection) - Fast, non-linear, balanced
+
+COMPARISON:
+- PCA: Best for initial exploration, shows global variance, very fast
+- t-SNE: Best for clustering visualization, very slow, can distort distances
+- UMAP: Best balance of speed and quality, preserves both local and global structure
+
+USAGE:
+Set REDUCTION_METHOD to one of: 'pca', 'tsne', 'umap', or 'all'
+- 'all' will compute all three methods (slower but comprehensive)
+- Single method will be faster and use less memory
+
+Each method produces both 2D and 3D embeddings for visualization.
+"""
+
+# Dimensionality reduction method: 'umap', 'pca', 'tsne', or 'all'
+REDUCTION_METHOD = 'all'  # Options: 'umap', 'pca', 'tsne', 'all'
+
+# Standardize embeddings before reduction (recommended for PCA/t-SNE)
+USE_STANDARDIZATION = True
+
+# UMAP parameters
+UMAP_N_NEIGHBORS = 15      # Size of local neighborhood (larger = more global structure)
+UMAP_MIN_DIST = 0.1        # Minimum distance between points (smaller = tighter clusters)
+UMAP_RANDOM_STATE = 42
+
+# t-SNE parameters
+TSNE_PERPLEXITY = 30       # Balance attention between local and global (5-50 typical)
+TSNE_MAX_ITER = 1000       # Number of iterations (1000+ recommended)
+TSNE_RANDOM_STATE = 42
+
+# PCA parameters
+PCA_RANDOM_STATE = 42
 
 class ArticleEmbeddingGenerator:
     """Generate embeddings for markdown articles"""
@@ -122,15 +168,16 @@ class ArticleEmbeddingGenerator:
                           use_chunking: bool = False,
                           chunk_size: int = 500,
                           reduce_dims: bool = True) -> Dict:
-        """Generate embeddings for all articles with optional UMAP dimensionality reduction"""
+        """Generate embeddings for all articles with optional dimensionality reduction"""
         
         embeddings_data = {
             'model': self.model._model_card_data.model_name if hasattr(self.model, '_model_card_data') else 'unknown',
             'embedding_dim': self.embedding_dim,
+            'reduction_method': REDUCTION_METHOD,
             'articles': []
         }
         
-        # Store all embeddings for UMAP reduction
+        # Store all embeddings for dimensionality reduction
         all_embeddings = []
         
         for idx, article in enumerate(articles):
@@ -171,25 +218,104 @@ class ArticleEmbeddingGenerator:
                     'is_chunk': False,
                     'embedding': embedding.tolist()
                 }
+                # Add extra metadata if available
+                for key in ['category', 'technologies', 'description', 'difficulty', 'tags']:
+                    if key in article:
+                        article_data[key] = article[key]
+                
                 embeddings_data['articles'].append(article_data)
         
-        # Apply UMAP reduction if requested
+        # Apply dimensionality reduction if requested
         if reduce_dims and all_embeddings:
-            print("\nApplying UMAP dimensionality reduction...")
             all_embeddings_array = np.array(all_embeddings)
             
-            # Reduce to 3D
-            reducer_3d = umap.UMAP(n_components=3, random_state=42)
-            embeddings_3d = reducer_3d.fit_transform(all_embeddings_array)
+            # Optionally standardize embeddings
+            if USE_STANDARDIZATION:
+                print("\nStandardizing embeddings...")
+                scaler = StandardScaler()
+                all_embeddings_scaled = scaler.fit_transform(all_embeddings_array)
+            else:
+                all_embeddings_scaled = all_embeddings_array
             
-            # Reduce to 2D
-            reducer_2d = umap.UMAP(n_components=2, random_state=42)
-            embeddings_2d = reducer_2d.fit_transform(all_embeddings_array)
+            # Apply selected reduction method(s)
+            if REDUCTION_METHOD in ['umap', 'all']:
+                print("\nApplying UMAP dimensionality reduction...")
+                # Reduce to 3D
+                reducer_3d = umap.UMAP(
+                    n_components=3, 
+                    random_state=UMAP_RANDOM_STATE,
+                    n_neighbors=UMAP_N_NEIGHBORS,
+                    min_dist=UMAP_MIN_DIST
+                )
+                embeddings_umap_3d = reducer_3d.fit_transform(all_embeddings_scaled)
+                
+                # Reduce to 2D
+                reducer_2d = umap.UMAP(
+                    n_components=2, 
+                    random_state=UMAP_RANDOM_STATE,
+                    n_neighbors=UMAP_N_NEIGHBORS,
+                    min_dist=UMAP_MIN_DIST
+                )
+                embeddings_umap_2d = reducer_2d.fit_transform(all_embeddings_scaled)
+                
+                # Add to articles
+                for idx, article_data in enumerate(embeddings_data['articles']):
+                    article_data['embedding_umap_3d'] = embeddings_umap_3d[idx].tolist()
+                    article_data['embedding_umap_2d'] = embeddings_umap_2d[idx].tolist()
+                
+                print(f"UMAP reduction complete")
             
-            # Add reduced dimensions to each article
-            for idx, article_data in enumerate(embeddings_data['articles']):
-                article_data['embedding_3d'] = embeddings_3d[idx].tolist()
-                article_data['embedding_2d'] = embeddings_2d[idx].tolist()
+            if REDUCTION_METHOD in ['pca', 'all']:
+                print("\nApplying PCA dimensionality reduction...")
+                # Reduce to 3D
+                pca_3d = PCA(n_components=3, random_state=PCA_RANDOM_STATE)
+                embeddings_pca_3d = pca_3d.fit_transform(all_embeddings_scaled)
+                explained_var_3d = pca_3d.explained_variance_ratio_.sum()
+                
+                # Reduce to 2D
+                pca_2d = PCA(n_components=2, random_state=PCA_RANDOM_STATE)
+                embeddings_pca_2d = pca_2d.fit_transform(all_embeddings_scaled)
+                explained_var_2d = pca_2d.explained_variance_ratio_.sum()
+                
+                # Add to articles
+                for idx, article_data in enumerate(embeddings_data['articles']):
+                    article_data['embedding_pca_3d'] = embeddings_pca_3d[idx].tolist()
+                    article_data['embedding_pca_2d'] = embeddings_pca_2d[idx].tolist()
+                
+                print(f"PCA reduction complete (3D explained variance: {explained_var_3d:.3f}, 2D: {explained_var_2d:.3f})")
+            
+            if REDUCTION_METHOD in ['tsne', 'all']:
+                print("\nApplying t-SNE dimensionality reduction (this may take a while)...")
+                # Reduce to 3D
+                tsne_3d = TSNE(
+                    n_components=3, 
+                    random_state=TSNE_RANDOM_STATE,
+                    perplexity=min(TSNE_PERPLEXITY, len(all_embeddings_scaled) - 1),
+                    max_iter=TSNE_MAX_ITER
+                )
+                embeddings_tsne_3d = tsne_3d.fit_transform(all_embeddings_scaled)
+                
+                # Reduce to 2D
+                tsne_2d = TSNE(
+                    n_components=2, 
+                    random_state=TSNE_RANDOM_STATE,
+                    perplexity=min(TSNE_PERPLEXITY, len(all_embeddings_scaled) - 1),
+                    max_iter=TSNE_MAX_ITER
+                )
+                embeddings_tsne_2d = tsne_2d.fit_transform(all_embeddings_scaled)
+                
+                # Add to articles
+                for idx, article_data in enumerate(embeddings_data['articles']):
+                    article_data['embedding_tsne_3d'] = embeddings_tsne_3d[idx].tolist()
+                    article_data['embedding_tsne_2d'] = embeddings_tsne_2d[idx].tolist()
+                
+                print(f"t-SNE reduction complete")
+            
+            # Maintain backwards compatibility with old field names
+            if REDUCTION_METHOD == 'umap' or REDUCTION_METHOD == 'all':
+                for idx, article_data in enumerate(embeddings_data['articles']):
+                    article_data['embedding_3d'] = article_data['embedding_umap_3d']
+                    article_data['embedding_2d'] = article_data['embedding_umap_2d']
         
         return embeddings_data
     
