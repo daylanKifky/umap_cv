@@ -8,6 +8,7 @@ import json
 import numpy as np
 import os
 import traceback
+import argparse
 
 from .embed import QueryEmbedder, SearchResult, QueryRequest, EMBEDDING_MODEL
 
@@ -30,9 +31,6 @@ EMBEDDINGS_FILE = os.path.join(os.path.dirname(__file__), 'public', 'embeddings.
 @app.get("/")
 async def root():
     return FileResponse(os.path.join(os.path.dirname(__file__), 'public', 'index.html'))
-
-# Serve static files from root directory
-app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "public")), name="static")
 
 @app.get("/health")
 async def health_check():
@@ -103,8 +101,27 @@ async def get_stats():
     except Exception as e:
         return {"error": str(e)}
 
+def setup_static_files():
+    """Setup static file serving - MUST be called last to avoid conflicts with API routes"""
+    app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "public")), name="static")
+
 if __name__ == "__main__":
     import uvicorn
+    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Semantic Search Server")
+    parser.add_argument("--static", action="store_true", help="Enable static file serving")
+    parser.add_argument("--host", default="0.0.0.0", help="Host to bind to")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind to")
+    args = parser.parse_args()
+    
     print("Starting Semantic Search Server...")
-    print("API Documentation available at: http://localhost:8003/docs")
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    print(f"API Documentation available at: http://{args.host}:{args.port}/docs")
+    
+    if args.static:
+        print("Static file serving enabled")
+        setup_static_files()
+    else:
+        print("Static file serving disabled (use --static to enable)")
+    
+    uvicorn.run(app, host=args.host, port=args.port)
