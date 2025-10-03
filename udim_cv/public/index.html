@@ -453,6 +453,9 @@
     <!-- THREE.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    
+    <!-- Article 3D Module -->
+    <script src="article3D.js"></script>
 
     <script>
         class ArticleVisualizer {
@@ -462,11 +465,9 @@
                 this.renderer = null;
                 this.controls = null;
                 this.articles = [];
-                this.spheres = [];
-                this.labels = [];
-                this.originalSizes = []; // Store original sphere sizes
+                this.articleManager = null; // Article class instance
                 this.searchResults = null;
-                this.apiUrl = 'http://localhost:8003';
+                this.apiUrl = 'http://localhost:8000';
                 this.raycaster = new THREE.Raycaster();
                 this.mouse = new THREE.Vector2();
                 this.currentMethod = 'umap'; // Default reduction method
@@ -540,6 +541,9 @@
                 // Handle mouse clicks for sphere selection
                 this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
                 
+                // Initialize Article manager
+                this.articleManager = new ArticleManager(this.scene, this.camera);
+                
                 // Start render loop
                 this.animate();
             }
@@ -553,140 +557,18 @@
                     document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
                     document.getElementById('loading').style.display = 'none';
                     
-                    this.createArticleSpheres();
+                    this.createArticleCards();
                 } catch (error) {
                     console.error('Error loading articles:', error);
                     document.getElementById('loading').textContent = 'Error loading articles';
                 }
             }
             
-            createArticleSpheres() {
-                // Get the embedding field name based on current method
-                const embeddingField = `${this.currentMethod}_3d`;
-                console.log(embeddingField);
-                
-                // Check if the selected method exists in the data
-                if (!this.articles[0] || !this.articles[0][embeddingField]) {
-                    console.warn(`Embedding field '${embeddingField}' not found, falling back to embedding_3d`);
-                    // Fall back to default embedding_3d (which is usually UMAP)
-                    return this.createArticleSpheresWithField('embedding_3d');
-                }
-                
-                return this.createArticleSpheresWithField(embeddingField);
+            createArticleCards() {
+                return this.articleManager.createArticleCards(this.articles, this.currentMethod);
             }
             
-            createArticleSpheresWithField(embeddingField) {
-                // Calculate bounds for normalization
-                let minX = Infinity, maxX = -Infinity;
-                let minY = Infinity, maxY = -Infinity;
-                let minZ = Infinity, maxZ = -Infinity;
-                
-                this.articles.forEach(article => {
-                    if (article[embeddingField]) {
-                        const [x, y, z] = article[embeddingField];
-                        minX = Math.min(minX, x);
-                        maxX = Math.max(maxX, x);
-                        minY = Math.min(minY, y);
-                        maxY = Math.max(maxY, y);
-                        minZ = Math.min(minZ, z);
-                        maxZ = Math.max(maxZ, z);
-                    }
-                });
-                
-                // Scale factor to fit in reasonable space
-                const scale = 30;
-                const centerX = (minX + maxX) / 2;
-                const centerY = (minY + maxY) / 2;
-                const centerZ = (minZ + maxZ) / 2;
-                
-                this.articles.forEach((article, index) => {
-                    if (!article[embeddingField]) return;
-                    
-                    const [x, y, z] = article[embeddingField];
-                    
-                    // Normalize and scale coordinates
-                    const normalizedX = ((x - centerX) / (maxX - minX)) * scale;
-                    const normalizedY = ((y - centerY) / (maxY - minY)) * scale;
-                    const normalizedZ = ((z - centerZ) / (maxZ - minZ)) * scale;
-                    
-                    // Create sphere geometry and material
-                    const geometry = new THREE.SphereGeometry(0.5, 16, 16);
-                    
-                    // Color based on article type or random
-                    const hue = (index * 137.5) % 360; // Golden angle for good distribution
-                    const color = new THREE.Color().setHSL(hue / 360, 0.7, 0.6);
-                    
-                    const material = new THREE.MeshPhongMaterial({ 
-                        color: color,
-                        shininess: 100,
-                        transparent: true,
-                        opacity: 0.9
-                    });
-                    
-                    const sphere = new THREE.Mesh(geometry, material);
-                    sphere.position.set(normalizedX, normalizedY, normalizedZ);
-                    sphere.castShadow = true;
-                    sphere.receiveShadow = true;
-                    
-                    // Store article data in userData
-                    sphere.userData = {
-                        article: article,
-                        originalIndex: index
-                    };
-                    
-                    this.scene.add(sphere);
-                    this.spheres.push(sphere);
-                    this.originalSizes.push(0.5); // Store original radius
-                    
-                    // Create text label
-                    this.createLabel(article.title, normalizedX, normalizedY, normalizedZ);
-                });
-                
-                console.log(`Created ${this.spheres.length} article spheres`);
-            }
             
-            createLabel(text, x, y, z) {
-                // Create canvas for text texture
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.width = 256;
-                canvas.height = 64;
-                
-                // Draw text on canvas
-                context.fillStyle = 'rgba(0, 0, 0, 0.8)';
-                context.fillRect(0, 0, canvas.width, canvas.height);
-                
-                context.fillStyle = 'white';
-                context.font = '14px Arial';
-                context.textAlign = 'center';
-                context.textBaseline = 'middle';
-                
-                // Truncate long titles
-                const maxLength = 30;
-                const displayText = text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
-                context.fillText(displayText, canvas.width / 2, canvas.height / 2);
-                
-                // Create texture and material
-                const texture = new THREE.CanvasTexture(canvas);
-                const material = new THREE.MeshBasicMaterial({ 
-                    map: texture, 
-                    transparent: true,
-                    alphaTest: 0.1
-                });
-                
-                // Create plane geometry for label
-                const geometry = new THREE.PlaneGeometry(4, 1);
-                const label = new THREE.Mesh(geometry, material);
-                
-                // Position label slightly offset from sphere
-                label.position.set(x + 1.5, y + 1, z);
-                
-                // Make label always face camera
-                label.lookAt(this.camera.position);
-                
-                this.scene.add(label);
-                this.labels.push(label);
-            }
             
             animate() {
                 requestAnimationFrame(() => this.animate());
@@ -694,10 +576,10 @@
                 // Update controls
                 this.controls.update();
                 
-                // Make labels face camera
-                this.labels.forEach(label => {
-                    label.lookAt(this.camera.position);
-                });
+                // Update article manager (labels face camera)
+                if (this.articleManager) {
+                    this.articleManager.update();
+                }
                 
                 // Render
                 this.renderer.render(this.scene, this.camera);
@@ -760,7 +642,7 @@
                     this.searchResults = results;
                     
                     this.displaySearchResults(results);
-                    this.rescaleSpheresBasedOnSearch(results);
+                    this.articleManager.rescaleCardsBasedOnSearch(results);
                     
                 } catch (error) {
                     console.error('Search failed:', error);
@@ -791,50 +673,6 @@
                 searchResults.style.display = 'block';
             }
             
-            // Similarity-based rescaling function that amplifies differences
-            similarityToScale(similarity) {
-                // Convert similarity to 0-1 range (assuming similarity is already 0-1)
-                const normalizedSim = Math.max(0, Math.min(1, similarity));
-                
-                // Amplifying function: exponential scaling to emphasize differences
-                // Higher similarities get much larger, lower similarities get much smaller
-                const amplified = Math.pow(normalizedSim, 0.3); // Power less than 1 spreads out the values
-                
-                // Scale to reasonable sphere sizes (0.2 to 2.0)
-                const minScale = 0.2;
-                const maxScale = 4.0;
-                return minScale + (maxScale - minScale) * amplified;
-            }
-            
-            rescaleSpheresBasedOnSearch(searchResults) {
-                // Create a map of article ID to similarity
-                const similarityMap = new Map();
-                searchResults.forEach(result => {
-                    similarityMap.set(result.id, result.similarity);
-                });
-                
-                // Rescale all spheres
-                this.spheres.forEach((sphere, index) => {
-                    const article = sphere.userData.article;
-                    const similarity = similarityMap.get(article.id) || 0;
-                    
-                    // Apply similarity-based scaling
-                    const newScale = this.similarityToScale(similarity);
-                    sphere.scale.setScalar(newScale);
-                    
-                    // Also adjust material opacity and color intensity based on similarity
-                    const material = sphere.material;
-                    if (similarity > 0) {
-                        // Highlight matching articles
-                        material.opacity = 0.9;
-                        material.emissive.setRGB(similarity * 0.3, similarity * 0.3, 0);
-                    } else {
-                        // Dim non-matching articles
-                        material.opacity = 0.3;
-                        material.emissive.setRGB(0, 0, 0);
-                    }
-                });
-            }
             
             clearSearch() {
                 const searchInput = document.getElementById('search-input');
@@ -844,13 +682,8 @@
                 searchResults.style.display = 'none';
                 this.searchResults = null;
                 
-                // Reset all spheres to original size and appearance
-                this.spheres.forEach((sphere, index) => {
-                    sphere.scale.setScalar(1.0);
-                    const material = sphere.material;
-                    material.opacity = 0.9;
-                    material.emissive.setRGB(0, 0, 0);
-                });
+                // Reset all cards to original size and appearance
+                this.articleManager.resetCardAppearance();
             }
             
             onMouseClick(event) {
@@ -863,12 +696,14 @@
                 this.raycaster.setFromCamera(this.mouse, this.camera);
                 
                 // Calculate objects intersecting the picking ray
-                const intersects = this.raycaster.intersectObjects(this.spheres);
+                const intersects = this.raycaster.intersectObjects(this.articleManager.getCards());
                 
                 if (intersects.length > 0) {
-                    const clickedSphere = intersects[0].object;
-                    const article = clickedSphere.userData.article;
-                    this.showArticleModal(article);
+                    const clickedCard = intersects[0].object;
+                    const entity = this.articleManager.getEntityByCard(clickedCard);
+                    if (entity) {
+                        this.showArticleModal(entity.article);
+                    }
                 }
             }
             
@@ -900,14 +735,13 @@
                 const body = document.getElementById('modal-body');
                 const filepath = document.getElementById('modal-filepath');
                 
-                // Set modal content
-                title.textContent = article.title;
-                filepath.textContent = article.filepath;
+                // Get modal content from Article manager
+                const modalData = this.articleManager.getModalHTML(article);
                 
-                // Convert markdown-like content to HTML (basic conversion)
-                const content = article.full_content || article.content;
-                const htmlContent = this.markdownToHtml(content);
-                body.innerHTML = htmlContent;
+                // Set modal content
+                title.textContent = modalData.title;
+                filepath.textContent = modalData.filepath;
+                body.innerHTML = modalData.content;
                 
                 // Show modal
                 modal.style.display = 'block';
@@ -924,36 +758,6 @@
                 document.body.style.overflow = 'auto';
             }
             
-            markdownToHtml(markdown) {
-                // Basic markdown to HTML conversion
-                let html = markdown;
-                
-                // Headers
-                html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-                html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-                html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-                
-                // Bold
-                html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-                
-                // Italic
-                html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-                
-                // Code blocks
-                html = html.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
-                
-                // Inline code
-                html = html.replace(/`([^`]*)`/gim, '<code>$1</code>');
-                
-                // Line breaks
-                html = html.replace(/\n/gim, '<br>');
-                
-                // Clean up extra breaks
-                html = html.replace(/<br><br>/gim, '</p><p>');
-                html = '<p>' + html + '</p>';
-                
-                return html;
-            }
             
             setupStartupModal() {
                 const startupModal = document.getElementById('startup-modal');
@@ -1020,33 +824,15 @@
             }
             
             updateVisualization() {
-                // Remove existing spheres and labels
-                this.spheres.forEach(sphere => {
-                    this.scene.remove(sphere);
-                    sphere.geometry.dispose();
-                    sphere.material.dispose();
-                });
+                // Dispose current article manager resources
+                this.articleManager.dispose();
                 
-                this.labels.forEach(label => {
-                    this.scene.remove(label);
-                    label.geometry.dispose();
-                    label.material.dispose();
-                    if (label.material.map) {
-                        label.material.map.dispose();
-                    }
-                });
-                
-                // Clear arrays
-                this.spheres = [];
-                this.labels = [];
-                this.originalSizes = [];
-                
-                // Recreate spheres with new method
-                this.createArticleSpheres();
+                // Recreate cards with new method
+                this.createArticleCards();
                 
                 // If there was a search active, re-apply it
                 if (this.searchResults) {
-                    this.rescaleSpheresBasedOnSearch(this.searchResults);
+                    this.articleManager.rescaleCardsBasedOnSearch(this.searchResults);
                 }
             }
         }
