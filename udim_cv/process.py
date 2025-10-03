@@ -7,8 +7,9 @@ import umap
 import json
 from typing import List, Union, Tuple, Optional
 
-# Default model configuration
-DEFAULT_EMBEDDING_MODEL = 'all-MiniLM-L6-v2'
+from .embed import DEFAULT_EMBEDDING_MODEL
+
+
 
 # Default parameters for dimensionality reduction
 DEFAULT_UMAP_PARAMS = {
