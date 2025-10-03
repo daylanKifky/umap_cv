@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import json
@@ -120,11 +122,14 @@ class QueryEmbedder:
 # Initialize the embedder
 print("Initializing semantic search engine...")
 embedder = QueryEmbedder()
-EMBEDDINGS_FILE = 'embeddings.json'
+EMBEDDINGS_FILE = os.path.join(os.path.dirname(__file__), 'public', 'embeddings.json')
 
 @app.get("/")
 async def root():
-    return {"message": "Semantic Search API", "status": "running"}
+    return FileResponse(os.path.join(os.path.dirname(__file__), 'public', 'index.html'))
+
+# Serve static files from root directory
+app.mount("/", StaticFiles(directory=os.path.join(os.path.dirname(__file__), "public")), name="static")
 
 @app.get("/health")
 async def health_check():
