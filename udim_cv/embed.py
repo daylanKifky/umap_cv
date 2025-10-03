@@ -94,7 +94,7 @@ class QueryEmbedder:
             results.append({
                 'id': article['id'],
                 'title': article['title'],
-                'content': article.get('full_content', ''),
+                'content': article.get('content', ''),
                 'filepath': article.get('filepath', '<not available>'),
                 'filename': article.get('filename', '<not available>'),
                 'similarity': float(similarity)

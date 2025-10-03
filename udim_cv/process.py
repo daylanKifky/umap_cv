@@ -5,7 +5,9 @@ from sklearn.manifold import TSNE
 from sklearn.preprocessing import StandardScaler
 import umap
 import json
-from typing import List, Union, Tuple, Optional
+import os
+import re
+from typing import List, Union, Tuple, Optional, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL
 
@@ -212,14 +214,66 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
     
     return chunks if chunks else [text]
 
-def main(input_file: str, output_file: str):
+
+def load_markdown_files(input_folder: str) -> Dict[str, Dict]:
+    """
+    Load markdown files from a folder and extract JSON data from them.
+    
+    Args:
+        input_folder: Path to folder containing markdown files
+        
+    Returns:
+        Dictionary with filename as key and parsed JSON data as value
+    """
+    data = {}
+    
+    # Get all .md files in the folder
+    md_files = [f for f in os.listdir(input_folder) if f.endswith('.md')]
+    md_files.sort()  # Sort for consistent ordering
+    
+    for filename in md_files:
+        article_id = re.search(r'^(\d+)_.*\.md$', filename).group(1)
+        if not article_id:
+            print(f"Warning: Could not find file ID in {filename}")
+            continue
+        article_id = int(article_id)
+        filepath = os.path.join(input_folder, filename)
+        
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Extract JSON from <script type="application/json"> tags
+            json_match = re.search(r'<script type="application/json">\s*(.*?)\s*</script>', 
+                                 content, re.DOTALL)
+            
+            if json_match:
+                json_str = json_match.group(1)
+                try:
+                    json_data = json.loads(json_str)
+                    json_data['id'] = article_id
+                    # Use filename without extension as key
+                    key = os.path.splitext(filename)[0]
+                    data[key] = json_data
+                except json.JSONDecodeError as e:
+                    print(f"Warning: Could not parse JSON in {filename}: {e}")
+            else:
+                print(f"Warning: No JSON data found in {filename}")
+                
+        except Exception as e:
+            print(f"Error reading {filename}: {e}")
+    
+    print(f"Loaded {len(data)} articles from {input_folder}")
+    return data
+
+def main(input_folder: str, output_file: str):
     # Initialize the embedding generator
     generator = ArticleEmbeddingGenerator()
 
-    # Load project data
-    with open(input_file, 'r') as f:
-        data = json.load(f)
+    # Load project data from markdown files
+    data = load_markdown_files(input_folder)
     
+    ids = [i['id'] for i in data.values()]
     categories = [i['category'] for i in data.values()]
     technologies = [i['technologies'] for i in data.values()]
     descriptions = [i['description'] for i in data.values()]
@@ -259,16 +313,13 @@ def main(input_file: str, output_file: str):
         "articles": []
     }
     
-    import hashlib
-    # Process each project and create article entries
 
     for i in range(len(data)):
         title = list(data.keys())[i]
         article_entry = {
-            "id": hashlib.md5(title.encode()).hexdigest()[:12],
+            "id": ids[i],
             "title": title,
-            "content": technologies[i],
-            "full_content": descriptions[i],
+            "content": descriptions[i],
             "embedding": embeddings[i].tolist(),
             "pca_2d": reduced_pca_2d[i].tolist(),
             "pca_3d": reduced_pca_3d[i].tolist(),
@@ -278,7 +329,7 @@ def main(input_file: str, output_file: str):
             "umap_3d": reduced_umap_3d[i].tolist()
         }
         embedding_data["articles"].append(article_entry)
-    
+
     # Save embeddings in the structured format
     with open(output_file, 'w') as f:
         json.dump(embedding_data, f, indent=2)
@@ -289,7 +340,7 @@ def _run():
     import argparse
     
     parser = argparse.ArgumentParser(description='Generate embeddings and dimensionality reductions for project data')
-    parser.add_argument('--input', '-i', type=str, required=True, help='Input JSON file containing project data')
+    parser.add_argument('--input', '-i', type=str, required=True, help='Input folder containing markdown files with project data')
     parser.add_argument('--output', '-o', type=str, required=True, help='Output file path for embeddings')
     parser.add_argument('--model', '-m', type=str, default=DEFAULT_EMBEDDING_MODEL, help='Name of the embedding model')
     
@@ -301,76 +352,3 @@ def _run():
 
 if __name__ == '__main__':
     _run()
-
-# def apply_multiple_reductions(embeddings: np.ndarray, 
-#                             methods: List[str] = ['pca', 'tsne', 'umap'],
-#                             n_components: int = 2,
-#                             generator: Optional[ArticleEmbeddingGenerator] = None) -> dict:
-#     """
-#     Apply multiple dimensionality reduction methods to embeddings.
-    
-#     Args:
-#         embeddings: Input embeddings array
-#         methods: List of reduction methods to apply
-#         n_components: Number of components for reduction
-#         generator: ArticleEmbeddingGenerator instance (created if None)
-        
-#     Returns:
-#         Dictionary with reduction results for each method
-#     """
-#     if generator is None:
-#         generator = ArticleEmbeddingGenerator()
-    
-#     results = {}
-    
-#     for method in methods:
-#         if method.lower() == 'pca':
-#             reduced_emb, model = generator.reduce_pca(embeddings, n_components)
-#             results['pca'] = {'embeddings': reduced_emb, 'model': model}
-#         elif method.lower() == 'tsne':
-#             reduced_emb = generator.reduce_tsne(embeddings, n_components)
-#             results['tsne'] = {'embeddings': reduced_emb, 'model': None}
-#         elif method.lower() == 'umap':
-#             reduced_emb, model = generator.reduce_umap(embeddings, n_components)
-#             results['umap'] = {'embeddings': reduced_emb, 'model': model}
-#         else:
-#             print(f"Unknown reduction method: {method}")
-    
-#     return results
-
-
-# def process_articles_pipeline(articles: List[str], 
-#                             model_name: str = DEFAULT_EMBEDDING_MODEL,
-#                             reduction_methods: List[str] = ['umap'],
-#                             dimensions: List[int] = [2, 3]) -> dict:
-#     """
-#     Complete pipeline for processing articles: embed and reduce dimensions.
-    
-#     Args:
-#         articles: List of text articles
-#         model_name: Name of the embedding model
-#         reduction_methods: List of reduction methods to apply
-#         dimensions: List of target dimensions
-        
-#     Returns:
-#         Dictionary containing embeddings and all reductions
-#     """
-#     # Initialize generator
-#     generator = ArticleEmbeddingGenerator(model_name)
-    
-#     # Generate embeddings
-#     embeddings = generator.generate_embeddings(articles)
-    
-#     # Apply reductions for each dimension
-#     results = {
-#         'original_embeddings': embeddings,
-#         'reductions': {}
-#     }
-    
-#     for dim in dimensions:
-#         results['reductions'][f'{dim}d'] = apply_multiple_reductions(
-#             embeddings, reduction_methods, dim, generator
-#         )
-    
-#     return results
-        
