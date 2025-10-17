@@ -60,41 +60,48 @@ class ArticleEntity {
         // Calculate dimensions based on window size
         const width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
         const height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
-        
+
         // Create canvas for texture
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = width;
         canvas.height = height;
-        
+
         // Create texture from canvas
         const texture = new THREE.CanvasTexture(canvas);
-        
+
         // Create texture from canvas and update it
         this.updateCardTexture(context, width, height);
-        
+
         // Create plane geometry with correct aspect ratio
         const aspectRatio = width / height;
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
+
+        // Move pivot point to upper left corner
+        // Translate geometry so pivot is at upper left instead of center
+        const offsetX = -0.8; // negative value moves the card to the left
+        const offsetY = -0.3; // negative value moves the card up
+        geometry.translate(2 * aspectRatio - offsetX, -2 - offsetY, 0);
+
         const material = new THREE.MeshBasicMaterial({
             map: texture,
             transparent: true,
             opacity: 0.9,
             side: THREE.DoubleSide
         });
-        
+
         this.card = new THREE.Mesh(geometry, material);
         this.card.position.set(x, y, z);
         this.card.castShadow = true;
         this.card.receiveShadow = true;
-        
+
         // Store article data in userData
         this.card.userData = {
             article: this.article,
             originalIndex: this.index,
             entity: this
         };
-        
+
         return this.card;
     }
 
@@ -218,6 +225,11 @@ class ArticleEntity {
                 this.card.material.map.dispose();
             }
             this.card = null;
+        }
+        if (this.sphere) {
+            this.sphere.geometry.dispose();
+            this.sphere.material.dispose();
+            this.sphere = null;
         }
     }
 
@@ -470,14 +482,35 @@ class ArticleManager {
             
             // Create ArticleEntity with RGB color
             const color = new THREE.Color(r/255, g/255, b/255);
-            color.offsetHSL(0, 0.3, 0.2); 
+            color.offsetHSL(0, 0.3, 0.2);
             console.log(`Color: ${color}`);
             const entity = new ArticleEntity(article, index, color);
-            const card = entity.createCard(normalizedX*scale, normalizedY*scale, normalizedZ*scale);
-            
-            // Add card to scene
-            this.scene.add(card);
-            
+            const card = entity.createCard(0, 0, 0); // Create card at origin
+
+            // Create sphere with entity color
+            const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+            const sphereMaterial = new THREE.MeshBasicMaterial({
+                color: color,
+                transparent: true,
+                opacity: 0.8
+            });
+            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+            // Position sphere at entity location
+            sphere.position.set(normalizedX*scale, normalizedY*scale, normalizedZ*scale);
+
+            // Make card a child of the sphere
+            sphere.add(card);
+
+            // // Position card relative to sphere (below and to the right)
+            // card.position.set(3, -3, 0);
+
+            // Add sphere (with card as child) to scene
+            this.scene.add(sphere);
+
+            // Store sphere reference in entity for cleanup
+            entity.sphere = sphere;
+
             this.entities.push(entity);
         });
         
@@ -547,8 +580,8 @@ class ArticleManager {
     dispose() {
         this.entities.forEach(entity => {
             // Remove objects from scene first
-            if (entity.getCard()) {
-                this.scene.remove(entity.getCard());
+            if (entity.sphere) {
+                this.scene.remove(entity.sphere);
             }
             // Then dispose entity resources
             entity.dispose();
@@ -565,12 +598,30 @@ class ArticleManager {
     }
 
     /**
+     * Get all spheres for interaction
+     * @returns {Array} Array of sphere meshes
+     */
+    getSpheres() {
+        return this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
+    }
+
+    /**
      * Get entity by card
      * @param {THREE.Mesh} card - The card mesh
      * @returns {ArticleEntity} The corresponding entity
      */
     getEntityByCard(card) {
         return card.userData.entity;
+    }
+
+    /**
+     * Get entity by sphere
+     * @param {THREE.Mesh} sphere - The sphere mesh
+     * @returns {ArticleEntity} The corresponding entity
+     */
+    getEntityBySphere(sphere) {
+        // Find entity by matching sphere reference
+        return this.entities.find(entity => entity.sphere === sphere);
     }
 }
 

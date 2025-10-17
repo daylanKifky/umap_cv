@@ -711,11 +711,11 @@
                 this.raycaster.setFromCamera(this.mouse, this.camera);
                 
                 // Calculate objects intersecting the picking ray
-                const intersects = this.raycaster.intersectObjects(this.articleManager.getCards());
-                
+                const intersects = this.raycaster.intersectObjects(this.articleManager.getSpheres());
+
                 if (intersects.length > 0) {
-                    const clickedCard = intersects[0].object;
-                    const entity = this.articleManager.getEntityByCard(clickedCard);
+                    const clickedSphere = intersects[0].object;
+                    const entity = this.articleManager.getEntityBySphere(clickedSphere);
                     if (entity) {
                         this.showArticleModal(entity.article);
                     }
