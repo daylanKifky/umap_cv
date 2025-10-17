@@ -124,6 +124,53 @@
             display: none;
         }
         
+        /* Bloom Controls */
+        #bloom-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            z-index: 100;
+            min-width: 220px;
+        }
+        
+        #bloom-controls h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #4080ff;
+        }
+        
+        .bloom-control {
+            margin-bottom: 12px;
+        }
+        
+        .bloom-control label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .bloom-control input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+        
+        .bloom-control input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+        }
+        
+        .bloom-value {
+            float: right;
+            color: #4080ff;
+            font-weight: bold;
+        }
+        
         #loading {
             position: absolute;
             top: 50%;
@@ -419,6 +466,35 @@
     </div>
     
     <div id="container"></div>
+    
+    <!-- Bloom Controls -->
+    <div id="bloom-controls">
+        <h3>Bloom Effects</h3>
+        <div class="bloom-control">
+            <label>
+                <input type="checkbox" id="bloom-enabled" checked>
+                Enable Bloom
+            </label>
+        </div>
+        <div class="bloom-control">
+            <label>
+                Strength <span class="bloom-value" id="bloom-strength-value">0.8</span>
+            </label>
+            <input type="range" id="bloom-strength" min="0" max="3" step="0.1" value="0.8">
+        </div>
+        <div class="bloom-control">
+            <label>
+                Radius <span class="bloom-value" id="bloom-radius-value">0.4</span>
+            </label>
+            <input type="range" id="bloom-radius" min="0" max="1" step="0.01" value="0.4">
+        </div>
+        <div class="bloom-control">
+            <label>
+                Threshold <span class="bloom-value" id="bloom-threshold-value">0.5</span>
+            </label>
+            <input type="range" id="bloom-threshold" min="0" max="1" step="0.01" value="0.5">
+        </div>
+    </div>
 
     <!-- Startup Modal -->
     <div id="startup-modal">
@@ -466,6 +542,12 @@
     <!-- THREE.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
     
     <!-- Article 3D Module -->
     <script src="article3D.js"></script>
@@ -485,7 +567,14 @@
                 this.mouse = new THREE.Vector2();
                 this.currentMethod = 'pca'; // Default reduction method
                 
+                // Bloom post-processing
+                this.composer = null;
+                this.bloomPass = null;
+                this.bloomEnabled = true;
+                
                 this.init();
+                this.setupBloom();
+                this.setupBloomControls();
                 this.loadArticles();
                 this.setupSearch();
                 this.setupModal();
@@ -530,25 +619,6 @@
                 const axesHelper = new THREE.AxesHelper(10);
                 this.scene.add(axesHelper);
                 
-                // Lighting
-                const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-                this.scene.add(ambientLight);
-                
-                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-                directionalLight.position.set(50, 50, 50);
-                directionalLight.castShadow = true;
-                directionalLight.shadow.mapSize.width = 2048;
-                directionalLight.shadow.mapSize.height = 2048;
-                this.scene.add(directionalLight);
-                
-                // Point lights for better illumination
-                const pointLight1 = new THREE.PointLight(0x4080ff, 0.5);
-                pointLight1.position.set(-30, 30, 30);
-                this.scene.add(pointLight1);
-                
-                const pointLight2 = new THREE.PointLight(0xff4080, 0.5);
-                pointLight2.position.set(30, -30, -30);
-                this.scene.add(pointLight2);
                 
                 // Handle window resize
                 window.addEventListener('resize', () => this.onWindowResize());
@@ -583,7 +653,60 @@
                 return await this.articleManager.createArticleCards(this.articles, this.currentMethod);
             }
             
+            setupBloom() {
+                // Create composer for post-processing
+                this.composer = new THREE.EffectComposer(this.renderer);
+                
+                // Render pass - renders the scene
+                const renderPass = new THREE.RenderPass(this.scene, this.camera);
+                this.composer.addPass(renderPass);
+                
+                // Bloom pass - adds bloom effect
+                this.bloomPass = new THREE.UnrealBloomPass(
+                    new THREE.Vector2(window.innerWidth, window.innerHeight),
+                    0.3,  // strength
+                    0.09,  // radius
+                    0.58   // threshold
+                );
+                this.composer.addPass(this.bloomPass);
+            }
             
+            setupBloomControls() {
+                const enabledCheckbox = document.getElementById('bloom-enabled');
+                const strengthSlider = document.getElementById('bloom-strength');
+                const radiusSlider = document.getElementById('bloom-radius');
+                const thresholdSlider = document.getElementById('bloom-threshold');
+                
+                const strengthValue = document.getElementById('bloom-strength-value');
+                const radiusValue = document.getElementById('bloom-radius-value');
+                const thresholdValue = document.getElementById('bloom-threshold-value');
+                
+                // Enable/disable bloom
+                enabledCheckbox.addEventListener('change', (e) => {
+                    this.bloomEnabled = e.target.checked;
+                });
+                
+                // Strength control
+                strengthSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.bloomPass.strength = value;
+                    strengthValue.textContent = value.toFixed(1);
+                });
+                
+                // Radius control
+                radiusSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.bloomPass.radius = value;
+                    radiusValue.textContent = value.toFixed(2);
+                });
+                
+                // Threshold control
+                thresholdSlider.addEventListener('input', (e) => {
+                    const value = parseFloat(e.target.value);
+                    this.bloomPass.threshold = value;
+                    thresholdValue.textContent = value.toFixed(2);
+                });
+            }
             
             animate() {
                 requestAnimationFrame(() => this.animate());
@@ -596,14 +719,23 @@
                     this.articleManager.update();
                 }
                 
-                // Render
-                this.renderer.render(this.scene, this.camera);
+                // Render with or without bloom
+                if (this.bloomEnabled && this.composer) {
+                    this.composer.render();
+                } else {
+                    this.renderer.render(this.scene, this.camera);
+                }
             }
             
             onWindowResize() {
                 this.camera.aspect = window.innerWidth / window.innerHeight;
                 this.camera.updateProjectionMatrix();
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
+                
+                // Update composer size
+                if (this.composer) {
+                    this.composer.setSize(window.innerWidth, window.innerHeight);
+                }
             }
             
             setupSearch() {
