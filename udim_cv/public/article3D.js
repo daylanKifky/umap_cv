@@ -486,6 +486,8 @@ class ArticleManager {
             console.log(`Color: ${color}`);
             const entity = new ArticleEntity(article, index, color);
             const card = entity.createCard(0, 0, 0); // Create card at origin
+            
+            card.visible = false; //TEMP: hide the card for now
 
             // Create sphere with entity color
             const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
@@ -501,9 +503,6 @@ class ArticleManager {
 
             // Make card a child of the sphere
             sphere.add(card);
-
-            // // Position card relative to sphere (below and to the right)
-            // card.position.set(3, -3, 0);
 
             // Add sphere (with card as child) to scene
             this.scene.add(sphere);

@@ -11,9 +11,11 @@ import markdown
 import xml.etree.ElementTree as ET
 import shutil
 import urllib.parse
+import itertools
 from typing import List, Union, Tuple, Optional, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL
+from .shapes import create_connecting_arc
 
 
 
@@ -33,6 +35,8 @@ DEFAULT_TSNE_PARAMS = {
 DEFAULT_PCA_PARAMS = {
     'random_state': 42
 }
+
+
 
 
 class ArticleEmbeddingGenerator:
@@ -511,6 +515,31 @@ def main(input_folder: str, output_file: str):
             "umap_3d": reduced_umap_3d[i].tolist()
         }
         embedding_data["articles"].append(article_entry)
+
+    # Generate connecting arcs for all possible article pairs
+    print(f"Generating connecting arcs for {len(ids)} articles...")
+    links = []
+
+    for (i, j) in itertools.combinations(range(len(ids)), 2):
+        origin_id = ids[i]
+        end_id = ids[j]
+
+        # Get the 3D coordinates for the arc calculation
+        origin_coords = reduced_pca_3d[i]
+        end_coords = reduced_pca_3d[j]
+
+        # Create the connecting arc
+        arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=2)
+
+        link = {
+            "origin_id": origin_id,
+            "end_id": end_id,
+            "arc_vertices": arc_vertices.tolist()
+        }
+        links.append(link)
+
+    print(f"Generated {len(links)} connecting arcs")
+    embedding_data["links"] = links
 
     # Save embeddings in the structured format
     with open(output_file, 'w') as f:
