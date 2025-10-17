@@ -30,5 +30,5 @@ Thumbs.db
 
 
 embeddings.json
-articles/*.md
+**/public
 X

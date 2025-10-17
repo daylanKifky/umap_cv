@@ -7,6 +7,8 @@ import umap
 import json
 import os
 import re
+import markdown
+import xml.etree.ElementTree as ET
 from typing import List, Union, Tuple, Optional, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL
@@ -215,22 +217,27 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
     return chunks if chunks else [text]
 
 
-def load_markdown_files(input_folder: str) -> Dict[str, Dict]:
+def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[str, Dict]:
     """
-    Load markdown files from a folder and extract JSON data from them.
-    
+    Load markdown files from a folder, convert to HTML, extract metadata and content.
+
     Args:
         input_folder: Path to folder containing markdown files
-        
+        output_folder: Path to folder where HTML files will be saved (optional)
+
     Returns:
-        Dictionary with filename as key and parsed JSON data as value
+        Dictionary with filename as key and parsed data as value
     """
     data = {}
-    
+
     # Get all .md files in the folder
     md_files = [f for f in os.listdir(input_folder) if f.endswith('.md')]
     md_files.sort()  # Sort for consistent ordering
-    
+
+    # Create output folder if specified
+    if output_folder:
+        os.makedirs(output_folder, exist_ok=True)
+
     for filename in md_files:
         search = re.search(r'^(\d+)[_-].*\.md$', filename)
         if not search:
@@ -239,46 +246,96 @@ def load_markdown_files(input_folder: str) -> Dict[str, Dict]:
         article_id = int(search.group(1))
 
         filepath = os.path.join(input_folder, filename)
-        
+
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                content = f.read()
-            
-            # Extract JSON from <script type="application/json"> tags
-            json_match = re.search(r'<script type="application/json">\s*(.*?)\s*</script>', 
-                                 content, re.DOTALL)
-            
-            # Remove script tags before extracting title/content
-            content_no_script = re.sub(r'<script.*?</script>', '', content, flags=re.DOTALL)
-            
-            # Extract title and content
-            title_match = re.search(r'^#\s*(.*?)$', content_no_script, re.MULTILINE)
-            content_match = re.search(r'^#.*?\n\n(.*?)$', content_no_script, re.DOTALL)
-            
-            title = title_match.group(1) if title_match else None
-            content = content_match.group(1) if content_match else None
-            
-            key = os.path.splitext(filename)[0]
-            data[key] = {
-                'id': article_id,
-                'title': title,
-                'content': content
-            }
+                markdown_content = f.read()
 
-            if json_match:
-                json_str = json_match.group(1)
-                try:
-                    json_data = json.loads(json_str)
-                    json_data['id'] = article_id
-                    data[key].update(json_data)
-                except json.JSONDecodeError as e:
-                    print(f"Warning: Could not parse JSON in {filename}: {e}")
-            else:
-                print(f"Warning: No JSON data found in {filename}")
-                
+            # Convert markdown to HTML
+            html_content = markdown.markdown(markdown_content)
+
+            # Parse HTML to extract structured data
+            try:
+                # Parse HTML with XML parser
+                root = ET.fromstring(f'<root>{html_content}</root>')
+
+                # Extract first h1 tag as title
+                h1_elem = root.find('.//h1')
+                title = h1_elem.text.strip() if h1_elem is not None and h1_elem.text else None
+
+                # Extract first p tag as content
+                p_elem = root.find('.//p')
+                content = p_elem.text.strip() if p_elem is not None and p_elem.text else None
+
+                # Extract JSON script data
+                script_elem = root.find('.//script[@type="application/json"]')
+                json_data = {}
+                if script_elem is not None and script_elem.text:
+                    try:
+                        json_data = json.loads(script_elem.text.strip())
+                    except json.JSONDecodeError as e:
+                        print(f"Warning: Could not parse JSON in {filename}: {e}")
+
+                key = os.path.splitext(filename)[0]
+                data[key] = {
+                    'id': article_id,
+                    'title': title,
+                    'content': content,
+                    'html_content': html_content
+                }
+
+                # Add JSON data to the result
+                json_data['id'] = article_id
+                data[key].update(json_data)
+
+                # Save HTML file if output folder specified
+                if output_folder:
+                    html_filename = filename.replace('.md', '.html')
+                    html_filepath = os.path.join(output_folder, html_filename)
+                    with open(html_filepath, 'w', encoding='utf-8') as f:
+                        f.write(html_content)
+                    print(f"Saved HTML: {html_filepath}")
+
+            except ET.ParseError as e:
+                print(f"Warning: Could not parse HTML in {filename}: {e}")
+                # Fallback to regex approach if XML parsing fails
+                print(f"Using regex fallback for {filename}")
+
+                # Extract JSON from <script type="application/json"> tags
+                json_match = re.search(r'<script type="application/json">\s*(.*?)\s*</script>',
+                                     markdown_content, re.DOTALL)
+
+                # Remove script tags before extracting title/content
+                content_no_script = re.sub(r'<script.*?</script>', '', markdown_content, flags=re.DOTALL)
+
+                # Extract title and content using regex
+                title_match = re.search(r'^#\s*(.*?)$', content_no_script, re.MULTILINE)
+                content_match = re.search(r'^#.*?\n\n(.*?)$', content_no_script, re.DOTALL)
+
+                title = title_match.group(1) if title_match else None
+                content = content_match.group(1) if content_match else None
+
+                json_data = {}
+                if json_match:
+                    try:
+                        json_data = json.loads(json_match.group(1))
+                    except json.JSONDecodeError as e:
+                        print(f"Warning: Could not parse JSON in {filename}: {e}")
+
+                key = os.path.splitext(filename)[0]
+                data[key] = {
+                    'id': article_id,
+                    'title': title,
+                    'content': content,
+                    'html_content': html_content
+                }
+
+                json_data['id'] = article_id
+                data[key].update(json_data)
+
         except Exception as e:
             print(f"Error reading {filename}: {e}")
-    
+
     print(f"Loaded {len(data)} articles from {input_folder}")
     return data
 
@@ -286,33 +343,44 @@ def main(input_folder: str, output_file: str):
     # Initialize the embedding generator
     generator = ArticleEmbeddingGenerator()
 
+    html_output_folder = os.path.dirname(output_file)
+    if not os.path.exists(html_output_folder):
+        os.makedirs(html_output_folder)
+
     # Load project data from markdown files
-    data = load_markdown_files(input_folder)
+    data = load_markdown_files(input_folder, html_output_folder)
     
     ids = [i['id'] for i in data.values()]
     titles = [i['title'] for i in data.values()]
     contents = [i['content'] for i in data.values()]
-    categories = [i['category'] for i in data.values()]
-    technologies = [i['technologies'] for i in data.values()]
-    descriptions = [i['description'] for i in data.values()]
-    features = [i['features'] for i in data.values()]
-    use_cases = [i['use_cases'] for i in data.values()]
-    technical_details = [i['technical_details'] for i in data.values()]
-    difficulty = [i['difficulty'] for i in data.values()]
-    tags = [i['tags'] for i in data.values()]
 
-    # Generate embeddings for technologies
-    embeddings_technologies = generator.generate_embeddings(technologies)
-    embeddings_descriptions = generator.generate_embeddings(descriptions)
 
-    # use just the technologies
-    embeddings = embeddings_technologies
+    # Define weights for each field
+    weights = {
+        'title': 1,
+        'category': 0,
+        'technologies': 3,
+        'description': 1,
+        'features': 0,
+        'use_cases': 0,
+        'technical_details': 0,
+        'difficulty': 0,
+        'tags': 0
+    }
 
-    # use the average of the technologies and descriptions
-    # embeddings = (embeddings_technologies + embeddings_descriptions) / 2
+    # Generate embeddings only for fields with non-zero weights
+    embeddings_dict = {}
+    for field, weight in weights.items():
+        if weight > 0:
+            field_data = [i[field] for i in data.values()]
+            embeddings_dict[field] = generator.generate_embeddings(field_data)
 
-    # use just the descriptions
-    # embeddings = embeddings_descriptions
+    # Calculate weighted average
+    total_weight = sum(weights.values())
+    embeddings = np.zeros((len(data), generator.embedding_dim))
+    for field, emb in embeddings_dict.items():
+        embeddings += weights[field] * emb
+    embeddings /= total_weight
     
     # Apply dimensionality reductions
     reduced_pca_3d, pca_model_3d = generator.reduce_pca(embeddings, n_components=3)
@@ -338,7 +406,7 @@ def main(input_folder: str, output_file: str):
             "id": ids[i],
             "title": titles[i],
             "content": contents[i],
-            "embedding": embeddings[i].tolist(),
+            # "embedding": embeddings[i].tolist(),
             "pca_2d": reduced_pca_2d[i].tolist(),
             "pca_3d": reduced_pca_3d[i].tolist(),
             "tsne_2d": reduced_tsne_2d[i].tolist(),
@@ -356,14 +424,14 @@ def main(input_folder: str, output_file: str):
 def _run():
     """Main function to run the embedding pipeline from command line"""
     import argparse
-    
+
     parser = argparse.ArgumentParser(description='Generate embeddings and dimensionality reductions for project data')
     parser.add_argument('--input', '-i', type=str, required=True, help='Input folder containing markdown files with project data')
     parser.add_argument('--output', '-o', type=str, required=True, help='Output file path for embeddings')
     parser.add_argument('--model', '-m', type=str, default=DEFAULT_EMBEDDING_MODEL, help='Name of the embedding model')
-    
+
     args = parser.parse_args()
-    
+
     main(args.input, args.output)
 
 
