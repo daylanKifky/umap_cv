@@ -572,15 +572,15 @@
                     document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
                     document.getElementById('loading').style.display = 'none';
                     
-                    this.createArticleCards();
+                    await this.createArticleCards();
                 } catch (error) {
                     console.error('Error loading articles:', error);
                     document.getElementById('loading').textContent = 'Error loading articles';
                 }
             }
             
-            createArticleCards() {
-                return this.articleManager.createArticleCards(this.articles, this.currentMethod);
+            async createArticleCards() {
+                return await this.articleManager.createArticleCards(this.articles, this.currentMethod);
             }
             
             
@@ -830,7 +830,7 @@
             setupReductionMethodSelector() {
                 const selector = document.getElementById('reduction-method');
                 
-                selector.addEventListener('change', (e) => {
+                selector.addEventListener('change', async (e) => {
                     this.currentMethod = e.target.value;
                     console.log(`Switching to ${this.currentMethod.toUpperCase()} visualization`);
                     
@@ -838,16 +838,16 @@
                     const methodDisplay = document.getElementById('current-method');
                     methodDisplay.textContent = `Method: ${this.currentMethod.toUpperCase()}`;
                     
-                    this.updateVisualization();
+                    await this.updateVisualization();
                 });
             }
             
-            updateVisualization() {
+            async updateVisualization() {
                 // Dispose current article manager resources
                 this.articleManager.dispose();
                 
                 // Recreate cards with new method
-                this.createArticleCards();
+                await this.createArticleCards();
                 
                 // If there was a search active, re-apply it
                 if (this.searchResults) {

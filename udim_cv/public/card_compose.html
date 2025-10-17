@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Card Composition Test</title>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            background: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            font-family: 'Raleway', sans-serif;
+        }
+        #controls {
+            margin: 20px;
+            color: white;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        canvas {
+            border: 1px solid #666;
+            margin: 20px;
+        }
+        #info {
+            color: white;
+            margin: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button onclick="testEntity()">Test Entity</button>
+        <input type="color" id="colorPicker" value="#ff4080" onchange="testEntity()">
+        <label style="color: white;">R: <input type="range" id="rSlider" min="0" max="255" value="255" onchange="updateColor()"></label>
+        <label style="color: white;">G: <input type="range" id="gSlider" min="0" max="255" value="64" onchange="updateColor()"></label>
+        <label style="color: white;">B: <input type="range" id="bSlider" min="0" max="255" value="128" onchange="updateColor()"></label>
+    </div>
+    <div id="info">Canvas dimensions will match window size * 0.3</div>
+    <canvas id="cardCanvas"></canvas>
+
+    <!-- THREE.js for THREE.Color -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Article 3D Module -->
+    <script src="article3D.js"></script>
+
+    <script>
+        const dummyArticle = {
+            id: "test_001",
+            title: "Building a Real-time Data Pipeline with Apache Kafka and Python",
+            content: "Learn how to create a robust data pipeline using Apache Kafka and Python. We'll cover setting up Kafka, implementing producers and consumers, handling stream processing, and deploying the solution. This comprehensive guide includes best practices for scalability and error handling in production environments.",
+            full_content: "Full content here...",
+            filepath: "test/article.md"
+        };
+
+        let currentEntity = null;
+        let articleManager = null;
+
+        function updateColor() {
+            const r = parseInt(document.getElementById('rSlider').value);
+            const g = parseInt(document.getElementById('gSlider').value);
+            const b = parseInt(document.getElementById('bSlider').value);
+            
+            // Update color picker to match sliders
+            const hexColor = '#' + [r, g, b].map(x => {
+                const hex = x.toString(16);
+                return hex.length === 1 ? '0' + hex : hex;
+            }).join('');
+            document.getElementById('colorPicker').value = hexColor;
+            
+            testEntity();
+        }
+
+        async function testEntity() {
+            console.log("Testing ArticleEntity...");
+            
+            // Initialize ArticleManager if not already done
+            if (!articleManager) {
+                articleManager = new ArticleManager(null, null);
+                await articleManager.loadFonts();
+            }
+            
+            // Get color from sliders
+            const r = parseInt(document.getElementById('rSlider').value);
+            const g = parseInt(document.getElementById('gSlider').value);
+            const b = parseInt(document.getElementById('bSlider').value);
+            
+            // Create THREE.Color
+            const color = new THREE.Color(r/255, g/255, b/255);
+            console.log("Original color:", color);
+            
+            // Apply same transformation as in ArticleManager
+            color.offsetHSL(0, 0.3, 0.2);
+            console.log("Transformed color:", color);
+            
+            // Create ArticleEntity
+            currentEntity = new ArticleEntity(dummyArticle, 0, color);
+            
+            // Get canvas and set dimensions based on window size
+            const canvas = document.getElementById('cardCanvas');
+            const SCALE_FACTOR = 0.3;
+            const width = Math.floor(window.innerWidth * SCALE_FACTOR);
+            const height = Math.floor(window.innerHeight * SCALE_FACTOR);
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Update info
+            document.getElementById('info').textContent = 
+                `Canvas: ${width}x${height} | Color RGB: (${Math.floor(color.r*255)}, ${Math.floor(color.g*255)}, ${Math.floor(color.b*255)})`;
+            
+            // Get context and render
+            const context = canvas.getContext('2d');
+            currentEntity.updateCardTexture(context, width, height);
+            
+            console.log("Entity rendered successfully");
+        }
+
+        // Initial draw when fonts are ready
+        document.fonts.ready.then(() => {
+            console.log("Fonts loaded");
+            testEntity();
+        });
+    </script>
+</body>
+</html>

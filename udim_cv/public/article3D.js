@@ -34,6 +34,8 @@ class ArticleEntity {
         
         // Create texture from canvas
         const texture = new THREE.CanvasTexture(canvas);
+        
+        // Create texture from canvas and update it
         this.updateCardTexture(context, width, height);
         
         // Create plane geometry with correct aspect ratio
@@ -212,13 +214,13 @@ class ArticleEntity {
         
         // Draw title
         context.fillStyle = colorStr;
-        context.font = `bold ${titleFontSize}px Noto Sans`;
+        context.font = `bold ${titleFontSize}px "Raleway"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
         this.wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2);
 
         // Draw content
-        context.font = `${contentFontSize}px Noto Sans`;
+        context.font = `${contentFontSize}px "Raleway"`;
         const contentY = titleY + titleFontSize * 2;
         this.wrapText(context, this.content.substring(0, 300) + '...', padding, contentY, width - padding * 2, contentFontSize * 1.3);
 
@@ -276,6 +278,7 @@ class ArticleManager {
         this.camera = camera;
         this.entities = [];
         this.articles = [];
+        this.fontsLoaded = false;
     }
 
     /**
@@ -283,7 +286,28 @@ class ArticleManager {
      * @param {Array} articles - Array of article objects
      * @param {string} currentMethod - Current dimensionality reduction method (umap, pca, tsne)
      */
-    createArticleCards(articles, currentMethod) {
+    async loadFonts() {
+        if (this.fontsLoaded) return;
+
+        if (document.fonts) {
+            try {
+                await Promise.all([
+                    document.fonts.load('bold 16px "Raleway"'),
+                    document.fonts.load('16px "Raleway"')
+                ]);
+                console.log("Fonts loaded successfully");
+                this.fontsLoaded = true;
+            } catch (err) {
+                console.warn("Font loading failed, falling back to system font:", err);
+                this.fontsLoaded = true; // Set to true anyway to avoid retrying
+            }
+        } else {
+            this.fontsLoaded = true;
+        }
+    }
+
+    async createArticleCards(articles, currentMethod) {
+        await this.loadFonts();
         this.articles = articles;
         const embeddingField = `${currentMethod}_3d`;
         console.log(`Creating cards with field: ${embeddingField}`);
