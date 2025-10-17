@@ -2,12 +2,15 @@
  * ArticleEntity - Handles a single article's 3D representation
  */
 class ArticleEntity {
-    constructor(article, index) {
+    constructor(article, index, color) {
         this.article = article;
         this.index = index;
+        this.id = article.id;
+        this.title = article.title;
+        this.content = article.content;
         this.card = null;
-        this.label = null;
-        this.originalSize = 0.5;
+        this.originalSize = 0.3;
+        this.color = color;
     }
 
     /**
@@ -18,18 +21,29 @@ class ArticleEntity {
      * @returns {THREE.Mesh} The created card mesh
      */
     createCard(x, y, z) {
-        // Create card geometry and material
-        const geometry = new THREE.SphereGeometry(this.originalSize, 16, 16);
+        // Calculate dimensions based on window size
+        const SCALE_FACTOR = 0.3; // Adjust this value to change card size
+        const width = Math.floor(window.innerWidth * SCALE_FACTOR);
+        const height = Math.floor(window.innerHeight * SCALE_FACTOR);
         
-        // Color based on article index
-        const hue = (this.index * 137.5) % 360; // Golden angle for good distribution
-        const color = new THREE.Color().setHSL(hue / 360, 0.7, 0.6);
+        // Create canvas for texture
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = width;
+        canvas.height = height;
         
-        const material = new THREE.MeshPhongMaterial({ 
-            color: color,
-            shininess: 100,
+        // Create texture from canvas
+        const texture = new THREE.CanvasTexture(canvas);
+        this.updateCardTexture(context, width, height);
+        
+        // Create plane geometry with correct aspect ratio
+        const aspectRatio = width / height;
+        const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
             transparent: true,
-            opacity: 0.9
+            opacity: 0.9,
+            side: THREE.DoubleSide
         });
         
         this.card = new THREE.Mesh(geometry, material);
@@ -41,67 +55,20 @@ class ArticleEntity {
         this.card.userData = {
             article: this.article,
             originalIndex: this.index,
-            entity: this // Reference back to this entity
+            entity: this
         };
         
         return this.card;
     }
 
-    /**
-     * Create text label for this article
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} z - Z position
-     * @returns {THREE.Mesh} The created label mesh
-     */
-    createLabel(x, y, z) {
-        // Create canvas for text texture
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 64;
-        
-        // Draw text on canvas
-        context.fillStyle = 'rgba(0, 0, 0, 0.8)';
-        context.fillRect(0, 0, canvas.width, canvas.height);
-        
-        context.fillStyle = 'white';
-        context.font = '14px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        
-        // Truncate long titles
-        const maxLength = 30;
-        const displayText = this.article.title.length > maxLength ? 
-            this.article.title.substring(0, maxLength) + '...' : 
-            this.article.title;
-        context.fillText(displayText, canvas.width / 2, canvas.height / 2);
-        
-        // Create texture and material
-        const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.MeshBasicMaterial({ 
-            map: texture, 
-            transparent: true,
-            alphaTest: 0.1
-        });
-        
-        // Create plane geometry for label
-        const geometry = new THREE.PlaneGeometry(4, 1);
-        this.label = new THREE.Mesh(geometry, material);
-        
-        // Position label slightly offset from card
-        this.label.position.set(x + 1.5, y + 1, z);
-        
-        return this.label;
-    }
 
     /**
-     * Update label to face camera position
+     * Update card to face camera position
      * @param {THREE.Vector3} cameraPosition - The camera position to look at
      */
     update(cameraPosition) {
-        if (this.label && cameraPosition) {
-            this.label.lookAt(cameraPosition);
+        if (this.card && cameraPosition) {
+            this.card.lookAt(cameraPosition);
         }
     }
 
@@ -120,11 +87,11 @@ class ArticleEntity {
         if (similarity > 0) {
             // Highlight matching articles
             material.opacity = 0.9;
-            material.emissive.setRGB(similarity * 0.3, similarity * 0.3, 0);
+            // material.emissive.setRGB(similarity * 0.3, similarity * 0.3, 0);
         } else {
             // Dim non-matching articles
             material.opacity = 0.3;
-            material.emissive.setRGB(0, 0, 0);
+            // material.emissive.setRGB(0, 0, 0);
         }
     }
 
@@ -137,7 +104,6 @@ class ArticleEntity {
         this.card.scale.setScalar(1.0);
         const material = this.card.material;
         material.opacity = 0.9;
-        material.emissive.setRGB(0, 0, 0);
     }
 
     /**
@@ -149,7 +115,7 @@ class ArticleEntity {
         const normalizedSim = Math.max(0, Math.min(1, similarity));
         const amplified = Math.pow(normalizedSim, 0.3);
         const minScale = 0.2;
-        const maxScale = 4.0;
+        const maxScale = 2.0;
         return minScale + (maxScale - minScale) * amplified;
     }
 
@@ -211,16 +177,10 @@ class ArticleEntity {
         if (this.card) {
             this.card.geometry.dispose();
             this.card.material.dispose();
-            this.card = null;
-        }
-        
-        if (this.label) {
-            this.label.geometry.dispose();
-            this.label.material.dispose();
-            if (this.label.material.map) {
-                this.label.material.map.dispose();
+            if (this.card.material.map) {
+                this.card.material.map.dispose();
             }
-            this.label = null;
+            this.card = null;
         }
     }
 
@@ -230,6 +190,72 @@ class ArticleEntity {
      */
     getCard() {
         return this.card;
+    }
+
+    /**
+     * Update the card's canvas texture
+     * @param {CanvasRenderingContext2D} context - The canvas context to draw on
+     */
+    updateCardTexture(context, width, height) {
+        // Clear canvas with transparency
+        context.clearRect(0, 0, width, height);
+
+        // Convert THREE.Color to CSS color string
+        const colorStr = `rgb(${Math.floor(this.color.r * 255)}, ${Math.floor(this.color.g * 255)}, ${Math.floor(this.color.b * 255)})`;
+
+        // Calculate font sizes based on canvas size
+        const titleFontSize = Math.max(16, Math.floor(height * 0.06));
+        const contentFontSize = Math.max(12, Math.floor(height * 0.04));
+        
+        // Set padding
+        const padding = Math.floor(width * 0.05);
+        
+        // Draw title
+        context.fillStyle = colorStr;
+        context.font = `bold ${titleFontSize}px Noto Sans`;
+        context.textAlign = 'left';
+        const titleY = padding + titleFontSize;
+        this.wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2);
+
+        // Draw content
+        context.font = `${contentFontSize}px Noto Sans`;
+        const contentY = titleY + titleFontSize * 2;
+        this.wrapText(context, this.content.substring(0, 300) + '...', padding, contentY, width - padding * 2, contentFontSize * 1.3);
+
+        // Update texture
+        if (this.card && this.card.material.map) {
+            this.card.material.map.needsUpdate = true;
+        }
+    }
+
+    /**
+     * Helper function to wrap text in canvas
+     * @param {CanvasRenderingContext2D} context - The canvas context
+     * @param {string} text - Text to wrap
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} maxWidth - Maximum width of text
+     * @param {number} lineHeight - Height of each line
+     */
+    wrapText(context, text, x, y, maxWidth, lineHeight) {
+        const words = text.split(' ');
+        let line = '';
+        let currentY = y;
+
+        for(let n = 0; n < words.length; n++) {
+            const testLine = line + words[n] + ' ';
+            const metrics = context.measureText(testLine);
+            const testWidth = metrics.width;
+
+            if (testWidth > maxWidth && n > 0) {
+                context.fillText(line, x, currentY);
+                line = words[n] + ' ';
+                currentY += lineHeight;
+            } else {
+                line = testLine;
+            }
+        }
+        context.fillText(line, x, currentY);
     }
 
     /**
@@ -302,18 +328,27 @@ class ArticleManager {
             const [x, y, z] = article[embeddingField];
             
             // Normalize and scale coordinates
-            const normalizedX = ((x - centerX) / (maxX - minX)) * scale;
-            const normalizedY = ((y - centerY) / (maxY - minY)) * scale;
-            const normalizedZ = ((z - centerZ) / (maxZ - minZ)) * scale;
+            const normalizedX = ((x - centerX) / (maxX - minX));
+            const normalizedY = ((y - centerY) / (maxY - minY));
+            const normalizedZ = ((z - centerZ) / (maxZ - minZ));
+
+            console.log(`Normalized coordinates: ${normalizedX}, ${normalizedY}, ${normalizedZ}`);
             
-            // Create ArticleEntity
-            const entity = new ArticleEntity(article, index);
-            const card = entity.createCard(normalizedX, normalizedY, normalizedZ);
-            const label = entity.createLabel(normalizedX, normalizedY, normalizedZ);
+            // Convert normalized coordinates to RGB (0-255 range)
+            const r = Math.floor((normalizedX + 1) * 127.5);
+            const g = Math.floor((normalizedY + 1) * 127.5);
+            const b = Math.floor((normalizedZ + 1) * 127.5);
+            console.log(`RGB: ${r}, ${g}, ${b}`);
             
-            // Add objects to scene
+            // Create ArticleEntity with RGB color
+            const color = new THREE.Color(r/255, g/255, b/255);
+            color.offsetHSL(0, 0.3, 0.2); 
+            console.log(`Color: ${color}`);
+            const entity = new ArticleEntity(article, index, color);
+            const card = entity.createCard(normalizedX*scale, normalizedY*scale, normalizedZ*scale);
+            
+            // Add card to scene
             this.scene.add(card);
-            this.scene.add(label);
             
             this.entities.push(entity);
         });
@@ -386,9 +421,6 @@ class ArticleManager {
             // Remove objects from scene first
             if (entity.getCard()) {
                 this.scene.remove(entity.getCard());
-            }
-            if (entity.getLabel()) {
-                this.scene.remove(entity.getLabel());
             }
             // Then dispose entity resources
             entity.dispose();
