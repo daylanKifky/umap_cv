@@ -46,7 +46,7 @@ class QueryRequest(BaseModel):
     top_k: int = 5
 
 class SearchResult(BaseModel):
-    id: str
+    id: int
     title: str
     content: str
     filepath: str

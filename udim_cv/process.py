@@ -232,11 +232,12 @@ def load_markdown_files(input_folder: str) -> Dict[str, Dict]:
     md_files.sort()  # Sort for consistent ordering
     
     for filename in md_files:
-        article_id = re.search(r'^(\d+)_.*\.md$', filename).group(1)
-        if not article_id:
+        search = re.search(r'^(\d+)[_-].*\.md$', filename)
+        if not search:
             print(f"Warning: Could not find file ID in {filename}")
             continue
-        article_id = int(article_id)
+        article_id = int(search.group(1))
+
         filepath = os.path.join(input_folder, filename)
         
         try:
@@ -247,14 +248,29 @@ def load_markdown_files(input_folder: str) -> Dict[str, Dict]:
             json_match = re.search(r'<script type="application/json">\s*(.*?)\s*</script>', 
                                  content, re.DOTALL)
             
+            # Remove script tags before extracting title/content
+            content_no_script = re.sub(r'<script.*?</script>', '', content, flags=re.DOTALL)
+            
+            # Extract title and content
+            title_match = re.search(r'^#\s*(.*?)$', content_no_script, re.MULTILINE)
+            content_match = re.search(r'^#.*?\n\n(.*?)$', content_no_script, re.DOTALL)
+            
+            title = title_match.group(1) if title_match else None
+            content = content_match.group(1) if content_match else None
+            
+            key = os.path.splitext(filename)[0]
+            data[key] = {
+                'id': article_id,
+                'title': title,
+                'content': content
+            }
+
             if json_match:
                 json_str = json_match.group(1)
                 try:
                     json_data = json.loads(json_str)
                     json_data['id'] = article_id
-                    # Use filename without extension as key
-                    key = os.path.splitext(filename)[0]
-                    data[key] = json_data
+                    data[key].update(json_data)
                 except json.JSONDecodeError as e:
                     print(f"Warning: Could not parse JSON in {filename}: {e}")
             else:
@@ -274,6 +290,8 @@ def main(input_folder: str, output_file: str):
     data = load_markdown_files(input_folder)
     
     ids = [i['id'] for i in data.values()]
+    titles = [i['title'] for i in data.values()]
+    contents = [i['content'] for i in data.values()]
     categories = [i['category'] for i in data.values()]
     technologies = [i['technologies'] for i in data.values()]
     descriptions = [i['description'] for i in data.values()]
@@ -318,8 +336,8 @@ def main(input_folder: str, output_file: str):
         title = list(data.keys())[i]
         article_entry = {
             "id": ids[i],
-            "title": title,
-            "content": descriptions[i],
+            "title": titles[i],
+            "content": contents[i],
             "embedding": embeddings[i].tolist(),
             "pca_2d": reduced_pca_2d[i].tolist(),
             "pca_3d": reduced_pca_3d[i].tolist(),
