@@ -1,3 +1,5 @@
+
+
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
 
@@ -367,13 +369,64 @@ class ArticleEntity {
     }
 }
 
+class coordinateConverter {
+    constructor(scaleFactor = 30) {
+        this.minX = Infinity; this.maxX = -Infinity;
+        this.minY = Infinity; this.maxY = -Infinity;
+        this.minZ = Infinity; this.maxZ = -Infinity;
+        this.scaleFactor = scaleFactor;
+    }
+    
+    add(x, y, z) {
+        this.minX = Math.min(this.minX, x);
+        this.maxX = Math.max(this.maxX, x);
+        this.minY = Math.min(this.minY, y);
+        this.maxY = Math.max(this.maxY, y);
+        this.minZ = Math.min(this.minZ, z);
+        this.maxZ = Math.max(this.maxZ, z);
+        this.centerX = (this.minX + this.maxX) / 2;
+        this.centerY = (this.minY + this.maxY) / 2;
+        this.centerZ = (this.minZ + this.maxZ) / 2;
+    }
+
+    process(x, y, z) {
+        // Normalize coordinates
+        const normalizedX = ((x - this.centerX) / (this.maxX - this.minX));
+        const normalizedY = ((y - this.centerY) / (this.maxY - this.minY)); 
+        const normalizedZ = ((z - this.centerZ) / (this.maxZ - this.minZ));
+
+        // Scale coordinates
+        const scaledX = normalizedX * this.scaleFactor;
+        const scaledY = normalizedY * this.scaleFactor;
+        const scaledZ = normalizedZ * this.scaleFactor;
+
+        
+        return {
+            x: scaledX,
+            y: scaledY, 
+            z: scaledZ,
+            color: () => {
+                // Convert normalized coordinates to RGB (0-255 range)
+                const r = Math.floor((normalizedX + 1) * 127.5);
+                const g = Math.floor((normalizedY + 1) * 127.5);
+                const b = Math.floor((normalizedZ + 1) * 127.5);
+                const color = new THREE.Color(r/255, g/255, b/255);
+                color.offsetHSL(0, 0.3, 0.2);
+                return color;
+            }
+        };
+    }
+}
+
+
 
 
 /**
  * ArticleManager - Manages a collection of ArticleEntity objects
  */
 class ArticleManager {
-    constructor(scene, camera) {
+    constructor(scene, camera, converter) {
+        this.converter = new coordinateConverter();
         this.scene = scene;
         this.camera = camera;
         this.entities = [];
@@ -422,9 +475,18 @@ class ArticleManager {
         }
     }
 
-    async createArticleCards(articles, currentMethod) {
-        await this.loadFonts();
+    addArticles(articles) {
         this.articles = articles;
+        this.articles.forEach(article => {
+            if (article["pca_3d"]) {
+                const [x, y, z] = article["pca_3d"];
+                this.converter.add(x, y, z);
+            }
+        });
+    }
+
+    async createArticleCards(currentMethod) {
+        await this.loadFonts();
         const embeddingField = `${currentMethod}_3d`;
         console.log(`Creating cards with field: ${embeddingField}`);
         
@@ -436,28 +498,6 @@ class ArticleManager {
      * @param {string} embeddingField - The field name for 3D coordinates
      */
     createArticleCardsWithField(embeddingField) {
-        // Calculate bounds for normalization
-        let minX = Infinity, maxX = -Infinity;
-        let minY = Infinity, maxY = -Infinity;
-        let minZ = Infinity, maxZ = -Infinity;
-        
-        this.articles.forEach(article => {
-            if (article[embeddingField]) {
-                const [x, y, z] = article[embeddingField];
-                minX = Math.min(minX, x);
-                maxX = Math.max(maxX, x);
-                minY = Math.min(minY, y);
-                maxY = Math.max(maxY, y);
-                minZ = Math.min(minZ, z);
-                maxZ = Math.max(maxZ, z);
-            }
-        });
-        
-        // Scale factor to fit in reasonable space
-        const scale = 30;
-        const centerX = (minX + maxX) / 2;
-        const centerY = (minY + maxY) / 2;
-        const centerZ = (minZ + maxZ) / 2;
         
         // Clear existing entities
         this.dispose();
@@ -466,24 +506,9 @@ class ArticleManager {
             if (!article[embeddingField]) return;
             
             const [x, y, z] = article[embeddingField];
-            
-            // Normalize and scale coordinates
-            const normalizedX = ((x - centerX) / (maxX - minX));
-            const normalizedY = ((y - centerY) / (maxY - minY));
-            const normalizedZ = ((z - centerZ) / (maxZ - minZ));
+            const coords = this.converter.process(x, y, z);
+            const color = coords.color();
 
-            console.log(`Normalized coordinates: ${normalizedX}, ${normalizedY}, ${normalizedZ}`);
-            
-            // Convert normalized coordinates to RGB (0-255 range)
-            const r = Math.floor((normalizedX + 1) * 127.5);
-            const g = Math.floor((normalizedY + 1) * 127.5);
-            const b = Math.floor((normalizedZ + 1) * 127.5);
-            console.log(`RGB: ${r}, ${g}, ${b}`);
-            
-            // Create ArticleEntity with RGB color
-            const color = new THREE.Color(r/255, g/255, b/255);
-            color.offsetHSL(0, 0.3, 0.2);
-            console.log(`Color: ${color}`);
             const entity = new ArticleEntity(article, index, color);
             const card = entity.createCard(0, 0, 0); // Create card at origin
             
@@ -499,7 +524,7 @@ class ArticleManager {
             const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
 
             // Position sphere at entity location
-            sphere.position.set(normalizedX*scale, normalizedY*scale, normalizedZ*scale);
+            sphere.position.set(coords.x, coords.y, coords.z);
 
             // Make card a child of the sphere
             sphere.add(card);
@@ -514,6 +539,7 @@ class ArticleManager {
         });
         
         console.log(`Created ${this.entities.length} article entities`);
+    
         return this.entities.length;
     }
 

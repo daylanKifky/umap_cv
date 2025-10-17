@@ -549,7 +549,7 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
     
-    <!-- Article 3D Module -->
+    <script src="links.js"></script>
     <script src="article3D.js"></script>
 
     <script>
@@ -638,11 +638,15 @@
                     const response = await fetch('embeddings.json');
                     const data = await response.json();
                     this.articles = data.articles;
-                    
+
                     document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
                     document.getElementById('loading').style.display = 'none';
                     
+                    this.articleManager.addArticles(this.articles);
+                    this.linksManager = new linksManager(data.links, this.articleManager.converter);
                     await this.createArticleCards();
+
+                    
                 } catch (error) {
                     console.error('Error loading articles:', error);
                     document.getElementById('loading').textContent = 'Error loading articles';
@@ -650,7 +654,10 @@
             }
             
             async createArticleCards() {
-                return await this.articleManager.createArticleCards(this.articles, this.currentMethod);
+                await this.articleManager.createArticleCards(this.currentMethod);
+                const linksMesh = this.linksManager.createLinks();
+                this.scene.add(linksMesh);
+                console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
             }
             
             setupBloom() {
