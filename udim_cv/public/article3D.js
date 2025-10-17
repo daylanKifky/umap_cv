@@ -1,3 +1,6 @@
+const FONT_NAME = "Space Grotesk";
+const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
+
 /**
  * ArticleEntity - Handles a single article's 3D representation
  */
@@ -9,9 +12,14 @@ class ArticleEntity {
         this.title = article.title;
         this.content = article.content;
         this.card = null;
-        this.originalSize = 0.3;
         this.color = color;
+    
+        this.maxCardTitleLength = 100;
+        this.maxCardTitleLines = 2;
+        this.maxCardContentLines = 4;
+        this.maxCardContentLength = 300;
     }
+
 
     /**
      * Create the 3D card representation for this article
@@ -22,9 +30,8 @@ class ArticleEntity {
      */
     createCard(x, y, z) {
         // Calculate dimensions based on window size
-        const SCALE_FACTOR = 0.3; // Adjust this value to change card size
-        const width = Math.floor(window.innerWidth * SCALE_FACTOR);
-        const height = Math.floor(window.innerHeight * SCALE_FACTOR);
+        const width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
+        const height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
         
         // Create canvas for texture
         const canvas = document.createElement('canvas');
@@ -214,15 +221,15 @@ class ArticleEntity {
         
         // Draw title
         context.fillStyle = colorStr;
-        context.font = `bold ${titleFontSize}px "Raleway"`;
+        context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        this.wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2);
+        const titleEndY = this.wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines);
 
-        // Draw content
-        context.font = `${contentFontSize}px "Raleway"`;
-        const contentY = titleY + titleFontSize * 2;
-        this.wrapText(context, this.content.substring(0, 300) + '...', padding, contentY, width - padding * 2, contentFontSize * 1.3);
+        // Draw content after title with some spacing
+        context.font = `${contentFontSize}px "${FONT_NAME}"`;
+        const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
+        this.wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
 
         // Update texture
         if (this.card && this.card.material.map) {
@@ -238,11 +245,17 @@ class ArticleEntity {
      * @param {number} y - Y position
      * @param {number} maxWidth - Maximum width of text
      * @param {number} lineHeight - Height of each line
+     * @returns {number} The final Y position after all lines
      */
-    wrapText(context, text, x, y, maxWidth, lineHeight) {
-        const words = text.split(' ');
+    wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines) {
         let line = '';
         let currentY = y;
+        let lines = 0;
+        
+        if (text.length > maxChars) {
+            text = text.substring(0, maxChars) + '...';
+        }
+        const words = text.split(' ');
 
         for(let n = 0; n < words.length; n++) {
             const testLine = line + words[n] + ' ';
@@ -253,11 +266,19 @@ class ArticleEntity {
                 context.fillText(line, x, currentY);
                 line = words[n] + ' ';
                 currentY += lineHeight;
+                lines++;
             } else {
                 line = testLine;
             }
+            if (maxLines && lines >= maxLines) {
+                line = line.substring(0, line.length - 1) + '...';
+                break;
+            }
         }
         context.fillText(line, x, currentY);
+        
+        // Return the Y position after the last line
+        return currentY + lineHeight;
     }
 
     /**
@@ -268,6 +289,8 @@ class ArticleEntity {
         return this.label;
     }
 }
+
+
 
 /**
  * ArticleManager - Manages a collection of ArticleEntity objects
@@ -291,11 +314,27 @@ class ArticleManager {
 
         if (document.fonts) {
             try {
+                // Wait for all CSS-connected fonts to be ready (registered)
+                await document.fonts.ready;
+                
+                console.log("Font faces registered, now loading specific variants...");
+                
+                // Explicitly load the font variants we need
                 await Promise.all([
-                    document.fonts.load('bold 16px "Raleway"'),
-                    document.fonts.load('16px "Raleway"')
+                    document.fonts.load(`bold 16px "${FONT_NAME}"`),
+                    document.fonts.load(`400 16px "${FONT_NAME}"`),
+                    document.fonts.load(`16px "${FONT_NAME}"`)
                 ]);
+                
                 console.log("Fonts loaded successfully");
+                console.log(`Total fonts loaded: ${document.fonts.size}`);
+                
+                // Print all available font entries
+                console.debug("Available fonts:");
+                document.fonts.forEach(fontFace => {
+                    console.debug(`  - ${fontFace.family} ${fontFace.weight} ${fontFace.style} (${fontFace.status})`);
+                });
+                
                 this.fontsLoaded = true;
             } catch (err) {
                 console.warn("Font loading failed, falling back to system font:", err);
