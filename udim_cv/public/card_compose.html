@@ -56,7 +56,8 @@
             title: "Building a Real-time Data Pipeline with Apache Kafka and Python",
             content: "Learn how to create a robust data pipeline using Apache Kafka and Python. We'll cover setting up Kafka, implementing producers and consumers, handling stream processing, and deploying the solution. This comprehensive guide includes best practices for scalability and error handling in production environments.",
             full_content: "Full content here...",
-            filepath: "test/article.md"
+            filepath: "test/article.md",
+            thumbnail: "images/placeholder.jpg"
         };
 
         let currentEntity = null;
@@ -115,9 +116,19 @@
             document.getElementById('info').textContent = 
                 `Canvas: ${width}x${height} | Color RGB: (${Math.floor(color.r*255)}, ${Math.floor(color.g*255)}, ${Math.floor(color.b*255)})`;
             
-            // Get context and render
+            // Get context
             const context = canvas.getContext('2d');
+            
+            // Render immediately (text will show, image will show when loaded)
             currentEntity.updateCardTexture(context, width, height);
+            
+            // Wait for thumbnail to load if it exists, then re-render
+            if (currentEntity.thumbnailImage) {
+                currentEntity.thumbnailImage.addEventListener('load', function onLoad() {
+                    console.log("Thumbnail loaded, re-rendering...");
+                    currentEntity.updateCardTexture(context, width, height);
+                });
+            }
             
             console.log("Entity rendered successfully");
         }

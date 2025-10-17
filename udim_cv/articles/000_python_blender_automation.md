@@ -2,6 +2,8 @@
 
 A Python-based automation framework for Blender that enables batch processing of 3D assets, automated scene composition, and render farm management. The system integrates computer vision for texture analysis and machine learning for optimal render settings.
 
+![some image](https://picsum.photos/200/300)
+
 <script type="application/json">
 {
   "category": "programming automation",

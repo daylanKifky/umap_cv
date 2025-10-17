@@ -2,6 +2,8 @@
 
 An animated infographics series designed for educational content, featuring data-driven animations, custom expressions, and interactive elements. The project transforms complex statistical data into engaging visual narratives suitable for online education platforms.
 
+![some_image placeholder](163-1024x768.jpg)
+
 <script type="application/json">
 {
   "category": "design data-visualization",

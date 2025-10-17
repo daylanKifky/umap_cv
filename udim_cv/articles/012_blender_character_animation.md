@@ -2,6 +2,8 @@
 
 A comprehensive character animation project featuring custom rigging systems, facial motion capture integration, and traditional animation techniques. The project culminates in a 10-minute short film showcasing advanced character performance and storytelling through animation.
 
+![portrait](https://picsum.photos/768/1024)
+
 <script type="application/json">
 {
   "category": "design character-animation",

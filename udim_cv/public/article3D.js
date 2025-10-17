@@ -5,19 +5,47 @@ const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window 
  * ArticleEntity - Handles a single article's 3D representation
  */
 class ArticleEntity {
-    constructor(article, index, color) {
+    constructor(article, index, color, image) {
         this.article = article;
         this.index = index;
         this.id = article.id;
         this.title = article.title;
         this.content = article.content;
+        this.thumbnail = article.thumbnail || null;
         this.card = null;
         this.color = color;
-    
+        this.image = image;
+        this.thumbnailImage = null; // Will store loaded Image object
         this.maxCardTitleLength = 100;
         this.maxCardTitleLines = 2;
-        this.maxCardContentLines = 4;
+        this.maxCardContentLines = 3;
         this.maxCardContentLength = 300;
+        
+        // Load thumbnail if available
+        if (this.thumbnail) {
+            this.loadThumbnail();
+        }
+    }
+    
+    /**
+     * Load the thumbnail image
+     */
+    loadThumbnail() {
+        this.thumbnailImage = new Image();
+        this.thumbnailImage.crossOrigin = 'anonymous';
+        this.thumbnailImage.onload = () => {
+            // Re-render the card once the image is loaded
+            if (this.card) {
+                const canvas = this.card.material.map.image;
+                const context = canvas.getContext('2d');
+                this.updateCardTexture(context, canvas.width, canvas.height);
+            }
+        };
+        this.thumbnailImage.onerror = () => {
+            console.warn(`Failed to load thumbnail: ${this.thumbnail}`);
+            this.thumbnailImage = null;
+        };
+        this.thumbnailImage.src = this.thumbnail;
     }
 
 
@@ -229,7 +257,44 @@ class ArticleEntity {
         // Draw content after title with some spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
-        this.wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
+        const contentEndY = this.wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
+
+        // Draw thumbnail image if available and loaded
+        if (this.thumbnailImage && this.thumbnailImage.complete) {
+            const imageY = contentEndY + padding;
+            const availableHeight = height - imageY - padding;
+            const availableWidth = width - padding * 2;
+            
+            if (availableHeight > 0 && availableWidth > 0) {
+                // Fit to the largest dimension of the available space
+                let drawWidth, drawHeight, drawX, drawY;
+                
+                if (availableWidth > availableHeight) {
+                    // Width is the largest dimension - fit to width
+                    drawWidth = availableWidth;
+                    drawHeight = (this.thumbnailImage.height / this.thumbnailImage.width) * availableWidth;
+                } else {
+                    // Height is the largest dimension - fit to height
+                    drawHeight = availableHeight;
+                    drawWidth = (this.thumbnailImage.width / this.thumbnailImage.height) * availableHeight;
+                }
+                
+                // Center the image in the available space
+                drawX = padding + (availableWidth - drawWidth) / 2;
+                drawY = imageY + (availableHeight - drawHeight) / 2;
+                
+                // Use clipping to ensure image doesn't overflow the available space
+                context.save();
+                context.beginPath();
+                context.rect(padding, imageY, availableWidth, availableHeight);
+                context.clip();
+                
+                // Draw the image
+                context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
+                
+                context.restore();
+            }
+        }
 
         // Update texture
         if (this.card && this.card.material.map) {

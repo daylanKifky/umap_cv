@@ -2,6 +2,8 @@
 
 A highly scalable distributed web scraping system designed to handle large-scale data extraction from e-commerce websites, news portals, and social media platforms. The system implements advanced anti-detection mechanisms, intelligent rate limiting, and robust error handling to ensure reliable data collection at scale.
 
+![some_image](placeholder.jpg)
+
 <script type="application/json">
 {
   "category": "programming backend",

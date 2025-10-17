@@ -2,6 +2,8 @@
 
 An automated product visualization pipeline designed for e-commerce applications, capable of rendering over 1000 products with consistent lighting, materials, and composition. The system includes customizable material presets, automated camera positioning, and batch rendering capabilities.
 
+![some image](860-200x200.jpg)
+
 <script type="application/json">
 {
   "category": "design product-visualization",

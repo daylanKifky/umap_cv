@@ -2,6 +2,8 @@
 
 An experimental watercolor animation exploring themes of memory and nostalgia through fluid, organic movements. The 2-minute piece combines traditional watercolor painting techniques with digital compositing to create a dreamlike visual narrative.
 
+![some image](https://picsum.photos/245/300)
+
 <script type="application/json">
 {
   "category": "design traditional-animation",

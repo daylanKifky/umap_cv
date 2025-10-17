@@ -9,6 +9,8 @@ import os
 import re
 import markdown
 import xml.etree.ElementTree as ET
+import shutil
+import urllib.parse
 from typing import List, Union, Tuple, Optional, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL
@@ -197,24 +199,76 @@ def standardize_embeddings(embeddings: np.ndarray) -> np.ndarray:
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
     """
     Split text into overlapping chunks.
-    
+
     Args:
         text: Input text to chunk
         chunk_size: Size of each chunk in words
         overlap: Number of overlapping words between chunks
-        
+
     Returns:
         List of text chunks
     """
     words = text.split()
     chunks = []
-    
+
     for i in range(0, len(words), chunk_size - overlap):
         chunk = ' '.join(words[i:i + chunk_size])
         if chunk:
             chunks.append(chunk)
-    
+
     return chunks if chunks else [text]
+
+
+def handle_image(image_source: str, output_folder: str, base_input_folder: str = None) -> Union[str, bool]:
+    """
+    Handle image source by copying local files or returning remote URLs.
+
+    Args:
+        image_source: Path to image file (local) or URL (remote)
+        output_folder: Folder where images should be copied
+        base_input_folder: Base folder to search for local images
+
+    Returns:
+        Relative path to copied image, URL if remote, or False if not found
+    """
+    if not image_source:
+        return False
+
+    # Check if it's a remote URL
+    parsed = urllib.parse.urlparse(image_source)
+    if parsed.scheme in ('http', 'https', 'ftp', 'ftps'):
+        return image_source  # Return URL as-is
+
+    # Handle local file paths
+    if os.path.isabs(image_source):
+        image_path = image_source
+    elif base_input_folder:
+        image_path = os.path.join(base_input_folder, image_source)
+    else:
+        image_path = image_source
+
+    # Check if file exists
+    if not os.path.exists(image_path):
+        return False
+
+    # Create images subfolder in output if it doesn't exist
+    images_folder = os.path.join(output_folder, 'images')
+    os.makedirs(images_folder, exist_ok=True)
+
+    # Get filename and create destination path
+    filename = os.path.basename(image_path)
+    dest_path = os.path.join(images_folder, filename)
+
+    # Copy if not already present
+    if not os.path.exists(dest_path):
+        try:
+            shutil.copy2(image_path, dest_path)
+        except Exception as e:
+            print(f"Warning: Could not copy image {image_path} to {dest_path}: {e}")
+            return False
+
+    # Return relative path from output folder
+    return os.path.relpath(dest_path, output_folder)
 
 
 def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[str, Dict]:
@@ -267,6 +321,10 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
                 p_elem = root.find('.//p')
                 content = p_elem.text.strip() if p_elem is not None and p_elem.text else None
 
+                # Extract first img tag for image source
+                img_elem = root.find('.//img')
+                first_image_src = img_elem.get('src') if img_elem is not None else None
+
                 # Extract JSON script data
                 script_elem = root.find('.//script[@type="application/json"]')
                 json_data = {}
@@ -281,12 +339,27 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
                     'id': article_id,
                     'title': title,
                     'content': content,
-                    'html_content': html_content
+                    'html_content': html_content,
+                    'first_image_src': first_image_src
                 }
 
                 # Add JSON data to the result
                 json_data['id'] = article_id
                 data[key].update(json_data)
+
+                # Handle image copying if output folder is specified
+                if output_folder:
+                    image_path = ''
+
+                    # Check precedence: thumbnail field in JSON first, then first image tag
+                    if 'thumbnail' in json_data and json_data['thumbnail']:
+                        image_path = handle_image(json_data['thumbnail'], output_folder, input_folder)
+                    elif first_image_src:
+                        image_path = handle_image(first_image_src, output_folder, input_folder)
+
+                    print(f"Processed image for {filename}: {image_path if image_path else 'NOT FOUND'}")
+                    
+                    data[key]['thumbnail'] = image_path
 
                 # Save HTML file if output folder specified
                 if output_folder:
@@ -304,6 +377,10 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
                 # Extract JSON from <script type="application/json"> tags
                 json_match = re.search(r'<script type="application/json">\s*(.*?)\s*</script>',
                                      markdown_content, re.DOTALL)
+
+                # Extract first image tag using regex
+                img_match = re.search(r'<img[^>]+src=["\']([^"\']+)["\'][^>]*>', markdown_content)
+                first_image_src = img_match.group(1) if img_match else None
 
                 # Remove script tags before extracting title/content
                 content_no_script = re.sub(r'<script.*?</script>', '', markdown_content, flags=re.DOTALL)
@@ -327,11 +404,29 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
                     'id': article_id,
                     'title': title,
                     'content': content,
-                    'html_content': html_content
+                    'html_content': html_content,
+                    'first_image_src': first_image_src
                 }
 
+                # Add JSON data to the result
                 json_data['id'] = article_id
                 data[key].update(json_data)
+
+                # Handle image copying if output folder is specified (fallback method)
+                if output_folder:
+                    image_path = None
+
+                    # Check precedence: thumbnail field in JSON first, then first image tag
+                    if 'thumbnail' in json_data and json_data['thumbnail']:
+                        image_path = handle_image(json_data['thumbnail'], output_folder, input_folder)
+                    elif first_image_src:
+                        image_path = handle_image(first_image_src, output_folder, input_folder)
+
+                    if image_path:
+                        data[key]['thumbnail'] = image_path
+                        print(f"Processed image for {filename}: {image_path}")
+                    else:
+                        print(f"No image found for {filename}")
 
         except Exception as e:
             print(f"Error reading {filename}: {e}")
@@ -353,7 +448,7 @@ def main(input_folder: str, output_file: str):
     ids = [i['id'] for i in data.values()]
     titles = [i['title'] for i in data.values()]
     contents = [i['content'] for i in data.values()]
-
+    thumbnails = [i['thumbnail'] for i in data.values()]
 
     # Define weights for each field
     weights = {
@@ -406,6 +501,7 @@ def main(input_folder: str, output_file: str):
             "id": ids[i],
             "title": titles[i],
             "content": contents[i],
+            "thumbnail": thumbnails[i],
             # "embedding": embeddings[i].tolist(),
             "pca_2d": reduced_pca_2d[i].tolist(),
             "pca_3d": reduced_pca_3d[i].tolist(),

@@ -2,6 +2,9 @@
 
 A photorealistic nature documentary project featuring procedural ecosystems, particle-based wildlife simulation, and cinematic lighting. The project showcases advanced Blender techniques for creating believable natural environments and animal behaviors for educational and entertainment purposes.
 
+
+![some image](https://picsum.photos/800/320)
+
 <script type="application/json">
 {
   "category": "design 3d-animation",

@@ -2,6 +2,8 @@
 
 An architectural visualization project showcasing modern residential housing with dynamic lighting systems, realistic materials, and immersive virtual tours. The project was developed for an international design competition and demonstrates cutting-edge visualization techniques.
 
+![portrait](https://picsum.photos/1024/1024)
+
 <script type="application/json">
 {
   "category": "design architecture",

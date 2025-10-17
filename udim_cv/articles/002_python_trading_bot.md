@@ -2,6 +2,8 @@
 
 An intelligent cryptocurrency trading bot that leverages reinforcement learning and technical analysis to execute automated trades across multiple exchanges. The system implements sophisticated risk management strategies, real-time market analysis, and adaptive learning algorithms to optimize trading performance in volatile cryptocurrency markets.
 
+![some image](314-200x500.jpg)
+
 <script type="application/json">
 {
   "category": "programming fintech",

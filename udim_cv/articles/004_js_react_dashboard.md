@@ -2,6 +2,8 @@
 
 A sophisticated real-time analytics dashboard built with React and Socket.IO, designed for enterprise-level data visualization and monitoring. The platform supports custom widget creation, dynamic theming, and real-time data streaming, serving over 10,000 daily active users across various industries.
 
+![portrait](https://picsum.photos/768/1024)
+
 <script type="application/json">
 {
   "category": "programming frontend",
