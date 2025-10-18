@@ -240,7 +240,7 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
 
     # Check if it's a remote URL
     parsed = urllib.parse.urlparse(image_source)
-    if parsed.scheme in ('http', 'https', 'ftp', 'ftps'):
+    if parsed.scheme in ('http', 'https'):
         return image_source  # Return URL as-is
 
     # Handle local file paths
@@ -525,16 +525,25 @@ def main(input_folder: str, output_file: str):
         end_id = ids[j]
 
         # Get the 3D coordinates for the arc calculation
-        origin_coords = reduced_pca_3d[i]
-        end_coords = reduced_pca_3d[j]
+        origin_coords = np.array(reduced_pca_3d[i])
+        end_coords =    np.array(reduced_pca_3d[j])
+
+        direction = end_coords - origin_coords
+        direction = direction / np.linalg.norm(direction)
+
+        midpoint = origin_coords + direction * 0.5
+
+        tangent = np.cross(direction, midpoint) 
+        tangent = tangent / np.linalg.norm(tangent)
 
         # Create the connecting arc
-        arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=2)
+        arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
         link = {
             "origin_id": origin_id,
             "end_id": end_id,
-            "arc_vertices": arc_vertices.tolist()
+            "arc_vertices": arc_vertices.tolist(),
+            "tangent": tangent.tolist()
         }
         links.append(link)
 

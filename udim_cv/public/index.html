@@ -614,6 +614,8 @@
                 this.controls.screenSpacePanning = false;
                 this.controls.minDistance = 5;
                 this.controls.maxDistance = 200;
+                this.controls.minPolarAngle = Math.PI / 3;
+                this.controls.maxPolarAngle = 2 *Math.PI / 3;
                 
                 // Axis Helper
                 const axesHelper = new THREE.AxesHelper(10);

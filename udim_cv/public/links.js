@@ -1,3 +1,13 @@
+// Parabolic curve function that starts and ends at 1, with controllable vertex
+function parabolaCurve(x, max, vertexY = 0) {
+    // Map x from [0,1] to vertex at 0.5
+    const a = 4 * (1 - vertexY);
+    return max * (a * (x - 0.5) * (x - 0.5) + vertexY);
+}
+
+
+
+
 class linksManager {
     constructor(links, converter) {
         this.links = links;
@@ -11,32 +21,52 @@ class linksManager {
         const indices = [];
         let vertexOffset = 0;
 
-        const Avals = [1, 5/6, 4/6, 3/6, 2/6, 1/6, 1/6, 2/6, 3/6, 4/6, 5/6, 1]
-
         // Add all vertices from this link
         // Process each link
         for (const link of this.links) {
             const arcVertices = link.arc_vertices;
             
+            if (Math.random() < 0.96) {
+                continue;
+            }
             let count = 0;
-            // Add all vertices from this link to the vertices array
-            for (const vertex of arcVertices) {
-                const coords = this.converter.process(vertex[0], vertex[1], vertex[2]);
-                vertices.push(coords.x, coords.y, coords.z);
-                this.vertcount++;
 
+            const tangent = new THREE.Vector3(link.tangent[0], link.tangent[1], link.tangent[2]);
+            // tangent.multiplyScalar(0.4);
+
+            for (let i = 0; i < arcVertices.length; i++) {
+                const vertex = arcVertices[i];
+                const coords = this.converter.process(vertex[0], vertex[1], vertex[2]);
                 const color = coords.color();
-                colors.push(color.r, color.g, color.b, Avals[count]);
+                const alpha = parabolaCurve(count / (arcVertices.length - 1), 1, 0.2);
+                const shape = parabolaCurve(count / (arcVertices.length - 1), 0.5, 0.3);
+
+                const deform = tangent.clone().multiplyScalar(shape);
+
+                // Original vertex (bottom of ribbon)
+                vertices.push(coords.x+deform.x, coords.y+deform.y, coords.z+deform.z);
+                colors.push(color.r, color.g, color.b, alpha);
+                
+                // Duplicate vertex offset in Y by 0.1 (top of ribbon)
+                vertices.push(coords.x-deform.x, coords.y-deform.y, coords.z-deform.z);
+                colors.push(color.r, color.g, color.b, alpha);
+
                 count++;
             }
 
-            // Create edge indices connecting consecutive vertices in this arc
+            // Create triangle strip indices for ribbon
             for (let i = 0; i < arcVertices.length - 1; i++) {
-                indices.push(vertexOffset + i, vertexOffset + i + 1);
+                const baseIdx = vertexOffset + i * 2;
+                // Two triangles per segment
+                // Triangle 1: bottom-left, bottom-right, top-left
+                indices.push(baseIdx, baseIdx + 2, baseIdx + 1);
+                // Triangle 2: bottom-right, top-right, top-left
+                indices.push(baseIdx + 2, baseIdx + 3, baseIdx + 1);
             }
 
-            vertexOffset += arcVertices.length;
+            vertexOffset += arcVertices.length * 2;
         }
+        this.vertcount = vertexOffset;
 
         // Create BufferGeometry
         const geometry = new THREE.BufferGeometry();
@@ -44,17 +74,26 @@ class linksManager {
         geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 4));
         geometry.setIndex(indices);
 
-        // Create LineSegments material
-        const material = new THREE.LineBasicMaterial({ 
+        // Create Mesh material for ribbon
+        const material = new THREE.MeshBasicMaterial({ 
             color: 0x888888,
             transparent: true,
-            opacity: 0.3,
+            opacity: 1,
             vertexColors: true,
-            linewidth: 8,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            depthTest: true,
+            depthFunc: THREE.LessEqualDepth,
+            depthBias: 0,
+            depthBiasUnits: 1,
+            depthBiasSlopeFactor: 0,
+            depthBiasClamp: 0,
+            depthBiasAuto: false,
         });
 
         // Create the mesh
-        this.linksMesh = new THREE.LineSegments(geometry, material);
+        this.linksMesh = new THREE.Mesh(geometry, material);
 
         return this.linksMesh;
     }
