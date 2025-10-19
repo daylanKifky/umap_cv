@@ -26,7 +26,7 @@ class linksManager {
         for (const link of this.links) {
             const arcVertices = link.arc_vertices;
             
-            if (Math.random() < 0.96) {
+            if (link.cross_similarity.technologies < -1 && link.cross_similarity.category < -3) {
                 continue;
             }
             let count = 0;
