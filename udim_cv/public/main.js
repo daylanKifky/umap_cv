@@ -135,13 +135,18 @@ class ArticleVisualizer {
         try {
             const response = await fetch('embeddings.json');
             const data = await response.json();
+
+            if (!data.reduction_method.includes(REDUCTION_METHOD)) {
+                console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
+                return;
+            }
             this.articles = data.articles;
 
             document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
             document.getElementById('loading').style.display = 'none';
             
             this.articleManager.addArticles(this.articles);
-            this.linksManager = new linksManager(data.links, this.articleManager.converter);
+            this.linksManager = new linksManager(data[REDUCTION_METHOD + '_links'], this.articleManager.converter);
             await this.createArticleCards();
 
             // Initialize search manager after articles are loaded

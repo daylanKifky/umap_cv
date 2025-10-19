@@ -1,9 +1,9 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.decomposition import PCA
-from sklearn.manifold import TSNE
+
 from sklearn.preprocessing import StandardScaler
-import umap
+
 import json
 import os
 import re
@@ -35,8 +35,6 @@ DEFAULT_TSNE_PARAMS = {
 DEFAULT_PCA_PARAMS = {
     'random_state': 42
 }
-
-
 
 
 class ArticleEmbeddingGenerator:
@@ -124,6 +122,8 @@ class ArticleEmbeddingGenerator:
         Returns:
             Reduced embeddings array
         """
+        from sklearn.manifold import TSNE
+
         if embeddings.size == 0:
             return np.array([])
             
@@ -148,7 +148,7 @@ class ArticleEmbeddingGenerator:
         return reduced_embeddings
         
     def reduce_umap(self, embeddings: np.ndarray, n_components: int = 2, 
-                    standardize: bool = False, **kwargs) -> Tuple[np.ndarray, umap.UMAP]:
+                    standardize: bool = False, **kwargs) -> Tuple[np.ndarray, "umap.UMAP"]:
         """
         Reduce embeddings dimensionality using UMAP.
         
@@ -161,6 +161,7 @@ class ArticleEmbeddingGenerator:
         Returns:
             Tuple of (reduced_embeddings, fitted_umap_model)
         """
+        import umap
         if embeddings.size == 0:
             return np.array([]), None
             
@@ -438,7 +439,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
     print(f"Loaded {len(data)} articles from {input_folder}")
     return data
 
-def main(input_folder: str, output_file: str):
+def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int]):
     # Initialize the embedding generator
     generator = ArticleEmbeddingGenerator()
 
@@ -481,74 +482,84 @@ def main(input_folder: str, output_file: str):
         embeddings += weights[field] * emb
     embeddings /= total_weight
     
-    # Apply dimensionality reductions
-    reduced_pca_3d, pca_model_3d = generator.reduce_pca(embeddings, n_components=3)
-    reduced_tsne_3d = generator.reduce_tsne(embeddings, n_components=3)
-    reduced_umap_3d, umap_model_3d = generator.reduce_umap(embeddings, n_components=3)
-
-    reduced_pca_2d, pca_model_2d = generator.reduce_pca(embeddings, n_components=2)
-    reduced_tsne_2d = generator.reduce_tsne(embeddings, n_components=2)
-    reduced_umap_2d, umap_model_2d = generator.reduce_umap(embeddings, n_components=2)
-    
     # Create embedding structure matching the reference format
     embedding_data = {
         "model": DEFAULT_EMBEDDING_MODEL,
         "embedding_dim": generator.embedding_dim,
-        "reduction_method": "all",
+        "reduction_method": methods,
         "articles": []
     }
-    
+
+    # Calculate all requested dimensionality reductions
+    reductions = {}
+    for method in methods:
+        for dim in dimensions:
+            key = f"{method}_{dim}d"
+            if method == "pca":
+                reduced_coords, _ = generator.reduce_pca(embeddings, n_components=dim)
+            elif method == "tsne":
+                reduced_coords = generator.reduce_tsne(embeddings, n_components=dim)
+            elif method == "umap":
+                reduced_coords, _ = generator.reduce_umap(embeddings, n_components=dim)
+            reductions[key] = reduced_coords
 
     for i in range(len(data)):
-        title = list(data.keys())[i]
         article_entry = {
             "id": ids[i],
             "title": titles[i],
             "content": contents[i],
-            "thumbnail": thumbnails[i],
-            # "embedding": embeddings[i].tolist(),
-            "pca_2d": reduced_pca_2d[i].tolist(),
-            "pca_3d": reduced_pca_3d[i].tolist(),
-            "tsne_2d": reduced_tsne_2d[i].tolist(),
-            "tsne_3d": reduced_tsne_3d[i].tolist(),
-            "umap_2d": reduced_umap_2d[i].tolist(),
-            "umap_3d": reduced_umap_3d[i].tolist()
+            "thumbnail": thumbnails[i]
         }
+        # Add all calculated reductions
+        for key, reduction in reductions.items():
+            article_entry[key] = reduction[i].tolist()
+            
         embedding_data["articles"].append(article_entry)
 
     # Generate connecting arcs for all possible article pairs
     print(f"Generating connecting arcs for {len(ids)} articles...")
     links = []
 
-    for (i, j) in itertools.combinations(range(len(ids)), 2):
-        origin_id = ids[i]
-        end_id = ids[j]
+    # Generate connecting arcs for all 3D reductions in all methods
+    for method in methods:
+        if 3 in dimensions:
+            key = f"{method}_3d"
+            if key not in reductions:
+                print(f"Warning: No 3D reduction found for '{method}' for arc generation")
+                continue
 
-        # Get the 3D coordinates for the arc calculation
-        origin_coords = np.array(reduced_pca_3d[i])
-        end_coords =    np.array(reduced_pca_3d[j])
+            arc_coords = reductions[key]
+            links = []
+            for (i, j) in itertools.combinations(range(len(ids)), 2):
+                origin_id = ids[i]
+                end_id = ids[j]
 
-        direction = end_coords - origin_coords
-        direction = direction / np.linalg.norm(direction)
+                # Get the coordinates for the arc calculation
+                origin_coords = np.array(arc_coords[i])
+                end_coords = np.array(arc_coords[j])
 
-        midpoint = origin_coords + direction * 0.5
+                direction = end_coords - origin_coords
+                direction = direction / np.linalg.norm(direction)
 
-        tangent = np.cross(direction, midpoint) 
-        tangent = tangent / np.linalg.norm(tangent)
+                midpoint = origin_coords + direction * 0.5
 
-        # Create the connecting arc
-        arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
+                tangent = np.cross(direction, midpoint)
+                tangent = tangent / np.linalg.norm(tangent)
 
-        link = {
-            "origin_id": origin_id,
-            "end_id": end_id,
-            "arc_vertices": arc_vertices.tolist(),
-            "tangent": tangent.tolist()
-        }
-        links.append(link)
+                # Create the connecting arc
+                arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
-    print(f"Generated {len(links)} connecting arcs")
-    embedding_data["links"] = links
+                link = {
+                    "origin_id": origin_id,
+                    "end_id": end_id,
+                    "arc_vertices": arc_vertices.tolist(),
+                    "tangent": tangent.tolist()
+                }
+                links.append(link)
+
+            print(f"Generated {len(links)} connecting arcs for method '{method}'")
+          
+            embedding_data[f"{method}_links"] = links
 
     # Save embeddings in the structured format
     with open(output_file, 'w') as f:
@@ -563,10 +574,14 @@ def _run():
     parser.add_argument('--input', '-i', type=str, required=True, help='Input folder containing markdown files with project data')
     parser.add_argument('--output', '-o', type=str, required=True, help='Output file path for embeddings')
     parser.add_argument('--model', '-m', type=str, default=DEFAULT_EMBEDDING_MODEL, help='Name of the embedding model')
+    parser.add_argument('--methods', type=str, nargs='+', choices=['pca', 'tsne', 'umap'], default=['pca'], 
+                       help='Dimensionality reduction methods to use')
+    parser.add_argument('--dimensions', '-d', type=int, nargs='+', choices=[2, 3], default=[3],
+                       help='Output dimensions (2D and/or 3D)')
 
     args = parser.parse_args()
 
-    main(args.input, args.output)
+    main(args.input, args.output, args.methods, args.dimensions)
 
 
 
