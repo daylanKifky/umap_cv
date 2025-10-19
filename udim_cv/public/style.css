@@ -114,6 +114,33 @@
             display: none;
         }
         
+        #search-suggestions {
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 5px;
+            padding: 5px;
+            color: white;
+            font-size: 13px;
+            max-width: 300px;
+            display: none;
+            border: 1px solid rgba(64, 128, 255, 0.3);
+        }
+        
+        .suggestion-item {
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: rgba(64, 128, 255, 0.2);
+        }
+        
+        .suggestion-item strong {
+            color: #4080ff;
+            font-weight: bold;
+        }
+        
         /* Bloom Controls */
         #bloom-controls {
             position: absolute;

@@ -150,7 +150,7 @@ class ArticleVisualizer {
             await this.createArticleCards();
 
             // Initialize search manager after articles are loaded
-            this.searchManager = new SearchManager(this.apiUrl, this.articleManager);
+            this.searchManager = new SearchManager(this.articles, this.articleManager);
             
         } catch (error) {
             console.error('Error loading articles:', error);
