@@ -17,6 +17,10 @@ from typing import List, Union, Tuple, Optional, Dict
 from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
 
+try:
+    from tqdm import tqdm
+except ImportError:
+    tqdm = lambda x: x
 
 
 # Default parameters for dimensionality reduction
@@ -276,7 +280,7 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
     return os.path.relpath(dest_path, output_folder)
 
 
-def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[str, Dict]:
+def load_markdown_files(input_folder: str, output_folder: str = None, skip_confirmation: bool = False) -> Dict[str, Dict]:
     """
     Load markdown files from a folder, convert to HTML, extract metadata and content.
 
@@ -291,6 +295,20 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
 
     # Get all .md files in the folder
     md_files = [f for f in os.listdir(input_folder) if f.endswith('.md')]
+
+    n = len(md_files)
+    total_combinations = (n * (n-1)) // 2
+    if total_combinations > 1000:
+        print(f"Found {n} markdown files.")
+        print(f"This script will calculate {total_combinations} combinations for cross similarity.")
+        print("This might take a while, and the frontend performance will be affected.")
+        if not skip_confirmation:
+            print("Do you want to continue? (y/n)")
+            answer = input()
+            if answer != 'y':
+                return data
+            exit()
+    
     md_files.sort()  # Sort for consistent ordering
 
     # Create output folder if specified
@@ -439,7 +457,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None) -> Dict[st
     print(f"Loaded {len(data)} articles from {input_folder}")
     return data
 
-def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int]):
+def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False):
     # Initialize the embedding generator
     generator = ArticleEmbeddingGenerator()
 
@@ -448,13 +466,13 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         os.makedirs(html_output_folder)
 
     # Load project data from markdown files
-    data = load_markdown_files(input_folder, html_output_folder)
+    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation)
 
     data_values = list(data.values())
     ids = [i['id'] for i in data_values]
-    titles = [i['title'] for i in data_values]
-    contents = [i['content'] for i in data_values]
     thumbnails = [i['thumbnail'] for i in data_values]
+
+    all_values = {}
 
     # Define weights for each field
     weights = {
@@ -470,11 +488,15 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
     }
 
     # Generate embeddings only for fields with non-zero weights
+    # Save all_values for later use
     embeddings_dict = {}
+
     for field, weight in weights.items():
+        field_data = [i[field] for i in data_values]
         if weight > 0:
-            field_data = [i[field] for i in data_values]
             embeddings_dict[field] = generator.generate_embeddings(field_data)
+        
+        all_values[field] = field_data
 
     # Calculate weighted average
     total_weight = sum(weights.values())
@@ -483,7 +505,7 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         embeddings += weights[field] * emb
     embeddings /= total_weight
     
-    # Create embedding structure matching the reference format
+    # Create embedding structure
     embedding_data = {
         "model": DEFAULT_EMBEDDING_MODEL,
         "embedding_dim": generator.embedding_dim,
@@ -504,24 +526,25 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 reduced_coords, _ = generator.reduce_umap(embeddings, n_components=dim)
             reductions[key] = reduced_coords
 
+    # Build each article entry combining metadata and dim reductions
     for i in range(len(data_values)):
         article_entry = {
             "id": ids[i],
-            "title": titles[i],
-            "content": contents[i],
             "thumbnail": thumbnails[i]
         }
+
+        for field, value in all_values.items():
+            article_entry[field] = value[i]
+
         # Add all calculated reductions
         for key, reduction in reductions.items():
             article_entry[key] = reduction[i].tolist()
             
         embedding_data["articles"].append(article_entry)
 
-    # Generate connecting arcs for all possible article pairs
-    print(f"Generating connecting arcs for {len(ids)} articles...")
-    links = []
 
     # Generate connecting arcs for all 3D reductions in all methods
+    links = []
     for method in methods:
         if 3 in dimensions:
             key = f"{method}_3d"
@@ -531,7 +554,11 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
 
             arc_coords = reductions[key]
             links = []
-            for (i, j) in itertools.combinations(range(len(ids)), 2):
+            n = len(ids)
+            total_combinations = (n * (n-1)) // 2
+            print(f"Calculating cross similarity for {len(data_values)} articles | total combinations: {total_combinations}")
+            print("This might take a while...")
+            for (i, j) in tqdm(itertools.combinations(range(len(ids)), 2), total=total_combinations):
                 origin_id = ids[i]
                 end_id = ids[j]
 
@@ -550,7 +577,10 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 # Create the connecting arc
                 arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
-                cross_similarity = calculate_cross_similarity(data_values, i, j, list(weights.keys()))
+                fields = list(weights.keys())
+                fields.remove('description')
+                fields.remove('technical_details')
+                cross_similarity = calculate_cross_similarity(data_values, i, j, fields)
 
                 link = {
                     "origin_id": origin_id,
@@ -582,10 +612,11 @@ def _run():
                        help='Dimensionality reduction methods to use')
     parser.add_argument('--dimensions', '-d', type=int, nargs='+', choices=[2, 3], default=[3],
                        help='Output dimensions (2D and/or 3D)')
+    parser.add_argument('--skip-confirmation', '-s', action='store_true', help='Skip confirmation before running')
 
     args = parser.parse_args()
 
-    main(args.input, args.output, args.methods, args.dimensions)
+    main(args.input, args.output, args.methods, args.dimensions, args.skip_confirmation)
 
 
 

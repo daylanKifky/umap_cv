@@ -12,7 +12,7 @@ class ArticleEntity {
         this.index = index;
         this.id = article.id;
         this.title = article.title;
-        this.content = article.content;
+        this.content = article.description;
         this.thumbnail = article.thumbnail || null;
         this.card = null;
         this.color = color;
@@ -23,10 +23,10 @@ class ArticleEntity {
         this.maxCardContentLines = 3;
         this.maxCardContentLength = 300;
         
-        // Load thumbnail if available
-        if (this.thumbnail) {
-            this.loadThumbnail();
-        }
+        // // Load thumbnail if available
+        // if (this.thumbnail) {
+        //     this.loadThumbnail();
+        // }
     }
     
     /**
@@ -247,7 +247,7 @@ class ArticleEntity {
      * Update the card's canvas texture
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
-    updateCardTexture(context, width, height) {
+    updateCardTexture(context, width, height, ima) {
         // Clear canvas with transparency
         context.clearRect(0, 0, width, height);
 
@@ -512,8 +512,6 @@ class ArticleManager {
             const entity = new ArticleEntity(article, index, color);
             const card = entity.createCard(0, 0, 0); // Create card at origin
             
-            card.visible = false; //TEMP: hide the card for now
-
             // Create sphere with entity color
             const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
             const sphereMaterial = new THREE.MeshBasicMaterial({
