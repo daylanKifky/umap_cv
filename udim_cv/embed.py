@@ -4,8 +4,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import json
 import numpy as np
-from sentence_transformers import SentenceTransformer
-
+from sentence_transformers import SentenceTransformer, CrossEncoder
 
 class EmbeddingModel(str, Enum):
     # ============ SENTENCE TRANSFORMERS COMPATIBLE ============
@@ -35,10 +34,34 @@ class EmbeddingModel(str, Enum):
     OPENAI_SMALL = 'text-embedding-3-small'  # API only, 1536 dims, requires OpenAI API key
     OPENAI_LARGE = 'text-embedding-3-large'  # API only, 3072 dims, requires OpenAI API key
 
+class CrossEncoderModel(str, Enum):
+    # ============ CROSS ENCODERS ============
+    
+    # Lightweight models
+    MINILM = 'cross-encoder/ms-marco-MiniLM-L-6-v2'  # Fast, good baseline
+    
+    # High quality general purpose
+    TinyBERT = 'cross-encoder/ms-marco-TinyBERT-L-6'  # Compact but effective
+    ELECTRA = 'cross-encoder/ms-marco-electra-base'  # Strong performance
+    
+    # State-of-the-art models
+    DEBERTA_V3 = 'cross-encoder/ms-marco-deberta-v3-base'  # Top performance
+    DEBERTA_V3_LARGE = 'cross-encoder/ms-marco-deberta-v3-large'  # Best quality but slower
+    
+    # Multilingual
+    MULTILINGUAL = 'cross-encoder/mmarco-mMiniLMv2-L12-H384-v1'  # 50+ languages
+    
+    # Task-specific
+    QUORA = 'cross-encoder/quora-distilroberta-base'  # Question similarity
+    NLI = 'cross-encoder/nli-deberta-v3-base'  # Natural language inference
+    SPARSITY = 'cross-encoder/stsb-TinyBERT-L-4'  # Memory efficient
+
 DEFAULT_EMBEDDING_MODEL = EmbeddingModel.MINILM
+DEFAULT_CROSS_ENCODER_MODEL = CrossEncoderModel.MINILM
 
 # Get model from environment or use default
 EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)
+CROSS_ENCODER_MODEL = os.getenv('CROSS_ENCODER_MODEL', DEFAULT_CROSS_ENCODER_MODEL)
 
 
 class QueryRequest(BaseModel):
@@ -104,3 +127,39 @@ class QueryEmbedder:
         results.sort(key=lambda x: x['similarity'], reverse=True)
         
         return results[:top_k]
+
+
+cross_encoder = None
+cache = {}
+def calculate_cross_similarity(data: Dict, i: int, j: int, fields: List) -> Dict:
+    global cross_encoder
+    if cross_encoder is None:
+        cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL.value)
+
+    cache_key = f"{i}_{j}"
+    if cache_key in cache:
+        return cache[cache_key]
+    else:
+        cache[cache_key] = calculate_cross_similarity_internal(data, i, j, fields)
+        return cache[cache_key]
+
+def calculate_cross_similarity_internal(data: Dict, i: int, j: int, fields: List) -> Dict:
+    field_similarities = {}
+    for field in fields:
+        field_i = data[i].get(field, '')
+        field_j = data[j].get(field, '')
+        
+        # Skip if either field is empty
+        if not field_i or not field_j:
+            continue
+
+        if isinstance(field_i, list):
+            field_i = ' '.join(field_i)
+        if isinstance(field_j, list):
+            field_j = ' '.join(field_j)
+            
+        # Calculate similarity score using cross encoder
+        score = cross_encoder.predict([field_i, field_j])
+        field_similarities[field] = float(score)
+
+    return field_similarities

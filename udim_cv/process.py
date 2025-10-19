@@ -14,7 +14,7 @@ import urllib.parse
 import itertools
 from typing import List, Union, Tuple, Optional, Dict
 
-from .embed import DEFAULT_EMBEDDING_MODEL
+from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
 
 
@@ -449,11 +449,12 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
 
     # Load project data from markdown files
     data = load_markdown_files(input_folder, html_output_folder)
-    
-    ids = [i['id'] for i in data.values()]
-    titles = [i['title'] for i in data.values()]
-    contents = [i['content'] for i in data.values()]
-    thumbnails = [i['thumbnail'] for i in data.values()]
+
+    data_values = list(data.values())
+    ids = [i['id'] for i in data_values]
+    titles = [i['title'] for i in data_values]
+    contents = [i['content'] for i in data_values]
+    thumbnails = [i['thumbnail'] for i in data_values]
 
     # Define weights for each field
     weights = {
@@ -472,12 +473,12 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
     embeddings_dict = {}
     for field, weight in weights.items():
         if weight > 0:
-            field_data = [i[field] for i in data.values()]
+            field_data = [i[field] for i in data_values]
             embeddings_dict[field] = generator.generate_embeddings(field_data)
 
     # Calculate weighted average
     total_weight = sum(weights.values())
-    embeddings = np.zeros((len(data), generator.embedding_dim))
+    embeddings = np.zeros((len(data_values), generator.embedding_dim))
     for field, emb in embeddings_dict.items():
         embeddings += weights[field] * emb
     embeddings /= total_weight
@@ -503,7 +504,7 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 reduced_coords, _ = generator.reduce_umap(embeddings, n_components=dim)
             reductions[key] = reduced_coords
 
-    for i in range(len(data)):
+    for i in range(len(data_values)):
         article_entry = {
             "id": ids[i],
             "title": titles[i],
@@ -549,11 +550,14 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 # Create the connecting arc
                 arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
+                cross_similarity = calculate_cross_similarity(data_values, i, j, list(weights.keys()))
+
                 link = {
                     "origin_id": origin_id,
                     "end_id": end_id,
                     "arc_vertices": arc_vertices.tolist(),
-                    "tangent": tangent.tolist()
+                    "tangent": tangent.tolist(),
+                    "cross_similarity": cross_similarity
                 }
                 links.append(link)
 
