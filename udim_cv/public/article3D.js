@@ -112,9 +112,9 @@ class ArticleEntity {
      * Update card to face camera position
      * @param {THREE.Vector3} cameraPosition - The camera position to look at
      */
-    update(cameraPosition) {
-        if (this.card && cameraPosition) {
-            this.card.lookAt(cameraPosition);
+    update(rotation) {
+        if (this.card && rotation) {
+            this.card.rotation.copy(rotation);
         }
     }
 
@@ -546,7 +546,7 @@ class ArticleManager {
      */
     update() {
         this.entities.forEach(entity => {
-            entity.update(this.camera.position);
+            entity.update(this.camera.rotation);
         });
     }
 
