@@ -85,11 +85,6 @@ class linksManager {
             depthWrite: false,
             depthTest: true,
             depthFunc: THREE.LessEqualDepth,
-            depthBias: 0,
-            depthBiasUnits: 1,
-            depthBiasSlopeFactor: 0,
-            depthBiasClamp: 0,
-            depthBiasAuto: false,
         });
 
         // Create the mesh
