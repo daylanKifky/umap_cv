@@ -10,7 +10,7 @@ A Python-based automation framework for Blender that enables batch processing of
   "technologies": [
     "Python",
     "Blender",
-    "Blender Python API",
+    "Blender-Python-API",
     "OpenCV",
     "NumPy",
     "Pillow",

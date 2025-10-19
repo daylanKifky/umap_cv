@@ -1,6 +1,6 @@
-class SearchManager {
-    constructor(articles, articleManager) {
-        this.articleManager = articleManager;
+class SearchManager extends EventTarget {
+    constructor(articles) {
+        super();
         this.searchResults = null;
         this.miniSearch = null;
         
@@ -143,7 +143,11 @@ class SearchManager {
             this.searchResults = results;
             
             this.displaySearchResults(results);
-            this.articleManager.rescaleCardsBasedOnSearch(results);
+            
+            // Dispatch custom event with search results
+            this.dispatchEvent(new CustomEvent('performSearch', { 
+                detail: { results } 
+            }));
             
         } catch (error) {
             console.error('Search failed:', error);
@@ -186,8 +190,8 @@ class SearchManager {
         suggestionsDiv.style.display = 'none';
         this.searchResults = null;
         
-        // Reset all cards to original size and appearance
-        this.articleManager.resetCardAppearance();
+        // Dispatch custom event to clear search
+        this.dispatchEvent(new CustomEvent('clearSearch'));
     }
     
     getSearchResults() {

@@ -89,7 +89,10 @@ class ArticleEntity {
             map: texture,
             transparent: true,
             opacity: 0.9,
-            side: THREE.DoubleSide
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            depthTest: true,
+            depthFunc: THREE.LessEqualDepth,
         });
 
         this.card = new THREE.Mesh(geometry, material);
@@ -126,14 +129,13 @@ class ArticleEntity {
         if (!this.card) return;
         
         const newScale = this.similarityToScale(similarity);
-        this.card.scale.setScalar(newScale);
+        this.sphere.scale.setScalar(newScale);
         
         // Adjust material opacity and color intensity based on similarity
         const material = this.card.material;
         if (similarity > 0) {
             // Highlight matching articles
             material.opacity = 0.9;
-            // material.emissive.setRGB(similarity * 0.3, similarity * 0.3, 0);
         } else {
             // Dim non-matching articles
             material.opacity = 0.3;
@@ -558,9 +560,10 @@ class ArticleManager {
         // Create a map of article ID to similarity
         const similarityMap = new Map();
         searchResults.forEach(result => {
-            similarityMap.set(result.id, result.similarity);
+            similarityMap.set(result.id, result.score);
         });
         
+
         // Apply similarity scaling to all entities
         this.entities.forEach(entity => {
             const similarity = similarityMap.get(entity.article.id) || 0;

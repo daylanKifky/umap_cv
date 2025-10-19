@@ -65,7 +65,6 @@ class ArticleVisualizer {
         this.articles = [];
         this.articleManager = null;
         this.searchManager = null;
-        this.apiUrl = 'http://localhost:8000';
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         
@@ -150,7 +149,28 @@ class ArticleVisualizer {
             await this.createArticleCards();
 
             // Initialize search manager after articles are loaded
-            this.searchManager = new SearchManager(this.articles, this.articleManager);
+            this.searchManager = new SearchManager(this.articles);
+            
+            // Set up event listeners for search events
+            this.searchManager.addEventListener('performSearch', (event) => {
+                this.articleManager.rescaleCardsBasedOnSearch(event.detail.results);
+                if (this.linksManager.linksMesh) {
+                    this.scene.remove(this.linksManager.linksMesh);
+                    this.linksManager.dispose();
+                }
+                this.linksManager.linksMesh = this.linksManager.createLinks(event.detail.results);
+                this.scene.add(this.linksManager.linksMesh);
+            });
+            
+            this.searchManager.addEventListener('clearSearch', () => {
+                this.articleManager.resetCardAppearance();
+                if (this.linksManager.linksMesh) {
+                    this.scene.remove(this.linksManager.linksMesh);
+                    this.linksManager.dispose();
+                }
+                this.linksManager.linksMesh = this.linksManager.createLinks();
+                this.scene.add(this.linksManager.linksMesh);
+            });
             
         } catch (error) {
             console.error('Error loading articles:', error);
