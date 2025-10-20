@@ -44,7 +44,7 @@ class linksManager {
 
 
                 const pvalue = i / (arcVertices.length - 1);
-                const alpha = parabolaCurve(pvalue, 1, 0.2, origin_value, end_value) * cross_similarity;
+                const alpha = parabolaCurve(pvalue, 1, 0.6, origin_value, end_value) * cross_similarity;
                 const shape = parabolaCurve(pvalue, 0.5, 0.3, origin_value, end_value);
 
                 const deform = tangent.clone().multiplyScalar(shape);

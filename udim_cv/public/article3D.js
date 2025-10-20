@@ -445,15 +445,20 @@ class ArticleManager {
         // Get max score from search results
         const maxScore = Math.max(...searchResults.map(result => result.score));
 
-        searchResults.forEach(result => {
-            similarityMap.set(result.id, result.score / maxScore);
-        });
+        if (searchResults.clearWinner) {
+            similarityMap.set(searchResults[0].id, 1.0)
+        }  else {
+            searchResults.forEach(result => {
+                similarityMap.set(result.id, result.score / maxScore);
+            });
+
+        } 
         
         // Apply similarity scaling to all entities
         this.entities.forEach(entity => {
             entity.score = similarityMap.get(entity.id) || 0;
             entity.applyScore();
-            // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.score.toFixed(3)}  || Scale:${entity.scale}` )
+            // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.scale.toFixed(3)}  || Scale:${entity.scale}` )
         });
         
 

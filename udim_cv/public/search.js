@@ -1,3 +1,34 @@
+/**
+ * Decide if the top search result is a clear winner or part of a cluster.
+ * 
+ * @param {Array<{score: number}>} results - array of result objects, sorted descending by score
+ * @param {number} ratioThreshold - how much higher the top score must be than the 2nd (default 2.5)
+ * @param {number} zThreshold - how many std deviations above mean to count as clear winner (default 2.5)
+ * @returns {{clearWinner: boolean, ratio: number, zTop: number}}
+ */
+function detectClearWinner(results, ratioThreshold = 2.5, zThreshold = 2.5) {
+    if (!results || results.length < 2) return { clearWinner: false, ratio: 1, zTop: 0 };
+  
+    const scores = results.map(r => r.score);
+    const top = scores[0];
+    const next = scores[1];
+  
+    // ratio test
+    const ratio = next === 0 ? Infinity : top / next;
+  
+    // mean and standard deviation
+    const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+    const variance = scores.reduce((a, b) => a + (b - mean) ** 2, 0) / scores.length;
+    const std = Math.sqrt(variance);
+  
+    const zTop = std === 0 ? 0 : (top - mean) / std;
+  
+    const clearWinner = (ratio > ratioThreshold) || (zTop > zThreshold);
+  
+    return { clearWinner, ratio, zTop };
+  }
+
+
 class SearchManager extends EventTarget {
     constructor(articles) {
         super();
@@ -139,6 +170,10 @@ class SearchManager extends EventTarget {
                 fuzzy: 0.2,
                 prefix: true
             });
+
+            const { clearWinner, ratio, zTop } = detectClearWinner(results);
+            console.log(`Clear winner: ${clearWinner}, Ratio: ${ratio}, Z-score: ${zTop}`);
+            results.clearWinner = clearWinner;
             
             this.searchResults = results;
             
