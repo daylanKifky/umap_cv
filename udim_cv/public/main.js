@@ -123,8 +123,9 @@ class ArticleVisualizer {
         // Handle mouse clicks for sphere selection
         this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
         
-        // Initialize Article manager
-        this.articleManager = new ArticleManager(this.scene, this.camera);
+       
+        // Initialize Article manager (will receive links later)
+        this.articleManager = null;
         
         // Start render loop
         this.animate();
@@ -139,37 +140,25 @@ class ArticleVisualizer {
                 console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
                 return;
             }
-            this.articles = data.articles;
 
-            document.getElementById('article-count').textContent = `Articles: ${this.articles.length}`;
+            document.getElementById('article-count').textContent = `Articles: ${data.articles.length}`;
             document.getElementById('loading').style.display = 'none';
             
-            this.articleManager.addArticles(this.articles);
-            this.linksManager = new linksManager(data[REDUCTION_METHOD + '_links'], this.articleManager.converter);
-            await this.createArticleCards();
+            // Initialize ArticleManager with full data and reduction method
+            this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
+            
+            await this.articleManager.createArticleObjects();
 
             // Initialize search manager after articles are loaded
-            this.searchManager = new SearchManager(this.articles);
+            this.searchManager = new SearchManager(data.articles);
             
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
-                this.articleManager.rescaleCardsBasedOnSearch(event.detail.results);
-                if (this.linksManager.linksMesh) {
-                    this.scene.remove(this.linksManager.linksMesh);
-                    this.linksManager.dispose();
-                }
-                this.linksManager.linksMesh = this.linksManager.createLinks(event.detail.results);
-                this.scene.add(this.linksManager.linksMesh);
+                this.articleManager.handleSearch(event.detail.results);
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
-                this.articleManager.resetCardAppearance();
-                if (this.linksManager.linksMesh) {
-                    this.scene.remove(this.linksManager.linksMesh);
-                    this.linksManager.dispose();
-                }
-                this.linksManager.linksMesh = this.linksManager.createLinks();
-                this.scene.add(this.linksManager.linksMesh);
+                this.articleManager.handleClearSearch();
             });
             
         } catch (error) {
@@ -178,12 +167,6 @@ class ArticleVisualizer {
         }
     }
     
-    async createArticleCards() {
-        await this.articleManager.createArticleCards(REDUCTION_METHOD);
-        const linksMesh = this.linksManager.createLinks();
-        this.scene.add(linksMesh);
-        console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
-    }
     
     setupBloom() {
         // Create composer for post-processing

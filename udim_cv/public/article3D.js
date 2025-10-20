@@ -110,6 +110,29 @@ class ArticleEntity {
         return this.card;
     }
 
+    /**
+     * Create the 3D sphere representation for this article
+     * @param {number} x - X position
+     * @param {number} y - Y position
+     * @param {number} z - Z position
+     * @returns {THREE.Mesh} The created sphere mesh
+     */
+    createSphere(x, y, z) {
+        // Create sphere with entity color
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const sphereMaterial = new THREE.MeshBasicMaterial({
+            color: this.color,
+            transparent: true,
+            opacity: 0.8
+        });
+        this.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+
+        // Position sphere at entity location
+        this.sphere.position.set(x, y, z);
+
+        return this.sphere;
+    }
+
 
     /**
      * Update card to face camera position
@@ -128,7 +151,7 @@ class ArticleEntity {
     applySimilarityScale(similarity) {
         if (!this.card) return;
         
-        const newScale = this.similarityToScale(similarity);
+        const newScale = similarityToScale(similarity);
         this.sphere.scale.setScalar(newScale);
         
         // Adjust material opacity and color intensity based on similarity
@@ -147,24 +170,15 @@ class ArticleEntity {
      * Reset card to original appearance
      */
     resetAppearance() {
-        if (!this.card) return;
+        if (this.card) {
+            this.card.scale.setScalar(1.0);
+            const material = this.card.material;
+            material.opacity = 0.9;
+        }
         
-        this.card.scale.setScalar(1.0);
-        const material = this.card.material;
-        material.opacity = 0.9;
-    }
-
-    /**
-     * Convert similarity score to scale factor
-     * @param {number} similarity - Similarity score (0-1)
-     * @returns {number} Scale factor for the card
-     */
-    similarityToScale(similarity) {
-        const normalizedSim = Math.max(0, Math.min(1, similarity));
-        const amplified = Math.pow(normalizedSim, 0.3);
-        const minScale = 0.2;
-        const maxScale = 2.0;
-        return minScale + (maxScale - minScale) * amplified;
+        if (this.sphere){
+            this.sphere.scale.setScalar(1.0);
+        }
     }
 
     /**
@@ -173,48 +187,13 @@ class ArticleEntity {
      */
     getModalHTML() {
         const content = this.article.full_content || this.article.content;
-        const htmlContent = this.markdownToHtml(content);
+        const htmlContent = markdownToHtml(content);
         
         return {
             title: this.article.title,
             content: htmlContent,
             filepath: this.article.filepath
         };
-    }
-
-    /**
-     * Convert markdown to HTML (basic conversion)
-     * @param {string} markdown - Markdown text
-     * @returns {string} HTML content
-     */
-    markdownToHtml(markdown) {
-        let html = markdown;
-        
-        // Headers
-        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-        
-        // Bold
-        html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-        
-        // Italic
-        html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-        
-        // Code blocks
-        html = html.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
-        
-        // Inline code
-        html = html.replace(/`([^`]*)`/gim, '<code>$1</code>');
-        
-        // Line breaks
-        html = html.replace(/\n/gim, '<br>');
-        
-        // Clean up extra breaks
-        html = html.replace(/<br><br>/gim, '</p><p>');
-        html = '<p>' + html + '</p>';
-        
-        return html;
     }
 
     /**
@@ -249,7 +228,7 @@ class ArticleEntity {
      * Update the card's canvas texture
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
-    updateCardTexture(context, width, height, ima) {
+    updateCardTexture(context, width, height) {
         // Clear canvas with transparency
         context.clearRect(0, 0, width, height);
 
@@ -268,12 +247,12 @@ class ArticleEntity {
         context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        const titleEndY = this.wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines);
+        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines);
 
         // Draw content after title with some spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
-        const contentEndY = this.wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
+        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
 
         // Draw thumbnail image if available and loaded
         if (this.thumbnailImage && this.thumbnailImage.complete) {
@@ -319,50 +298,6 @@ class ArticleEntity {
     }
 
     /**
-     * Helper function to wrap text in canvas
-     * @param {CanvasRenderingContext2D} context - The canvas context
-     * @param {string} text - Text to wrap
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} maxWidth - Maximum width of text
-     * @param {number} lineHeight - Height of each line
-     * @returns {number} The final Y position after all lines
-     */
-    wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines) {
-        let line = '';
-        let currentY = y;
-        let lines = 0;
-        
-        if (text.length > maxChars) {
-            text = text.substring(0, maxChars) + '...';
-        }
-        const words = text.split(' ');
-
-        for(let n = 0; n < words.length; n++) {
-            const testLine = line + words[n] + ' ';
-            const metrics = context.measureText(testLine);
-            const testWidth = metrics.width;
-
-            if (testWidth > maxWidth && n > 0) {
-                context.fillText(line, x, currentY);
-                line = words[n] + ' ';
-                currentY += lineHeight;
-                lines++;
-            } else {
-                line = testLine;
-            }
-            if (maxLines && lines >= maxLines) {
-                line = line.substring(0, line.length - 1) + '...';
-                break;
-            }
-        }
-        context.fillText(line, x, currentY);
-        
-        // Return the Y position after the last line
-        return currentY + lineHeight;
-    }
-
-    /**
      * Get the label mesh
      * @returns {THREE.Mesh} The label mesh
      */
@@ -371,75 +306,36 @@ class ArticleEntity {
     }
 }
 
-class coordinateConverter {
-    constructor(scaleFactor = 30) {
-        this.minX = Infinity; this.maxX = -Infinity;
-        this.minY = Infinity; this.maxY = -Infinity;
-        this.minZ = Infinity; this.maxZ = -Infinity;
-        this.scaleFactor = scaleFactor;
-    }
-    
-    add(x, y, z) {
-        this.minX = Math.min(this.minX, x);
-        this.maxX = Math.max(this.maxX, x);
-        this.minY = Math.min(this.minY, y);
-        this.maxY = Math.max(this.maxY, y);
-        this.minZ = Math.min(this.minZ, z);
-        this.maxZ = Math.max(this.maxZ, z);
-        this.centerX = (this.minX + this.maxX) / 2;
-        this.centerY = (this.minY + this.maxY) / 2;
-        this.centerZ = (this.minZ + this.maxZ) / 2;
-    }
-
-    process(x, y, z) {
-        // Normalize coordinates
-        const normalizedX = ((x - this.centerX) / (this.maxX - this.minX));
-        const normalizedY = ((y - this.centerY) / (this.maxY - this.minY)); 
-        const normalizedZ = ((z - this.centerZ) / (this.maxZ - this.minZ));
-
-        // Scale coordinates
-        const scaledX = normalizedX * this.scaleFactor;
-        const scaledY = normalizedY * this.scaleFactor;
-        const scaledZ = normalizedZ * this.scaleFactor;
-
-        
-        return {
-            x: scaledX,
-            y: scaledY, 
-            z: scaledZ,
-            color: () => {
-                // Convert normalized coordinates to RGB (0-255 range)
-                const r = Math.floor((normalizedX + 1) * 127.5);
-                const g = Math.floor((normalizedY + 1) * 127.5);
-                const b = Math.floor((normalizedZ + 1) * 127.5);
-                const color = new THREE.Color(r/255, g/255, b/255);
-                color.offsetHSL(0, 0.3, 0.2);
-                return color;
-            }
-        };
-    }
-}
-
-
-
-
 /**
  * ArticleManager - Manages a collection of ArticleEntity objects
  */
 class ArticleManager {
-    constructor(scene, camera, converter) {
+    constructor(scene, camera, data, reductionMethod) {
         this.converter = new coordinateConverter();
         this.scene = scene;
         this.camera = camera;
         this.entities = [];
-        this.articles = [];
         this.fontsLoaded = false;
+        this.reductionMethod = reductionMethod;
+        
+        // Extract articles and links from data
+        this.articles = data.articles || [];
+        this.links = data[`${reductionMethod}_links`] || null;
+        
+        // Add article coordinates to converter for normalization
+        const embeddingField = `${reductionMethod}_3d`;
+        this.articles.forEach(article => {
+            if (article[embeddingField]) {
+                const [x, y, z] = article[embeddingField];
+                this.converter.add(x, y, z);
+            }
+        });
+
+        this.linksManager = new linksManager(this.links, this.converter);
     }
 
     /**
-     * Create article cards using the current reduction method
-     * @param {Array} articles - Array of article objects
-     * @param {string} currentMethod - Current dimensionality reduction method (umap, pca, tsne)
+     * Load fonts required for rendering article cards
      */
     async loadFonts() {
         if (this.fontsLoaded) return;
@@ -477,29 +373,14 @@ class ArticleManager {
         }
     }
 
-    addArticles(articles) {
-        this.articles = articles;
-        this.articles.forEach(article => {
-            if (article["pca_3d"]) {
-                const [x, y, z] = article["pca_3d"];
-                this.converter.add(x, y, z);
-            }
-        });
-    }
-
-    async createArticleCards(currentMethod) {
-        await this.loadFonts();
-        const embeddingField = `${currentMethod}_3d`;
-        console.log(`Creating cards with field: ${embeddingField}`);
-        
-        return this.createArticleCardsWithField(embeddingField);
-    }
-
     /**
-     * Create article cards with a specific embedding field
-     * @param {string} embeddingField - The field name for 3D coordinates
+     * Create all article objects (spheres, cards, and links) for visualization
+     * @returns {Promise<Object>} Object containing count of entities and links mesh
      */
-    createArticleCardsWithField(embeddingField) {
+    async createArticleObjects() {
+        await this.loadFonts();
+        const embeddingField = `${this.reductionMethod}_3d`;
+        console.log(`Creating objects with field: ${embeddingField}`);
         
         // Clear existing entities
         this.dispose();
@@ -511,20 +392,10 @@ class ArticleManager {
             const coords = this.converter.process(x, y, z);
             const color = coords.color();
 
+            // Create entity with its visual components
             const entity = new ArticleEntity(article, index, color);
             const card = entity.createCard(0, 0, 0); // Create card at origin
-            
-            // Create sphere with entity color
-            const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
-            const sphereMaterial = new THREE.MeshBasicMaterial({
-                color: color,
-                transparent: true,
-                opacity: 0.8
-            });
-            const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-
-            // Position sphere at entity location
-            sphere.position.set(coords.x, coords.y, coords.z);
+            const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
 
             // Make card a child of the sphere
             sphere.add(card);
@@ -532,15 +403,22 @@ class ArticleManager {
             // Add sphere (with card as child) to scene
             this.scene.add(sphere);
 
-            // Store sphere reference in entity for cleanup
-            entity.sphere = sphere;
-
             this.entities.push(entity);
         });
         
         console.log(`Created ${this.entities.length} article entities`);
-    
-        return this.entities.length;
+        
+        // Create links
+        const linksMesh = this.linksManager.createLinks()
+        if (linksMesh) {
+            this.scene.add(linksMesh);
+            console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
+        }
+        
+        return {
+            entitiesCount: this.entities.length,
+            linksMesh: linksMesh
+        };
     }
 
     /**
@@ -553,31 +431,52 @@ class ArticleManager {
     }
 
     /**
-     * Rescale cards based on search results
+     * Handle search by updating objects (cards and links) based on search results
      * @param {Array} searchResults - Array of search results with similarity scores
      */
-    rescaleCardsBasedOnSearch(searchResults) {
+    handleSearch(searchResults) {
         // Create a map of article ID to similarity
         const similarityMap = new Map();
         searchResults.forEach(result => {
             similarityMap.set(result.id, result.score);
         });
         
-
         // Apply similarity scaling to all entities
         this.entities.forEach(entity => {
             const similarity = similarityMap.get(entity.article.id) || 0;
             entity.applySimilarityScale(similarity);
         });
+        
+
+        if (this.linksManager.linksMesh) {
+            this.scene.remove(linksManager.linksMesh);
+            this.linksManager.dispose();
+        }
+
+        const linksMesh = this.linksManager.createLinks(searchResults)
+        if (linksMesh) {
+            this.scene.add(linksMesh);
+        }
     }
 
     /**
-     * Reset all cards to their original appearance
+     * Clear search by resetting all objects (cards and links) to original state
      */
-    resetCardAppearance() {
+    handleClearSearch() {
+        // Reset all entities to original appearance
         this.entities.forEach(entity => {
             entity.resetAppearance();
         });
+        
+
+        if (this.linksManager.linksMesh) {
+            this.scene.remove(this.linksManager.linksMesh);
+            this.linksManager.dispose();
+        }
+        const newLinksMesh = this.linksManager.createLinks()
+        if (newLinksMesh) {
+            this.scene.add(newLinksMesh);
+        }
     }
 
     /**
@@ -613,14 +512,11 @@ class ArticleManager {
             entity.dispose();
         });
         this.entities = [];
-    }
 
-    /**
-     * Get all cards for raycasting
-     * @returns {Array} Array of card meshes
-     */
-    getCards() {
-        return this.entities.map(entity => entity.getCard()).filter(card => card !== null);
+        if (this.linksManager.linksMesh) {
+            this.scene.remove(linksManager.linksMesh);
+            this.linksManager.dispose();
+        }
     }
 
     /**
@@ -631,14 +527,6 @@ class ArticleManager {
         return this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
     }
 
-    /**
-     * Get entity by card
-     * @param {THREE.Mesh} card - The card mesh
-     * @returns {ArticleEntity} The corresponding entity
-     */
-    getEntityByCard(card) {
-        return card.userData.entity;
-    }
 
     /**
      * Get entity by sphere
@@ -649,6 +537,9 @@ class ArticleManager {
         // Find entity by matching sphere reference
         return this.entities.find(entity => entity.sphere === sphere);
     }
+
+
+
 }
 
 // Export for use in other modules
