@@ -18,24 +18,17 @@ class linksManager {
     }
 
     createLinks(entityMap = null) {
-        entityMap
         const vertices = [];
         const colors = [];
         const indices = [];
         let vertexOffset = 0;
-        // Create normalized score lookup
-        const normalizedScores = {};
-
 
         // Process each link
         for (const link of this.links) {
             const arcVertices = link.arc_vertices;
-
-            let count = 0;
-
-            const tangent = new THREE.Vector3(link.tangent[0], link.tangent[1], link.tangent[2]);
-            // ==========
             
+            const tangent = new THREE.Vector3(link.tangent[0], link.tangent[1], link.tangent[2]);
+            const cross_similarity = link.cross_similarity.technologies;
             const origin_value = entityMap.get(link.origin_id).scale
             const end_value = entityMap.get(link.end_id).scale
             
@@ -43,17 +36,15 @@ class linksManager {
                 // console.log(`Skipping!! [O] ${entityMap.get(link.origin_id).title.substr(0,6)} (${link.origin_id}): ${origin_value.toFixed(3)}  || [E] ${entityMap.get(link.origin_id).title.substr(0,6)} (${link.end_id}): ${end_value.toFixed(3)}` )
                 continue
             }
-
-            // ====================
-
+            
             for (let i = 0; i < arcVertices.length; i++) {
                 const vertex = arcVertices[i];
                 const coords = this.converter.process(vertex[0], vertex[1], vertex[2]);
                 const color = coords.color();
 
 
-                const pvalue = count / (arcVertices.length - 1);
-                const alpha = parabolaCurve(pvalue, 1, 0.2, origin_value, end_value);
+                const pvalue = i / (arcVertices.length - 1);
+                const alpha = parabolaCurve(pvalue, 1, 0.2, origin_value, end_value) * cross_similarity;
                 const shape = parabolaCurve(pvalue, 0.5, 0.3, origin_value, end_value);
 
                 const deform = tangent.clone().multiplyScalar(shape);
@@ -66,7 +57,6 @@ class linksManager {
                 vertices.push(coords.x-deform.x, coords.y-deform.y, coords.z-deform.z);
                 colors.push(color.r, color.g, color.b, alpha);
 
-                count++;
             }
 
             // Create triangle strip indices for ribbon
@@ -93,7 +83,7 @@ class linksManager {
         const material = new THREE.MeshBasicMaterial({ 
             color: 0x888888,
             transparent: true,
-            opacity: 0.1,
+            opacity: 0.5,
             vertexColors: true,
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,

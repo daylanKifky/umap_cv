@@ -464,6 +464,7 @@ class ArticleManager {
 
         const linksMesh = this.linksManager.createLinks(this.entityMap)
         if (linksMesh) {
+            console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
             this.scene.add(linksMesh);
         }
     }

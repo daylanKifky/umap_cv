@@ -155,6 +155,7 @@ class ArticleVisualizer {
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
+               
             });
             
             this.searchManager.addEventListener('clearSearch', () => {

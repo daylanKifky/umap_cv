@@ -587,9 +587,17 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                     "end_id": end_id,
                     "arc_vertices": arc_vertices.tolist(),
                     "tangent": tangent.tolist(),
-                    "cross_similarity": cross_similarity
+                    "cross_similarity_raw": cross_similarity
                 }
                 links.append(link)
+
+            # Convert to numpy array and normalize in one step
+            cross_sims = np.array([[link['cross_similarity_raw'][f] for f in fields] for link in links])
+            normalized = 2 * (cross_sims - np.min(cross_sims, axis=0)) / (np.ptp(cross_sims, axis=0) + 1e-8)
+
+            # Assign normalized values back to links
+            for link, norm_vals in zip(links, normalized):
+                link['cross_similarity'] = dict(zip(fields, norm_vals))
 
             print(f"Generated {len(links)} connecting arcs for method '{method}'")
           

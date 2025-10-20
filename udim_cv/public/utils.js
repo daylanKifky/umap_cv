@@ -5,7 +5,7 @@
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
-const SIM_TO_SCALE_MAX = 2.0
+const SIM_TO_SCALE_MAX = 1.5
 
 /**
  * Convert similarity score to scale factor
