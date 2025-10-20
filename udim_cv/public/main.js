@@ -78,6 +78,7 @@ class ArticleVisualizer {
         this.setupBloomControls();
         this.loadArticles();
         this.setupModal();
+
     }
     
     init() {
@@ -112,6 +113,13 @@ class ArticleVisualizer {
         this.controls.maxDistance = 200;
         this.controls.minPolarAngle = Math.PI / 3;
         this.controls.maxPolarAngle = 2 * Math.PI / 3;
+
+        window.getTHREE = () => { return {
+            camera: this.camera, 
+            controls: this.controls, 
+            scene: this.scene, 
+            renderer: this.renderer 
+        }}
         
         // Axis Helper
         const axesHelper = new THREE.AxesHelper(10);
@@ -155,6 +163,9 @@ class ArticleVisualizer {
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
+                const endPos = this.articleManager.entityMap.get(event.detail.results[0].id).position;
+                endPos.multiplyScalar(2);
+                this.animateCamera(endPos);
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
@@ -165,6 +176,41 @@ class ArticleVisualizer {
             console.error('Error loading articles:', error);
             document.getElementById('loading').textContent = 'Error loading articles';
         }
+    }
+
+    animateCamera(endPos) {
+        if (!this.controls.enabled) return;
+
+        const camera = this.camera;
+        const controls = this.controls;
+        const duration = 1000;
+        controls.enabled = false;
+        
+        const startPos = camera.position.clone();
+        const startTarget = controls.target.clone();
+        const endTarget = new THREE.Vector3(0, 0, 0);
+        
+        let startTime = null;
+        console.log("Perform Search");
+        const animation = (time) => {
+            if (!startTime) startTime = time;
+            const t = Math.min((time - startTime) / duration, 1);
+            const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // simple easeInOut
+
+            camera.position.lerpVectors(startPos, endPos, ease);
+            controls.target.lerpVectors(startTarget, endTarget, ease);
+            controls.update();
+            
+            if (t < 1) {
+                requestAnimationFrame(animation);
+                console.log("Animate", t);
+            } else {
+                controls.enabled = true; // Re-enable user control
+            }
+        }
+        requestAnimationFrame(animation);
+
+
     }
     
     
@@ -227,7 +273,9 @@ class ArticleVisualizer {
         requestAnimationFrame(() => this.animate());
         
         // Update controls
-        this.controls.update();
+        if (this.controls.enabled) {
+            this.controls.update();
+        }
         
         // Update article manager (labels face camera)
         if (this.articleManager) {

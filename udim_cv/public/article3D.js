@@ -129,6 +129,7 @@ class ArticleEntity {
 
         // Position sphere at entity location
         this.sphere.position.set(x, y, z);
+        this.position = this.sphere.position.clone();
 
         return this.sphere;
     }
