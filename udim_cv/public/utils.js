@@ -63,7 +63,9 @@ class coordinateConverter {
                 const g = Math.floor((normalizedY + 1) * 127.5);
                 const b = Math.floor((normalizedZ + 1) * 127.5);
                 const color = new THREE.Color(r/255, g/255, b/255);
-                color.offsetHSL(0, 0.3, 0.2);
+                // console.log(r,g,b, " || ", color.getHSL());
+                const {h, s, l} = color.getHSL();
+                color.setHSL(h, s+0.6, 0.7);
                 return color;
             }
         };
