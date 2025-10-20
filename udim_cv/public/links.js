@@ -8,14 +8,6 @@ function parabolaCurve(x, max, vertexY = 0, startMult = 1, endMult = 1) {
     return base * multiplier;
 }
 
-function similarityToScale_TEMP(similarity) {
-    const minScale = 0.2;
-    const maxScale = 2.0;
-    if (similarity === undefined) { return minScale; }
-    const amplified = Math.pow(similarity, 0.3);
-    return minScale + (maxScale - minScale) * amplified;
-}
-
 
 class linksManager {
     constructor(links, converter) {
@@ -25,8 +17,8 @@ class linksManager {
         this.linksMesh = null;
     }
 
-    createLinks(searchResults = null) {
-        console.log(searchResults);
+    createLinks(entityMap = null) {
+        entityMap
         const vertices = [];
         const colors = [];
         const indices = [];
@@ -35,45 +27,22 @@ class linksManager {
         const normalizedScores = {};
 
 
-        if (searchResults) {
-            // Normalize search scores to 0-1 range
-            const scores = searchResults.map(result => result.score);
-            const maxScore = Math.max(...scores);
-            const minScore = Math.min(...scores);
-            const scoreRange = maxScore - minScore;
-
-            searchResults.forEach(result => {
-                normalizedScores[result.id] = (result.score - minScore) / scoreRange;
-            });
-            console.log(normalizedScores);
-
-        } 
-
-        // Add all vertices from this link
         // Process each link
         for (const link of this.links) {
             const arcVertices = link.arc_vertices;
-            
-            if (searchResults) {
-                if ((normalizedScores[link.origin_id] < 0.2 || normalizedScores[link.origin_id] === undefined) && (normalizedScores[link.end_id] < 0.2 || normalizedScores[link.end_id] === undefined)) {
-                    console.log("NO DRAWING", link.origin_id, normalizedScores[link.origin_id], link.end_id, normalizedScores[link.end_id]);
-                    continue;
-                }
-            } else if ( link.cross_similarity.technologies < -1 && link.cross_similarity.category < -3) {
-                continue;
-            }
-            console.log("YES DRAWING", link.origin_id, link.end_id);
+
             let count = 0;
 
             const tangent = new THREE.Vector3(link.tangent[0], link.tangent[1], link.tangent[2]);
             // ==========
-            let origin_value = 1;
-            let end_value = 1;
-            // const min_value = 0.2;
-            if (Object.keys(normalizedScores).length > 0) {
-                origin_value =  similarityToScale_TEMP(normalizedScores[link.origin_id]);
-                end_value = similarityToScale_TEMP(normalizedScores[link.end_id]);
-            } 
+            
+            const origin_value = entityMap.get(link.origin_id).scale
+            const end_value = entityMap.get(link.end_id).scale
+            
+            if (origin_value <= SIM_TO_SCALE_MIN && end_value <= SIM_TO_SCALE_MIN){
+                // console.log(`Skipping!! [O] ${entityMap.get(link.origin_id).title.substr(0,6)} (${link.origin_id}): ${origin_value.toFixed(3)}  || [E] ${entityMap.get(link.origin_id).title.substr(0,6)} (${link.end_id}): ${end_value.toFixed(3)}` )
+                continue
+            }
 
             // ====================
 
@@ -84,7 +53,7 @@ class linksManager {
 
 
                 const pvalue = count / (arcVertices.length - 1);
-                const alpha = parabolaCurve(pvalue, 1, 0.2);
+                const alpha = parabolaCurve(pvalue, 1, 0.2, origin_value, end_value);
                 const shape = parabolaCurve(pvalue, 0.5, 0.3, origin_value, end_value);
 
                 const deform = tangent.clone().multiplyScalar(shape);
@@ -124,7 +93,7 @@ class linksManager {
         const material = new THREE.MeshBasicMaterial({ 
             color: 0x888888,
             transparent: true,
-            opacity: 1,
+            opacity: 0.1,
             vertexColors: true,
             side: THREE.DoubleSide,
             blending: THREE.AdditiveBlending,

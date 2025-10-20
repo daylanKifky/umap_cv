@@ -2,6 +2,22 @@
  * Utility functions and classes for the 3D Article Visualization
  */
 
+
+const SIM_TO_SCALE_POW = 0.3
+const SIM_TO_SCALE_MIN = 0.2
+const SIM_TO_SCALE_MAX = 2.0
+
+/**
+ * Convert similarity score to scale factor
+ * @param {number} similarity - Similarity score (0-1)
+ * @returns {number} Scale factor for the card
+ */
+function similarityToScale(similarity) {
+    const amplified = Math.pow(similarity, SIM_TO_SCALE_POW);
+    return SIM_TO_SCALE_MIN + (SIM_TO_SCALE_MAX - SIM_TO_SCALE_MIN) * amplified;
+}
+
+
 /**
  * coordinateConverter - Converts and normalizes 3D coordinates to scene space
  */
@@ -89,18 +105,7 @@ function markdownToHtml(markdown) {
     return html;
 }
 
-/**
- * Convert similarity score to scale factor
- * @param {number} similarity - Similarity score (0-1)
- * @returns {number} Scale factor for the card
- */
-function similarityToScale(similarity) {
-    const normalizedSim = Math.max(0, Math.min(1, similarity));
-    const amplified = Math.pow(normalizedSim, 0.3);
-    const minScale = 0.2;
-    const maxScale = 2.0;
-    return minScale + (maxScale - minScale) * amplified;
-}
+
 
 /**
  * Helper function to wrap text in canvas

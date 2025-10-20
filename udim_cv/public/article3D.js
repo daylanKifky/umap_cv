@@ -1,5 +1,3 @@
-
-
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
 
@@ -22,6 +20,8 @@ class ArticleEntity {
         this.maxCardTitleLines = 2;
         this.maxCardContentLines = 3;
         this.maxCardContentLength = 300;
+        this.score = 1.0;
+        this.scale = 1.0;
         
         // // Load thumbnail if available
         // if (this.thumbnail) {
@@ -148,15 +148,14 @@ class ArticleEntity {
      * Apply similarity-based scaling to this article's card
      * @param {number} similarity - Similarity score (0-1)
      */
-    applySimilarityScale(similarity) {
-        if (!this.card) return;
-        
-        const newScale = similarityToScale(similarity);
-        this.sphere.scale.setScalar(newScale);
+    applyScore() {
+       
+        this.scale = similarityToScale(this.score);
+        this.sphere.scale.setScalar(this.scale);
         
         // Adjust material opacity and color intensity based on similarity
         const material = this.card.material;
-        if (similarity > 0) {
+        if (this.scale > 0) {
             // Highlight matching articles
             material.opacity = 0.9;
         } else {
@@ -164,6 +163,8 @@ class ArticleEntity {
             material.opacity = 0.3;
             // material.emissive.setRGB(0, 0, 0);
         }
+
+        return this.scale;
     }
 
     /**
@@ -179,6 +180,8 @@ class ArticleEntity {
         if (this.sphere){
             this.sphere.scale.setScalar(1.0);
         }
+        this.score = 1.0;
+        this.scale = 1.0;
     }
 
     /**
@@ -315,6 +318,7 @@ class ArticleManager {
         this.scene = scene;
         this.camera = camera;
         this.entities = [];
+        this.entityMap = new Map();
         this.fontsLoaded = false;
         this.reductionMethod = reductionMethod;
         
@@ -404,12 +408,13 @@ class ArticleManager {
             this.scene.add(sphere);
 
             this.entities.push(entity);
+            this.entityMap.set(article.id, entity);
         });
         
         console.log(`Created ${this.entities.length} article entities`);
         
         // Create links
-        const linksMesh = this.linksManager.createLinks()
+        const linksMesh = this.linksManager.createLinks(this.entityMap)
         if (linksMesh) {
             this.scene.add(linksMesh);
             console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
@@ -437,23 +442,27 @@ class ArticleManager {
     handleSearch(searchResults) {
         // Create a map of article ID to similarity
         const similarityMap = new Map();
+        // Get max score from search results
+        const maxScore = Math.max(...searchResults.map(result => result.score));
+
         searchResults.forEach(result => {
-            similarityMap.set(result.id, result.score);
+            similarityMap.set(result.id, result.score / maxScore);
         });
         
         // Apply similarity scaling to all entities
         this.entities.forEach(entity => {
-            const similarity = similarityMap.get(entity.article.id) || 0;
-            entity.applySimilarityScale(similarity);
+            entity.score = similarityMap.get(entity.id) || 0;
+            entity.applyScore();
+            // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.score.toFixed(3)}  || Scale:${entity.scale}` )
         });
         
 
         if (this.linksManager.linksMesh) {
-            this.scene.remove(linksManager.linksMesh);
+            this.scene.remove(this.linksManager.linksMesh);
             this.linksManager.dispose();
         }
 
-        const linksMesh = this.linksManager.createLinks(searchResults)
+        const linksMesh = this.linksManager.createLinks(this.entityMap)
         if (linksMesh) {
             this.scene.add(linksMesh);
         }
@@ -473,7 +482,8 @@ class ArticleManager {
             this.scene.remove(this.linksManager.linksMesh);
             this.linksManager.dispose();
         }
-        const newLinksMesh = this.linksManager.createLinks()
+
+        const newLinksMesh = this.linksManager.createLinks(this.entityMap)
         if (newLinksMesh) {
             this.scene.add(newLinksMesh);
         }
