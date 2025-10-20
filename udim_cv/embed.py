@@ -60,8 +60,8 @@ DEFAULT_EMBEDDING_MODEL = EmbeddingModel.MINILM
 DEFAULT_CROSS_ENCODER_MODEL = CrossEncoderModel.MINILM
 
 # Get model from environment or use default
-EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL)
-CROSS_ENCODER_MODEL = os.getenv('CROSS_ENCODER_MODEL', DEFAULT_CROSS_ENCODER_MODEL)
+EMBEDDING_MODEL = os.getenv('EMBEDDING_MODEL', DEFAULT_EMBEDDING_MODEL.value)
+CROSS_ENCODER_MODEL = os.getenv('CROSS_ENCODER_MODEL', DEFAULT_CROSS_ENCODER_MODEL.value)
 
 
 class QueryRequest(BaseModel):
@@ -134,7 +134,7 @@ cache = {}
 def calculate_cross_similarity(data: Dict, i: int, j: int, fields: List) -> Dict:
     global cross_encoder
     if cross_encoder is None:
-        cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL.value)
+        cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL)
 
     cache_key = f"{i}_{j}"
     if cache_key in cache:

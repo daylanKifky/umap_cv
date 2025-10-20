@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "udim_cv"
+version = "0.1.0"
+description = "A module to publish a list of projects as web visualization of their semantic latent space"
+authors = [
+    {name = "Bruno"}
+]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "markdown>=3.5.0",
+    "sentence-transformers>=2.7.0", 
+    "scikit-learn>=1.3.0",
+    "pydantic>=2.0.0"
+]
+
+[tool.setuptools]
+packages = ["udim_cv"]
