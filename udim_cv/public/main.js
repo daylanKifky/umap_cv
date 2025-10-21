@@ -73,6 +73,7 @@ class ArticleVisualizer {
         this.bloomPass = null;
         this.bloomEnabled = true;
 
+        this.cameraInitialPosition = new THREE.Vector3(20, 15, 20); 
         this.cameraDistance = 5;
         this.cameraAnimationDuration = 1000;
         
@@ -98,7 +99,7 @@ class ArticleVisualizer {
             0.1, 
             1000
         );
-        this.camera.position.set(20, 20, 20);
+        this.camera.position.copy(this.cameraInitialPosition);
         
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -172,6 +173,7 @@ class ArticleVisualizer {
             
             this.searchManager.addEventListener('clearSearch', () => {
                 this.articleManager.handleClearSearch();
+                this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
             });
             
         } catch (error) {
@@ -180,24 +182,27 @@ class ArticleVisualizer {
         }
     }
     
-    animateCamera(searchResult) {
+    animateCamera(targets, centroid = null) {
         // Check if an animation is already in progress
         if (!this.controls.enabled) return;
         // Disable user control
         this.controls.enabled = false;
 
         let endPos, endTarget;
-        
-        if (searchResult.clearWinner) {
+
+        if (targets.isVector3) {
+            endPos = targets.clone();
+            endTarget = centroid ? centroid: new THREE.Vector3(0, 0, 0);
+        } else if (targets.clearWinner) {
             endPos = this.articleManager.entityMap
-                                    .get(searchResult[0].id)
-                                    .sphere.position.clone();
+                                    .get(targets[0].id)
+                                    .position.clone();
             endTarget = new THREE.Vector3(0, 0, 0);
             const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
             endPos.add(offsetPos)
         } else {
-
-            const { position, target } = findOptimalCameraView(searchResult.map(result => this.articleManager.entityMap.get(result.id).sphere.position));
+            const { position, target } = findOptimalCameraView(
+                targets.map(result => this.articleManager.entityMap.get(result.id).position), this.camera);
             endPos = position;
             endTarget = target;
         }

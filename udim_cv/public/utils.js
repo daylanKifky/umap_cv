@@ -162,18 +162,20 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
 /**
  * findOptimalCameraView - Finds the optimal camera view for a set of points
  * @param {Array<THREE.Vector3>} points - Array of points
+ * @param {THREE.PerspectiveCamera} camera - Camera to use for calculation
  * @returns {Object} - Object containing the optimal camera position and target
  */
-function findOptimalCameraView(points) {
-    
+function findOptimalCameraView(points, camera, centroid = null) {
     if (points.length === 0) {
       return { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) };
     }
     
     // 1. Calculate centroid
-    const centroid = new THREE.Vector3();
-    points.forEach(p => centroid.add(p));
-    centroid.divideScalar(points.length);
+    if (centroid === null) { 
+        centroid = new THREE.Vector3();
+        points.forEach(p => centroid.add(p));
+        centroid.divideScalar(points.length);
+    }
     
     // 2. Center the points
     const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
@@ -204,7 +206,7 @@ function findOptimalCameraView(points) {
       }
     }
     
-    // 4. Power iteration to find largest eigenvector (simplified PCA)
+    // 4. Power iteration to find largest eigenvector
     let v = new THREE.Vector3(1, 1, 1).normalize();
     
     for (let iter = 0; iter < 20; iter++) {
@@ -216,23 +218,10 @@ function findOptimalCameraView(points) {
       v = Av.normalize();
     }
     
-    // 5. Find the spread along principal component
-    let minProj = Infinity, maxProj = -Infinity;
-    let maxDist = 0;
+    // 5. Calculate optimal distance based on camera frustum
+    const distance = calculateOptimalDistance(points, centroid, v, camera);
     
-    centered.forEach(p => {
-      const proj = p.dot(v);
-      minProj = Math.min(minProj, proj);
-      maxProj = Math.max(maxProj, proj);
-      maxDist = Math.max(maxDist, p.length());
-    });
-    
-    const spread = maxProj - minProj;
-    
-    // 6. Position camera along the principal component
-    // Use a multiplier to ensure all points are visible
-    const distance = Math.max(spread, maxDist );
-    
+    // 6. Position camera
     const cameraPosition = new THREE.Vector3()
       .copy(v)
       .multiplyScalar(distance)
@@ -243,6 +232,57 @@ function findOptimalCameraView(points) {
       target: centroid
     };
   }
+  
+  function calculateOptimalDistance(points, centroid, viewDirection, camera) {
+    // Create a temporary camera at centroid looking along viewDirection
+    const tempCamera = camera.clone();
+    tempCamera.position.copy(centroid);
+    tempCamera.lookAt(new THREE.Vector3().copy(centroid).add(viewDirection));
+    tempCamera.updateMatrixWorld();
+    
+    // Get camera parameters
+    let fovRadians, aspect;
+    fovRadians = THREE.MathUtils.degToRad(camera.fov);
+    aspect = camera.aspect;
+        
+    // Transform points to camera space
+    const worldToCamera = new THREE.Matrix4();
+    worldToCamera.copy(tempCamera.matrixWorldInverse);
+    
+    let maxDistance = 0;
+    let maxRadius = 0;
+    
+    points.forEach(point => {
+      // Transform point to camera space
+      const pointCameraSpace = point.clone().applyMatrix4(worldToCamera);
+      
+      // Distance along view direction (z-axis in camera space)
+      const distAlongView = Math.abs(pointCameraSpace.z);
+      
+      // Radius from camera center axis
+      const radius = Math.sqrt(pointCameraSpace.x * pointCameraSpace.x + pointCameraSpace.y * pointCameraSpace.y);
+      
+      // Calculate required distance for this point to fit in frustum
+      // For vertical FOV: distance = radius / tan(fov/2)
+      // For horizontal FOV: distance = radius / (tan(fov/2) * aspect)
+      
+      const verticalHalfAngle = fovRadians / 2;
+      const horizontalHalfAngle = Math.atan(Math.tan(verticalHalfAngle) * aspect);
+      
+      // Use the tighter constraint
+      const requiredDistVertical = radius / Math.tan(verticalHalfAngle);
+      const requiredDistHorizontal = radius / Math.tan(horizontalHalfAngle);
+      const requiredDist = Math.max(requiredDistVertical, requiredDistHorizontal);
+      
+      maxDistance = Math.max(maxDistance, requiredDist + distAlongView);
+      maxRadius = Math.max(maxRadius, radius);
+    });
+    
+    // Add a margin (10% extra distance)
+    const margin = 1.1;
+    return maxDistance * margin;
+  }
+  
 
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
