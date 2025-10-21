@@ -342,7 +342,7 @@ function findOptimalCameraView(entities, camera) {
     }
     
     // Add 10% margin
-    return maxDistance * 1.1;
+    return maxDistance * 0.6;
   }
   
 

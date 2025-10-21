@@ -369,6 +369,12 @@ class ArticleManager {
         });
 
         this.linksManager = new linksManager(this.links, this.converter);
+        
+        // Animation state for score interpolation
+        this.scoreAnimationActive = false;
+        this.scoreAnimationStart = 0;
+        this.animationDuration = 1000;
+        this.lastLinkUpdate = 0;
     }
 
     /**
@@ -467,12 +473,64 @@ class ArticleManager {
     }
 
     /**
-     * Update all entities (labels face camera)
+     * Update all entities (labels face camera and score interpolation)
      */
     update() {
         this.entities.forEach(entity => {
             entity.update(this.camera.rotation);
         });
+        
+        // Handle score animation
+        if (this.scoreAnimationActive) {
+            const now = performance.now();
+            const elapsed = now - this.scoreAnimationStart;
+            let t = Math.min(Math.max(elapsed / this.animationDuration, 0), 1.0);
+            
+            // Apply easing (ease-in-out cubic)
+            // t = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            
+            const isComplete = elapsed >= this.animationDuration;
+            
+            // Interpolate scores for all entities
+            this.entities.forEach(entity => {
+                if (entity.previousScore !== undefined && entity.targetScore !== undefined) {
+                    if (isComplete) {
+                        // Snap to final value
+                        entity.score = entity.targetScore;
+                    } else {
+                        // Interpolate
+                        entity.score = entity.previousScore + (entity.targetScore - entity.previousScore) * t;
+                    }
+                    entity.applyScore();
+                }
+            });
+            
+            // Update links periodically during animation (every ~16ms for smooth updates)
+            if (now - this.lastLinkUpdate > 16) {
+                this.updateLinks();
+                this.lastLinkUpdate = now;
+            }
+            
+            // End animation
+            if (isComplete) {
+                this.scoreAnimationActive = false;
+            }
+        }
+    }
+
+    /**
+     * Update links based on current entity scores
+     */
+    updateLinks() {
+        if (this.linksManager.linksMesh) {
+            this.scene.remove(this.linksManager.linksMesh);
+            this.linksManager.dispose();
+        }
+
+        const linksMesh = this.linksManager.createLinks(this.entityMap);
+        if (linksMesh) {
+            this.scene.add(linksMesh);
+        }
     }
 
     /**
@@ -491,48 +549,58 @@ class ArticleManager {
             searchResults.forEach(result => {
                 similarityMap.set(result.id, result.score / maxScore);
             });
-
         } 
-        
-        // Apply similarity scaling to all entities
+
+        // If animation is already running, complete it immediately
+        if (this.scoreAnimationActive) {
+            this.entities.forEach(entity => {
+                if (entity.targetScore !== undefined) {
+                    entity.score = entity.targetScore;
+                    entity.applyScore();
+                }
+            });
+            this.scoreAnimationActive = false;
+        }
+
+        // Store current scores and set target scores for animation
         this.entities.forEach(entity => {
-            entity.score = similarityMap.get(entity.id) || 0;
-            entity.applyScore();
-            // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.scale.toFixed(3)}  || Scale:${entity.scale}` )
+            entity.previousScore = entity.score;
+            entity.targetScore = similarityMap.get(entity.id) || 0;
         });
         
-
-        if (this.linksManager.linksMesh) {
-            this.scene.remove(this.linksManager.linksMesh);
-            this.linksManager.dispose();
-        }
-
-        const linksMesh = this.linksManager.createLinks(this.entityMap)
-        if (linksMesh) {
-            console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
-            this.scene.add(linksMesh);
-        }
+        // Start score animation
+        this.scoreAnimationActive = true;
+        this.scoreAnimationStart = performance.now();
+        this.lastLinkUpdate = this.scoreAnimationStart - 20; // Ensure links update on first frame
+        this.animationDuration = 1000;
     }
 
     /**
      * Clear search by resetting all objects (cards and links) to original state
      */
     handleClearSearch() {
-        // Reset all entities to original appearance
+        // If animation is already running, complete it immediately
+        if (this.scoreAnimationActive) {
+            this.entities.forEach(entity => {
+                if (entity.targetScore !== undefined) {
+                    entity.score = 1;
+                    entity.applyScore();
+                }
+            });
+            this.scoreAnimationActive = false;
+        }
+
+        // Animate all entities back to score = 1.0
         this.entities.forEach(entity => {
-            entity.resetAppearance();
+            entity.previousScore = entity.score;
+            entity.targetScore = 1.0;
         });
         
-
-        if (this.linksManager.linksMesh) {
-            this.scene.remove(this.linksManager.linksMesh);
-            this.linksManager.dispose();
-        }
-
-        const newLinksMesh = this.linksManager.createLinks(this.entityMap)
-        if (newLinksMesh) {
-            this.scene.add(newLinksMesh);
-        }
+        // Start score animation
+        this.scoreAnimationActive = true;
+        this.scoreAnimationStart = performance.now();
+        // this.lastLinkUpdate = this.scoreAnimationStart - 20; // Ensure links update on first frame
+        this.animationDuration = 1000;
     }
 
     /**
