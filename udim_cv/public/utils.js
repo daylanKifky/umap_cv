@@ -171,13 +171,15 @@ function findOptimalCameraView(entities, camera) {
       return { position: null, target: null };
     }
     
-    // 1. Extract points from entity positions
-    const points = entities.map(entity => entity.position);
-    
-    // 2. Calculate centroid
+    // 1. Extract points and calculate centroid in single pass
+    const points = [];
     const centroid = new THREE.Vector3();
-    points.forEach(p => centroid.add(p));
-    centroid.divideScalar(points.length);
+    for (let i = 0; i < entities.length; i++) {
+        const pos = entities[i].position;
+        points.push(pos);
+        centroid.add(pos);
+    }
+    centroid.divideScalar(entities.length);
     
     // 3. Center the points
     const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
@@ -230,38 +232,41 @@ function findOptimalCameraView(entities, camera) {
     // Get orthogonal direction using cross product
     const viewDirection = new THREE.Vector3().crossVectors(principalDir, arbitrary).normalize();
 
-    // Calculate view direction in XZ plane
-    const viewDirXZ = new THREE.Vector3(viewDirection.x, 0, viewDirection.z)
-    const centroidXZ = new THREE.Vector3(centroid.x, 0, centroid.z)
-    // If the position in the XZ is closer to the origin than the centroid,
-    // then the view direction is pointing away from the center, so we need to flip it
-    const flip = viewDirXZ.add(centroidXZ).length() < centroidXZ.length();
+    // Calculate view direction in XZ plane to check if it points away from center
+    const viewDirXZLength = Math.sqrt(
+        (viewDirection.x + centroid.x) ** 2 + (viewDirection.z + centroid.z) ** 2
+    );
+    const centroidXZLength = Math.sqrt(centroid.x ** 2 + centroid.z ** 2);
+    const flip = viewDirXZLength < centroidXZLength;
     if (flip) {
         console.log("View direction is pointing away from center, flipping!!!");
         viewDirection.negate();
     }
 
     // 7. Calculate camera transform matrix from view direction and centroid
-    // The camera will look from viewDirection towards the centroid
-    const tempCameraPos = new THREE.Vector3().copy(viewDirection).add(centroid);
     const tempMatrix = new THREE.Matrix4();
-    tempMatrix.lookAt(tempCameraPos, centroid, new THREE.Vector3(0, 1, 0));
+    const upVector = new THREE.Vector3(0, 1, 0);
+    tempMatrix.lookAt(
+        new THREE.Vector3().addVectors(viewDirection, centroid),
+        centroid,
+        upVector
+    );
     
-    // 8. Transform card corners to world space using camera transform matrix
+    // 8. Transform card corners and calculate adjusted centroid in single pass
     const allPoints = [...points];
-    entities.forEach(entity => {
+    const adjustedCentroid = centroid.clone().multiplyScalar(points.length);
+    
+    for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
         if (entity.cardCorner) {
             // Rotate card corner by camera transform matrix (entities face camera)
             const rotatedCorner = entity.cardCorner.clone().applyMatrix4(tempMatrix);
             // Apply entity position as offset
             const worldCorner = rotatedCorner.add(entity.position);
             allPoints.push(worldCorner);
+            adjustedCentroid.add(worldCorner);
         }
-    });
-    
-    // 9. Recalculate centroid including card corners
-    const adjustedCentroid = new THREE.Vector3();
-    allPoints.forEach(p => adjustedCentroid.add(p));
+    }
     adjustedCentroid.divideScalar(allPoints.length);
     
     // 9. Calculate optimal distance based on camera frustum with all points
@@ -302,31 +307,28 @@ function findOptimalCameraView(entities, camera) {
   }
   
   function calculateOptimalDistance(points, centroid, viewDirection, camera) {
-    // Create a temporary camera at centroid looking along viewDirection
-    // Create view matrix directly using Matrix4
+    // Create view matrix for transforming points to camera space
     const viewMatrix = new THREE.Matrix4();
+    const upVector = new THREE.Vector3(0, 1, 0);
     viewMatrix.lookAt(
-        centroid, // camera position 
-        new THREE.Vector3().copy(centroid).add(viewDirection), // target
-        new THREE.Vector3(0, 1, 0) // up vector
+        centroid,
+        new THREE.Vector3().addVectors(centroid, viewDirection),
+        upVector
     );
-    viewMatrix.invert(); // Convert from view to world-to-camera matrix
+    viewMatrix.invert(); // Convert to world-to-camera matrix
     
-    // Get camera parameters
-    let fovRadians, aspect;
-    fovRadians = THREE.MathUtils.degToRad(camera.fov);
-    aspect = camera.aspect;
-        
-    // Transform points to camera space
-    const worldToCamera = new THREE.Matrix4();
-    worldToCamera.copy(viewMatrix);
-        
+    // Pre-calculate FOV parameters
+    const fovRadians = THREE.MathUtils.degToRad(camera.fov);
+    const verticalHalfAngle = fovRadians / 2;
+    const horizontalHalfAngle = Math.atan(Math.tan(verticalHalfAngle) * camera.aspect);
+    const tanVertical = Math.tan(verticalHalfAngle);
+    const tanHorizontal = Math.tan(horizontalHalfAngle);
+    
     let maxDistance = 0;
-    let maxRadius = 0;
     
-    points.forEach(point => {
+    for (let i = 0; i < points.length; i++) {
       // Transform point to camera space
-      const pointCameraSpace = point.clone().applyMatrix4(viewMatrix);
+      const pointCameraSpace = points[i].clone().applyMatrix4(viewMatrix);
       
       // Distance along view direction (z-axis in camera space)
       const distAlongView = Math.abs(pointCameraSpace.z);
@@ -334,25 +336,13 @@ function findOptimalCameraView(entities, camera) {
       // Radius from camera center axis
       const radius = Math.sqrt(pointCameraSpace.x * pointCameraSpace.x + pointCameraSpace.y * pointCameraSpace.y);
       
-      // Calculate required distance for this point to fit in frustum
-      // For vertical FOV: distance = radius / tan(fov/2)
-      // For horizontal FOV: distance = radius / (tan(fov/2) * aspect)
-      
-      const verticalHalfAngle = fovRadians / 2;
-      const horizontalHalfAngle = Math.atan(Math.tan(verticalHalfAngle) * aspect);
-      
-      // Use the tighter constraint
-      const requiredDistVertical = radius / Math.tan(verticalHalfAngle);
-      const requiredDistHorizontal = radius / Math.tan(horizontalHalfAngle);
-      const requiredDist = Math.max(requiredDistVertical, requiredDistHorizontal);
-      
+      // Calculate required distance using tighter constraint
+      const requiredDist = Math.max(radius / tanVertical, radius / tanHorizontal);
       maxDistance = Math.max(maxDistance, requiredDist + distAlongView);
-      maxRadius = Math.max(maxRadius, radius);
-    });
+    }
     
-    // Add a margin (10% extra distance)
-    const margin = 1.1;
-    return maxDistance * margin;
+    // Add 10% margin
+    return maxDistance * 1.1;
   }
   
 
