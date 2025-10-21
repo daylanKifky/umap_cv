@@ -210,7 +210,17 @@ class ArticleVisualizer {
         
         const startPos = this.camera.position.clone();
         const startTarget = this.controls.target.clone();
+
+        // Get relative positions (camera relative to target)
+        const startRelative = startPos.clone().sub(startTarget);
+        const endRelative = endPos.clone().sub(endTarget);
         
+        // Convert XZ plane vectors to spherical (ignoring Y, we just want to rotate around the vertical axis)
+        const startXZ = new THREE.Vector3(startRelative.x, 0, startRelative.z);
+        const endXZ = new THREE.Vector3(endRelative.x, 0, endRelative.z);
+        const radialStartXZ = new THREE.Spherical().setFromVector3(startXZ);
+        const radialEndXZ = new THREE.Spherical().setFromVector3(endXZ);
+                
         let startTime = null;
 
         const animation = (time) => {
@@ -218,8 +228,21 @@ class ArticleVisualizer {
             const t = Math.min((time - startTime) / this.cameraAnimationDuration, 1);
             const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // simple easeInOut
 
-            this.camera.position.lerpVectors(startPos, endPos, ease);
+            // Interpolate theta (azimuthal angle around Y-axis) and radius for horizontal rotation
+            const theta = radialStartXZ.theta + (radialEndXZ.theta - radialStartXZ.theta) * ease;
+            const radius = radialStartXZ.radius + (radialEndXZ.radius - radialStartXZ.radius) * ease;
+            
+            // Interpolate height relative to target
+            const relativeHeight = startRelative.y + (endRelative.y - startRelative.y) * ease;
+
+            // Interpolate target
             this.controls.target.lerpVectors(startTarget, endTarget, ease);
+            
+            // Convert spherical to cartesian (on XZ plane) and add height
+            this.camera.position.setFromSpherical(new THREE.Spherical(radius, Math.PI / 2, theta));
+            this.camera.position.y = relativeHeight;
+            this.camera.position.add(this.controls.target);
+                        
             this.controls.update();
             
             if (t < 1) {
