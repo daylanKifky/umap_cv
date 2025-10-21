@@ -186,27 +186,25 @@ class ArticleVisualizer {
         // Disable user control
         this.controls.enabled = false;
 
-        let endPos;
+        let endPos, endTarget;
         
         if (searchResult.clearWinner) {
             endPos = this.articleManager.entityMap
                                     .get(searchResult[0].id)
                                     .sphere.position.clone();
+            endTarget = new THREE.Vector3(0, 0, 0);
+            const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
+            endPos.add(offsetPos)
         } else {
 
-            endPos = searchResult.reduce((acc, result) => {
-                const position = this.articleManager.entityMap.get(result.id).sphere.position;
-                acc.add(position);
-                return acc;
-            }, new THREE.Vector3(0, 0, 0)).divideScalar(searchResult.length);
+            const { position, target } = findOptimalCameraView(searchResult.map(result => this.articleManager.entityMap.get(result.id).sphere.position));
+            endPos = position;
+            endTarget = target;
         }
         
-        const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
-        endPos.add(offsetPos)
         
         const startPos = this.camera.position.clone();
         const startTarget = this.controls.target.clone();
-        const endTarget = new THREE.Vector3(0, 0, 0);
         
         let startTime = null;
 

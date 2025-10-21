@@ -159,6 +159,91 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
     return currentY + lineHeight;
 }
 
+/**
+ * findOptimalCameraView - Finds the optimal camera view for a set of points
+ * @param {Array<THREE.Vector3>} points - Array of points
+ * @returns {Object} - Object containing the optimal camera position and target
+ */
+function findOptimalCameraView(points) {
+    
+    if (points.length === 0) {
+      return { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) };
+    }
+    
+    // 1. Calculate centroid
+    const centroid = new THREE.Vector3();
+    points.forEach(p => centroid.add(p));
+    centroid.divideScalar(points.length);
+    
+    // 2. Center the points
+    const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
+    
+    // 3. Compute covariance matrix (3x3)
+    const cov = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
+    
+    centered.forEach(p => {
+      cov[0][0] += p.x * p.x;
+      cov[0][1] += p.x * p.y;
+      cov[0][2] += p.x * p.z;
+      cov[1][0] += p.y * p.x;
+      cov[1][1] += p.y * p.y;
+      cov[1][2] += p.y * p.z;
+      cov[2][0] += p.z * p.x;
+      cov[2][1] += p.z * p.y;
+      cov[2][2] += p.z * p.z;
+    });
+    
+    const n = points.length;
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        cov[i][j] /= n;
+      }
+    }
+    
+    // 4. Power iteration to find largest eigenvector (simplified PCA)
+    let v = new THREE.Vector3(1, 1, 1).normalize();
+    
+    for (let iter = 0; iter < 20; iter++) {
+      const Av = new THREE.Vector3(
+        cov[0][0] * v.x + cov[0][1] * v.y + cov[0][2] * v.z,
+        cov[1][0] * v.x + cov[1][1] * v.y + cov[1][2] * v.z,
+        cov[2][0] * v.x + cov[2][1] * v.y + cov[2][2] * v.z
+      );
+      v = Av.normalize();
+    }
+    
+    // 5. Find the spread along principal component
+    let minProj = Infinity, maxProj = -Infinity;
+    let maxDist = 0;
+    
+    centered.forEach(p => {
+      const proj = p.dot(v);
+      minProj = Math.min(minProj, proj);
+      maxProj = Math.max(maxProj, proj);
+      maxDist = Math.max(maxDist, p.length());
+    });
+    
+    const spread = maxProj - minProj;
+    
+    // 6. Position camera along the principal component
+    // Use a multiplier to ensure all points are visible
+    const distance = Math.max(spread, maxDist );
+    
+    const cameraPosition = new THREE.Vector3()
+      .copy(v)
+      .multiplyScalar(distance)
+      .add(centroid);
+    
+    return {
+      position: cameraPosition,
+      target: centroid
+    };
+  }
+
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { 
@@ -166,7 +251,8 @@ if (typeof module !== 'undefined' && module.exports) {
         markdownToHtml, 
         similarityToScale, 
         wrapText,
-        degToRad
+        degToRad,
+        findOptimalCameraView
     };
 }
 
