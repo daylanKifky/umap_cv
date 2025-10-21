@@ -1,6 +1,6 @@
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
-const DEBUG_CARD_CORNER = true;
+const DEBUG_CARD_CORNER = false;
 /**
  * ArticleEntity - Handles a single article's 3D representation
  */

@@ -189,27 +189,27 @@ class ArticleVisualizer {
         this.controls.enabled = false;
 
         let endPos, endTarget;
+        let target_entities = [];
 
         if (targets.isVector3) {
             endPos = targets.clone();
             endTarget = centroid ? centroid: new THREE.Vector3(0, 0, 0);
-        } else if (targets.clearWinner) {
-            endPos = this.articleManager.entityMap
-                                    .get(targets[0].id)
-                                    .position.clone();
-            endTarget = new THREE.Vector3(0, 0, 0);
-            const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
-            endPos.add(offsetPos)
         } else {
-            const { position, target } = findOptimalCameraView(
-                targets.map(result => this.articleManager.entityMap.get(result.id)), this.camera);
+            if (targets.clearWinner) {
+                target_entities = [this.articleManager.entityMap.get(targets[0].id)];
+            } else {
+                target_entities = targets.map(result => this.articleManager.entityMap.get(result.id));
+            }
+            const view = findOptimalCameraView(target_entities, this.camera);
 
-            if (!position) {
+            if (!view.position) {
+                this.controls.enabled = false;
                 console.log("No optimal camera view found, aborting animation");
                 return;
             }
-            endPos = position;
-            endTarget = target;
+
+            endPos = view.position;
+            endTarget = view.target;
         }
         
         
