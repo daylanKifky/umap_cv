@@ -202,7 +202,7 @@ class ArticleVisualizer {
             endPos.add(offsetPos)
         } else {
             const { position, target } = findOptimalCameraView(
-                targets.map(result => this.articleManager.entityMap.get(result.id).position), this.camera);
+                targets.map(result => this.articleManager.entityMap.get(result.id)), this.camera);
             endPos = position;
             endTarget = target;
         }

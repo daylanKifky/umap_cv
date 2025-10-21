@@ -160,26 +160,29 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
 }
 
 /**
- * findOptimalCameraView - Finds the optimal camera view for a set of points
- * @param {Array<THREE.Vector3>} points - Array of points
+ * findOptimalCameraView - Finds the optimal camera view for a set of entities
+ * @param {Array<Object>} entities - Array of entities with position, rotation, and cardCorner properties
  * @param {THREE.PerspectiveCamera} camera - Camera to use for calculation
  * @returns {Object} - Object containing the optimal camera position and target
  */
-function findOptimalCameraView(points, camera) {
+function findOptimalCameraView(entities, camera) {
     
-    if (points.length === 0) {
+    if (entities.length === 0) {
       return { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) };
     }
     
-    // 1. Calculate centroid
+    // 1. Extract points from entity positions
+    const points = entities.map(entity => entity.position);
+    
+    // 2. Calculate centroid
     const centroid = new THREE.Vector3();
     points.forEach(p => centroid.add(p));
     centroid.divideScalar(points.length);
     
-    // 2. Center the points
+    // 3. Center the points
     const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
     
-    // 3. Compute covariance matrix (3x3)
+    // 4. Compute covariance matrix (3x3)
     const cov = [
       [0, 0, 0],
       [0, 0, 0],
@@ -205,7 +208,7 @@ function findOptimalCameraView(points, camera) {
       }
     }
     
-    // 4. Power iteration to find largest eigenvector (principal direction)
+    // 5. Power iteration to find largest eigenvector (principal direction)
     let principalDir = new THREE.Vector3(1, 1, 1).normalize();
     
     for (let iter = 0; iter < 20; iter++) {
@@ -217,7 +220,7 @@ function findOptimalCameraView(points, camera) {
       principalDir = Av.normalize();
     }
     
-    // 5. Find a direction orthogonal to the principal direction
+    // 6. Find a direction orthogonal to the principal direction
     // Choose a vector that's not parallel to principalDir
     let arbitrary = new THREE.Vector3(0, 1, 0);
     if (Math.abs(principalDir.dot(arbitrary)) > 0.9) {
@@ -238,14 +241,39 @@ function findOptimalCameraView(points, camera) {
         viewDirection.negate();
     }
 
-    // 6. Calculate optimal distance based on camera frustum
-    const distance = calculateOptimalDistance(points, centroid, viewDirection, camera);
+    // 7. Calculate camera rotation from view direction and centroid
+    // The camera will look from viewDirection towards the centroid
+    const tempCameraPos = new THREE.Vector3().copy(viewDirection).add(centroid);
+    const cameraQuaternion = new THREE.Quaternion();
+    const tempMatrix = new THREE.Matrix4();
+    tempMatrix.lookAt(tempCameraPos, centroid, new THREE.Vector3(0, 1, 0));
+    cameraQuaternion.setFromRotationMatrix(tempMatrix);
     
-    // 7. Position camera orthogonal to principal direction
+    // 8. Transform card corners to world space using camera rotation
+    const allPoints = [...points];
+    entities.forEach(entity => {
+        if (entity.cardCorner) {
+            // Rotate card corner by camera rotation (entities face camera)
+            const rotatedCorner = entity.cardCorner.clone().applyQuaternion(cameraQuaternion);
+            // Apply entity position as offset
+            const worldCorner = rotatedCorner.add(entity.position);
+            allPoints.push(worldCorner);
+        }
+    });
+    
+    // 9. Recalculate centroid including card corners
+    const adjustedCentroid = new THREE.Vector3();
+    allPoints.forEach(p => adjustedCentroid.add(p));
+    adjustedCentroid.divideScalar(allPoints.length);
+    
+    // 9. Calculate optimal distance based on camera frustum with all points
+    const distance = calculateOptimalDistance(allPoints, adjustedCentroid, viewDirection, camera);
+    
+    // 10. Position camera orthogonal to principal direction
     const cameraPosition = new THREE.Vector3()
     .copy(viewDirection)
     .multiplyScalar(distance)
-    .add(centroid);
+    .add(adjustedCentroid);
 
     if (DEBUG_VIEW_DIRECTION) {
         const { scene } = getTHREE();
@@ -255,7 +283,7 @@ function findOptimalCameraView(points, camera) {
             window.__debug_view_direction__ = null;
         }
         // Create arrow helper to visualize view direction
-        const arrowDir = centroid.clone().sub(cameraPosition);
+        const arrowDir = adjustedCentroid.clone().sub(cameraPosition);
         const length = arrowDir.length();
         const arrowHelper = new THREE.ArrowHelper(
             arrowDir.normalize(),
@@ -271,7 +299,7 @@ function findOptimalCameraView(points, camera) {
     
     return {
       position: cameraPosition,
-      target: centroid
+      target: adjustedCentroid
     };
   }
   

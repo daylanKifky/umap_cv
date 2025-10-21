@@ -1,6 +1,6 @@
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
-const DEBUG_CARD_CORNER = false;
+const DEBUG_CARD_CORNER = true;
 /**
  * ArticleEntity - Handles a single article's 3D representation
  */
@@ -153,8 +153,10 @@ class ArticleEntity {
 
         // Position sphere at entity location
         this.sphere.position.set(x, y, z);
-        this.position = this.sphere.position.clone();
-
+        this.position = this.sphere.position;
+        this.rotation = this.sphere.rotation;
+        this.quaternion = this.sphere.quaternion;
+        
         return this.sphere;
     }
 
