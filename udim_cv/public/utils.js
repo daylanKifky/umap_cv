@@ -168,7 +168,7 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
 function findOptimalCameraView(entities, camera) {
     
     if (entities.length === 0) {
-      return { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) };
+      return { position: null, target: null };
     }
     
     // 1. Extract points from entity positions
@@ -241,20 +241,18 @@ function findOptimalCameraView(entities, camera) {
         viewDirection.negate();
     }
 
-    // 7. Calculate camera rotation from view direction and centroid
+    // 7. Calculate camera transform matrix from view direction and centroid
     // The camera will look from viewDirection towards the centroid
     const tempCameraPos = new THREE.Vector3().copy(viewDirection).add(centroid);
-    const cameraQuaternion = new THREE.Quaternion();
     const tempMatrix = new THREE.Matrix4();
     tempMatrix.lookAt(tempCameraPos, centroid, new THREE.Vector3(0, 1, 0));
-    cameraQuaternion.setFromRotationMatrix(tempMatrix);
     
-    // 8. Transform card corners to world space using camera rotation
+    // 8. Transform card corners to world space using camera transform matrix
     const allPoints = [...points];
     entities.forEach(entity => {
         if (entity.cardCorner) {
-            // Rotate card corner by camera rotation (entities face camera)
-            const rotatedCorner = entity.cardCorner.clone().applyQuaternion(cameraQuaternion);
+            // Rotate card corner by camera transform matrix (entities face camera)
+            const rotatedCorner = entity.cardCorner.clone().applyMatrix4(tempMatrix);
             // Apply entity position as offset
             const worldCorner = rotatedCorner.add(entity.position);
             allPoints.push(worldCorner);
@@ -271,9 +269,9 @@ function findOptimalCameraView(entities, camera) {
     
     // 10. Position camera orthogonal to principal direction
     const cameraPosition = new THREE.Vector3()
-    .copy(viewDirection)
-    .multiplyScalar(distance)
-    .add(adjustedCentroid);
+        .copy(viewDirection)
+        .multiplyScalar(distance)
+        .add(adjustedCentroid);
 
     if (DEBUG_VIEW_DIRECTION) {
         const { scene } = getTHREE();
@@ -305,10 +303,14 @@ function findOptimalCameraView(entities, camera) {
   
   function calculateOptimalDistance(points, centroid, viewDirection, camera) {
     // Create a temporary camera at centroid looking along viewDirection
-    const tempCamera = camera.clone();
-    tempCamera.position.copy(centroid);
-    tempCamera.lookAt(new THREE.Vector3().copy(centroid).add(viewDirection));
-    tempCamera.updateMatrixWorld();
+    // Create view matrix directly using Matrix4
+    const viewMatrix = new THREE.Matrix4();
+    viewMatrix.lookAt(
+        centroid, // camera position 
+        new THREE.Vector3().copy(centroid).add(viewDirection), // target
+        new THREE.Vector3(0, 1, 0) // up vector
+    );
+    viewMatrix.invert(); // Convert from view to world-to-camera matrix
     
     // Get camera parameters
     let fovRadians, aspect;
@@ -317,14 +319,14 @@ function findOptimalCameraView(entities, camera) {
         
     // Transform points to camera space
     const worldToCamera = new THREE.Matrix4();
-    worldToCamera.copy(tempCamera.matrixWorldInverse);
-    
+    worldToCamera.copy(viewMatrix);
+        
     let maxDistance = 0;
     let maxRadius = 0;
     
     points.forEach(point => {
       // Transform point to camera space
-      const pointCameraSpace = point.clone().applyMatrix4(worldToCamera);
+      const pointCameraSpace = point.clone().applyMatrix4(viewMatrix);
       
       // Distance along view direction (z-axis in camera space)
       const distAlongView = Math.abs(pointCameraSpace.z);

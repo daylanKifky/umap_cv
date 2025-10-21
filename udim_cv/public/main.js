@@ -203,6 +203,11 @@ class ArticleVisualizer {
         } else {
             const { position, target } = findOptimalCameraView(
                 targets.map(result => this.articleManager.entityMap.get(result.id)), this.camera);
+
+            if (!position) {
+                console.log("No optimal camera view found, aborting animation");
+                return;
+            }
             endPos = position;
             endTarget = target;
         }
