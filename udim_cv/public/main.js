@@ -185,10 +185,21 @@ class ArticleVisualizer {
         if (!this.controls.enabled) return;
         // Disable user control
         this.controls.enabled = false;
+
+        let endPos;
         
-        const endPos = this.articleManager.entityMap
-                                .get(searchResult[0].id)
-                                .sphere.position.clone();
+        if (searchResult.clearWinner) {
+            endPos = this.articleManager.entityMap
+                                    .get(searchResult[0].id)
+                                    .sphere.position.clone();
+        } else {
+
+            endPos = searchResult.reduce((acc, result) => {
+                const position = this.articleManager.entityMap.get(result.id).sphere.position;
+                acc.add(position);
+                return acc;
+            }, new THREE.Vector3(0, 0, 0)).divideScalar(searchResult.length);
+        }
         
         const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
         endPos.add(offsetPos)
