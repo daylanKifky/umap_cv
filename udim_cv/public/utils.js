@@ -22,49 +22,44 @@ function similarityToScale(similarity) {
  * coordinateConverter - Converts and normalizes 3D coordinates to scene space
  */
 class coordinateConverter {
-    constructor(scaleFactor = 30) {
-        this.minX = Infinity; this.maxX = -Infinity;
-        this.minY = Infinity; this.maxY = -Infinity;
-        this.minZ = Infinity; this.maxZ = -Infinity;
+    constructor(scaleFactor = 30, saturation = 0.6, lightness = 0.7) {
+        this.min = new THREE.Vector3(Infinity, Infinity, Infinity);
+        this.max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
+        this.center = new THREE.Vector3();
         this.scaleFactor = scaleFactor;
+        this.saturation = saturation;
+        this.lightness = lightness;
     }
     
     add(x, y, z) {
-        this.minX = Math.min(this.minX, x);
-        this.maxX = Math.max(this.maxX, x);
-        this.minY = Math.min(this.minY, y);
-        this.maxY = Math.max(this.maxY, y);
-        this.minZ = Math.min(this.minZ, z);
-        this.maxZ = Math.max(this.maxZ, z);
-        this.centerX = (this.minX + this.maxX) / 2;
-        this.centerY = (this.minY + this.maxY) / 2;
-        this.centerZ = (this.minZ + this.maxZ) / 2;
+        const point = new THREE.Vector3(x, y, z);
+        this.min.min(point);
+        this.max.max(point);
+        this.center.addVectors(this.min, this.max).multiplyScalar(0.5);
     }
 
     process(x, y, z) {
-        // Normalize coordinates
-        const normalizedX = ((x - this.centerX) / (this.maxX - this.minX));
-        const normalizedY = ((y - this.centerY) / (this.maxY - this.minY)); 
-        const normalizedZ = ((z - this.centerZ) / (this.maxZ - this.minZ));
+        const centered = new THREE.Vector3(x, y, z).sub(this.center);
+        const range = new THREE.Vector3().subVectors(this.max, this.min);
+        
+        // // Normalize coordinates
+        const normalized = centered.divide(range);
 
         // Scale coordinates
-        const scaledX = normalizedX * this.scaleFactor;
-        const scaledY = normalizedY * this.scaleFactor;
-        const scaledZ = normalizedZ * this.scaleFactor;
-
+        const scaled = normalized.clone().multiplyScalar(this.scaleFactor);    
         
         return {
-            x: scaledX,
-            y: scaledY, 
-            z: scaledZ,
+            x: scaled.x,
+            y: scaled.y, 
+            z: scaled.z,
             color: () => {
                 // Convert normalized coordinates to RGB (0-255 range)
-                const r = Math.floor((normalizedX + 1) * 127.5);
-                const g = Math.floor((normalizedY + 1) * 127.5);
-                const b = Math.floor((normalizedZ + 1) * 127.5);
+                const r = Math.floor((normalized.x + 1) * 127.5);
+                const g = Math.floor((normalized.y + 1) * 127.5);
+                const b = Math.floor((normalized.z + 1) * 127.5);
                 const color = new THREE.Color(r/255, g/255, b/255);
                 const {h, s, l} = color.getHSL({});
-                color.setHSL(h, s+0.6, 0.7); // Adjust saturation and constant lightness (0.7)
+                color.setHSL(h, s+this.saturation, this.lightness); // Adjust saturation and constant lightness 
                 return color;
             }
         };
