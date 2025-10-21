@@ -1,6 +1,6 @@
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
-
+const DEBUG_CARD_CORNER = false;
 /**
  * ArticleEntity - Handles a single article's 3D representation
  */
@@ -78,12 +78,18 @@ class ArticleEntity {
         // Create plane geometry with correct aspect ratio
         const aspectRatio = width / height;
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
-
+        
         // Move pivot point to upper left corner
         // Translate geometry so pivot is at upper left instead of center
-        const offsetX = -0.8; // negative value moves the card to the left
-        const offsetY = -0.3; // negative value moves the card up
+        const offsetX = -0.6; // negative value moves the card to the left
+        const offsetY = -0.2; // negative value moves the card up
         geometry.translate(2 * aspectRatio - offsetX, -2 - offsetY, 0);
+        geometry.computeBoundingBox();
+
+        this.cardCorner = new THREE.Vector3(geometry.boundingBox.max.x, 
+                                            geometry.boundingBox.min.y,
+                                            0);
+
 
         const material = new THREE.MeshBasicMaterial({
             map: texture,
@@ -99,6 +105,24 @@ class ArticleEntity {
         this.card.position.set(x, y, z);
         this.card.castShadow = true;
         this.card.receiveShadow = true;
+
+        if (DEBUG_CARD_CORNER) {
+            const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const boxMaterial = new THREE.MeshBasicMaterial({color: 0xff0000});
+            const cornerBox = new THREE.Mesh(boxGeometry, boxMaterial);
+            cornerBox.position.copy(geometry.boundingBox.max);
+            this.card.add(cornerBox);
+
+            const boxMaterial2 = new THREE.MeshBasicMaterial({color: 0x00ff00});
+            const cornerBox2 = new THREE.Mesh(boxGeometry, boxMaterial2);
+            cornerBox2.position.copy(geometry.boundingBox.min);
+            this.card.add(cornerBox2);
+
+            const boxMaterial3 = new THREE.MeshBasicMaterial({color: 0x0000ff, wireframe: true});
+            const cornerBox3 = new THREE.Mesh(boxGeometry, boxMaterial3);
+            cornerBox3.scale.setScalar(5);
+            this.card.add(cornerBox3);
+        }
 
         // Store article data in userData
         this.card.userData = {
@@ -140,8 +164,8 @@ class ArticleEntity {
      * @param {THREE.Vector3} cameraPosition - The camera position to look at
      */
     update(rotation) {
-        if (this.card && rotation) {
-            this.card.rotation.copy(rotation);
+        if (this.sphere && rotation) {
+            this.sphere.rotation.copy(rotation);
         }
     }
 
@@ -233,9 +257,15 @@ class ArticleEntity {
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
     updateCardTexture(context, width, height) {
+        
         // Clear canvas with transparency
         context.clearRect(0, 0, width, height);
 
+        if (DEBUG_CARD_CORNER) {    
+            // Add background color
+            context.fillStyle = 'rgba(228, 21, 200, 0.1)'; // Semi-transparent white
+            context.fillRect(0, 0, width, height);
+        }
         // Convert THREE.Color to CSS color string
         const colorStr = `rgb(${Math.floor(this.color.r * 255)}, ${Math.floor(this.color.g * 255)}, ${Math.floor(this.color.b * 255)})`;
 
@@ -401,7 +431,14 @@ class ArticleManager {
             const entity = new ArticleEntity(article, index, color);
             const card = entity.createCard(0, 0, 0); // Create card at origin
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
-
+            
+            if (DEBUG_CARD_CORNER) {
+                const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const boxMaterial = new THREE.MeshBasicMaterial({color: 0x00ffff});
+                const cornerBox = new THREE.Mesh(boxGeometry, boxMaterial);
+                cornerBox.position.copy(entity.cardCorner);
+                sphere.add(cornerBox);
+            }
             // Make card a child of the sphere
             sphere.add(card);
 

@@ -177,7 +177,7 @@ class SearchManager extends EventTarget {
             
             this.searchResults = results;
             
-            this.displaySearchResults(results);
+            // this.displaySearchResults(results);
             
             // Dispatch custom event with search results
             this.dispatchEvent(new CustomEvent('performSearch', { 

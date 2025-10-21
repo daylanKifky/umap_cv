@@ -1,7 +1,7 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-
+const DEBUG_VIEW_DIRECTION = true;
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
@@ -165,17 +165,16 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
  * @param {THREE.PerspectiveCamera} camera - Camera to use for calculation
  * @returns {Object} - Object containing the optimal camera position and target
  */
-function findOptimalCameraView(points, camera, centroid = null) {
+function findOptimalCameraView(points, camera) {
+    
     if (points.length === 0) {
       return { position: new THREE.Vector3(0, 0, 10), target: new THREE.Vector3(0, 0, 0) };
     }
     
     // 1. Calculate centroid
-    if (centroid === null) { 
-        centroid = new THREE.Vector3();
-        points.forEach(p => centroid.add(p));
-        centroid.divideScalar(points.length);
-    }
+    const centroid = new THREE.Vector3();
+    points.forEach(p => centroid.add(p));
+    centroid.divideScalar(points.length);
     
     // 2. Center the points
     const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
@@ -206,26 +205,69 @@ function findOptimalCameraView(points, camera, centroid = null) {
       }
     }
     
-    // 4. Power iteration to find largest eigenvector
-    let v = new THREE.Vector3(1, 1, 1).normalize();
+    // 4. Power iteration to find largest eigenvector (principal direction)
+    let principalDir = new THREE.Vector3(1, 1, 1).normalize();
     
     for (let iter = 0; iter < 20; iter++) {
       const Av = new THREE.Vector3(
-        cov[0][0] * v.x + cov[0][1] * v.y + cov[0][2] * v.z,
-        cov[1][0] * v.x + cov[1][1] * v.y + cov[1][2] * v.z,
-        cov[2][0] * v.x + cov[2][1] * v.y + cov[2][2] * v.z
+        cov[0][0] * principalDir.x + cov[0][1] * principalDir.y + cov[0][2] * principalDir.z,
+        cov[1][0] * principalDir.x + cov[1][1] * principalDir.y + cov[1][2] * principalDir.z,
+        cov[2][0] * principalDir.x + cov[2][1] * principalDir.y + cov[2][2] * principalDir.z
       );
-      v = Av.normalize();
+      principalDir = Av.normalize();
     }
     
-    // 5. Calculate optimal distance based on camera frustum
-    const distance = calculateOptimalDistance(points, centroid, v, camera);
+    // 5. Find a direction orthogonal to the principal direction
+    // Choose a vector that's not parallel to principalDir
+    let arbitrary = new THREE.Vector3(0, 1, 0);
+    if (Math.abs(principalDir.dot(arbitrary)) > 0.9) {
+      arbitrary = new THREE.Vector3(1, 0, 1);
+    }
     
-    // 6. Position camera
+    // Get orthogonal direction using cross product
+    const viewDirection = new THREE.Vector3().crossVectors(principalDir, arbitrary).normalize();
+
+    // Calculate view direction in XZ plane
+    const viewDirXZ = new THREE.Vector3(viewDirection.x, 0, viewDirection.z)
+    const centroidXZ = new THREE.Vector3(centroid.x, 0, centroid.z)
+    // If the position in the XZ is closer to the origin than the centroid,
+    // then the view direction is pointing away from the center, so we need to flip it
+    const flip = viewDirXZ.add(centroidXZ).length() < centroidXZ.length();
+    if (flip) {
+        console.log("View direction is pointing away from center, flipping!!!");
+        viewDirection.negate();
+    }
+
+    // 6. Calculate optimal distance based on camera frustum
+    const distance = calculateOptimalDistance(points, centroid, viewDirection, camera);
+    
+    // 7. Position camera orthogonal to principal direction
     const cameraPosition = new THREE.Vector3()
-      .copy(v)
-      .multiplyScalar(distance)
-      .add(centroid);
+    .copy(viewDirection)
+    .multiplyScalar(distance)
+    .add(centroid);
+
+    if (DEBUG_VIEW_DIRECTION) {
+        const { scene } = getTHREE();
+       
+        if (window.__debug_view_direction__) {
+            scene.remove(window.__debug_view_direction__);
+            window.__debug_view_direction__ = null;
+        }
+        // Create arrow helper to visualize view direction
+        const arrowDir = centroid.clone().sub(cameraPosition);
+        const length = arrowDir.length();
+        const arrowHelper = new THREE.ArrowHelper(
+            arrowDir.normalize(),
+            cameraPosition,
+            length,
+            flip ? 0xffcc00 : 0xcccccc,
+            length * 0.2,
+            length * 0.05
+        );
+        scene.add(arrowHelper);
+        window.__debug_view_direction__ = arrowHelper;
+    }
     
     return {
       position: cameraPosition,
