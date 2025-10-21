@@ -19,6 +19,16 @@ function similarityToScale(similarity) {
 
 
 /**
+ * Convert degrees to radians.
+ * @param {number} degrees - Degrees to convert
+ * @returns {number} Radians
+ */
+function degToRad(degrees)
+{
+  return degrees * (Math.PI/180);
+}
+
+/**
  * coordinateConverter - Converts and normalizes 3D coordinates to scene space
  */
 class coordinateConverter {
@@ -155,7 +165,8 @@ if (typeof module !== 'undefined' && module.exports) {
         coordinateConverter, 
         markdownToHtml, 
         similarityToScale, 
-        wrapText 
+        wrapText,
+        degToRad
     };
 }
 

@@ -72,6 +72,9 @@ class ArticleVisualizer {
         this.composer = null;
         this.bloomPass = null;
         this.bloomEnabled = true;
+
+        this.cameraDistance = 5;
+        this.cameraAnimationDuration = 1000;
         
         this.init();
         this.setupBloom();
@@ -111,8 +114,8 @@ class ArticleVisualizer {
         this.controls.screenSpacePanning = false;
         this.controls.minDistance = 5;
         this.controls.maxDistance = 200;
-        this.controls.minPolarAngle = Math.PI / 3;
-        this.controls.maxPolarAngle = 2 * Math.PI / 3;
+        this.controls.minPolarAngle = degToRad(30);
+        this.controls.maxPolarAngle = degToRad(180-30);
 
         window.getTHREE = () => { return {
             camera: this.camera, 
@@ -163,9 +166,8 @@ class ArticleVisualizer {
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
-                const endPos = this.articleManager.entityMap.get(event.detail.results[0].id).position;
-                endPos.multiplyScalar(2);
-                this.animateCamera(endPos);
+                
+                this.animateCamera(event.detail.results);
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
@@ -177,35 +179,40 @@ class ArticleVisualizer {
             document.getElementById('loading').textContent = 'Error loading articles';
         }
     }
-
-    animateCamera(endPos) {
+    
+    animateCamera(searchResult) {
+        // Check if an animation is already in progress
         if (!this.controls.enabled) return;
-
-        const camera = this.camera;
-        const controls = this.controls;
-        const duration = 1000;
-        controls.enabled = false;
+        // Disable user control
+        this.controls.enabled = false;
         
-        const startPos = camera.position.clone();
-        const startTarget = controls.target.clone();
+        const endPos = this.articleManager.entityMap
+                                .get(searchResult[0].id)
+                                .sphere.position.clone();
+        
+        const offsetPos = endPos.clone().normalize().multiplyScalar(this.cameraDistance );
+        endPos.add(offsetPos)
+        
+        const startPos = this.camera.position.clone();
+        const startTarget = this.controls.target.clone();
         const endTarget = new THREE.Vector3(0, 0, 0);
         
         let startTime = null;
-        console.log("Perform Search");
+
         const animation = (time) => {
             if (!startTime) startTime = time;
-            const t = Math.min((time - startTime) / duration, 1);
+            const t = Math.min((time - startTime) / this.cameraAnimationDuration, 1);
             const ease = t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // simple easeInOut
 
-            camera.position.lerpVectors(startPos, endPos, ease);
-            controls.target.lerpVectors(startTarget, endTarget, ease);
-            controls.update();
+            this.camera.position.lerpVectors(startPos, endPos, ease);
+            this.controls.target.lerpVectors(startTarget, endTarget, ease);
+            this.controls.update();
             
             if (t < 1) {
                 requestAnimationFrame(animation);
-                console.log("Animate", t);
             } else {
-                controls.enabled = true; // Re-enable user control
+                console.log("Animate complete camera position: ", endPos.x, endPos.y, endPos.z);
+                this.controls.enabled = true; // Re-enable user control
             }
         }
         requestAnimationFrame(animation);
