@@ -7,7 +7,8 @@
  * @returns {{clearWinner: boolean, ratio: number, zTop: number}}
  */
 function detectClearWinner(results, ratioThreshold = 2.5, zThreshold = 2.5) {
-    if (!results || results.length < 2) return { clearWinner: false, ratio: 1, zTop: 0 };
+    if (!results || results.length < 1) return { clearWinner: false, ratio: 1, zTop: 0 };
+    else if (results.length === 1) return { clearWinner: true, ratio: 1, zTop: 0 };
   
     const scores = results.map(r => r.score);
     const top = scores[0];

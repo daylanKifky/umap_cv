@@ -36,10 +36,10 @@ class ArticleEntity {
 
         this.animation = {targetScore: 1.0, prevScore: 1.0, startTime: null};
         
-        // // Load thumbnail if available
-        // if (this.thumbnail) {
-        //     this.loadThumbnail();
-        // }
+        // Load thumbnail if available
+        if (this.thumbnail) {
+            this.loadThumbnail();
+        }
     }
     
     /**
@@ -48,18 +48,18 @@ class ArticleEntity {
     loadThumbnail() {
         this.thumbnailImage = new Image();
         this.thumbnailImage.crossOrigin = 'anonymous';
-        this.thumbnailImage.onload = () => {
-            // Re-render the card once the image is loaded
-            if (this.card) {
-                const canvas = this.card.material.map.image;
-                const context = canvas.getContext('2d');
-                this.updateCardTexture(context, canvas.width, canvas.height);
-            }
-        };
-        this.thumbnailImage.onerror = () => {
-            console.warn(`Failed to load thumbnail: ${this.thumbnail}`);
-            this.thumbnailImage = null;
-        };
+        // this.thumbnailImage.onload = () => {
+        //     // Re-render the card once the image is loaded
+        //     if (this.card) {
+        //         const canvas = this.card.material.map.image;
+        //         const context = canvas.getContext('2d');
+        //         this.updateCardTexture(context, canvas.width, canvas.height);
+        //     }
+        // };
+        // this.thumbnailImage.onerror = () => {
+        //     console.warn(`Failed to load thumbnail: ${this.thumbnail}`);
+        //     this.thumbnailImage = null;
+        // };
         this.thumbnailImage.src = this.thumbnail;
     }
 
@@ -381,6 +381,7 @@ class ArticleEntity {
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
         const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
 
+        console.log("about to draw thumbnail", image, this.thumbnailImage, this.thumbnailImage.complete);
         // Draw thumbnail image if available and loaded
         if (image && this.thumbnailImage && this.thumbnailImage.complete) {
             const imageY = contentEndY + padding;
@@ -628,14 +629,10 @@ class ArticleManager {
 
                 // If entity is in similarityMap, update card to screen mode
                 if (similarityMap.has(entity.id)) {
-                    entity.updateCard("screen");
+                    entity.updateCard("screen", searchResults.clearWinner);
                 } else {
                     entity.updateCard("small");
                 }
-
-                // if (entity.card) {
-                //     entity.card.material.opacity = 0.9;
-                // }
 
             });
         
