@@ -162,10 +162,9 @@ class ArticleEntity {
         return this.sphere;
     }
 
-
     /**
-     * Update card to face camera position
-     * @param {THREE.Vector3} cameraPosition - The camera position to look at
+     * Update entity to match camera rotation
+     * @param {ArticleManager} manager - The article manager containing camera and scene
      */
     update(manager) {
         const rotation = manager.camera.rotation;
@@ -173,10 +172,17 @@ class ArticleEntity {
             this.sphere.rotation.copy(rotation);
         }
 
-        if (manager.animation.active) {
-            this.score = this.animation.prevScore + (this.animation.targetScore - this.animation.prevScore) * manager.animation.progress;
-            this.applyScore();
-        }
+    }
+    
+    /**
+     * Animate entity score between previous and target values based on animation progress
+     * @param {ArticleManager} manager - The article manager containing animation state
+     */
+    animate(manager) {
+        this.score = this.animation.prevScore 
+                    + (this.animation.targetScore - this.animation.prevScore) 
+                    * manager.animation.progress;
+        this.applyScore();
     }
 
     /**
@@ -358,7 +364,7 @@ class ArticleManager {
         this.entityMap = new Map();
         this.fontsLoaded = false;
         this.reductionMethod = reductionMethod;
-        this.animation = {active: false, progress: 0.0};
+        this.animation = {active: false, progress: 0.0, duration: 1000};
         
         // Extract articles and links from data
         this.articles = data.articles || [];
@@ -480,21 +486,27 @@ class ArticleManager {
         if (this.animation.active) {
             const currentTime = performance.now();
             const elapsedTime = currentTime - this.animation.startTime;
-            const duration = 1000; // 1 second
-            const progress = elapsedTime / duration;
+            const progress = elapsedTime / this.animation.duration;
             this.animation.progress = Math.min(progress, 1.0);
-            // console.log(`Animation progress: ${this.animation.progress}`);
+            console.log(`Animation progress: ${this.animation.progress}`);
+            this.entities.forEach(entity => {
+                entity.animate(this);
+            });
+            
+            this.updateLinks();
+            
+            if (this.animation.progress >= 1.0) {
+                this.animation.active = false;
+                this.animation.progress = 0.0;
+                this.animation.startTime = null;
+            }
         }
 
         this.entities.forEach(entity => {
             entity.update(this);
         });
 
-        if (this.animation.active && this.animation.progress >= 1.0) {
-            this.animation.active = false;
-            this.animation.progress = 0.0;
-            this.animation.startTime = null;            
-        }
+
     }
 
     /**
@@ -526,26 +538,21 @@ class ArticleManager {
         
         }
 
-        // // Apply similarity scaling to all entities
-        // this.entities.forEach(entity => {
-        //     entity.score = similarityMap.get(entity.id) || 0;
-        //     entity.applyScore();
-        //     // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.scale.toFixed(3)}  || Scale:${entity.scale}` )
-        // });
-        
 
+    }
+
+
+    updateLinks() {
         if (this.linksManager.linksMesh) {
             this.scene.remove(this.linksManager.linksMesh);
             this.linksManager.dispose();
         }
-
-        // const linksMesh = this.linksManager.createLinks(this.entityMap)
-        // if (linksMesh) {
-        //     console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
-        //     this.scene.add(linksMesh);
-        // }
+        const linksMesh = this.linksManager.createLinks(this.entityMap)
+        if (linksMesh) {
+            console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
+            this.scene.add(linksMesh);
+        }
     }
-
     /**
      * Clear search by resetting all objects (cards and links) to original state
      */
@@ -555,16 +562,7 @@ class ArticleManager {
             entity.resetAppearance();
         });
         
-
-        if (this.linksManager.linksMesh) {
-            this.scene.remove(this.linksManager.linksMesh);
-            this.linksManager.dispose();
-        }
-
-        const newLinksMesh = this.linksManager.createLinks(this.entityMap)
-        if (newLinksMesh) {
-            this.scene.add(newLinksMesh);
-        }
+        this.updateLinks();
     }
 
     /**

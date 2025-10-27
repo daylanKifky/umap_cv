@@ -158,7 +158,8 @@ class ArticleVisualizer {
             
             // Initialize ArticleManager with full data and reduction method
             this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
-            
+            this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
+
             await this.articleManager.createArticleObjects();
 
             // Initialize search manager after articles are loaded
@@ -168,12 +169,12 @@ class ArticleVisualizer {
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
                 
-                // this.animateCamera(event.detail.results);
+                this.animateCamera(event.detail.results);
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
                 this.articleManager.handleClearSearch();
-                // this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
+                this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
             });
             
         } catch (error) {
