@@ -168,12 +168,12 @@ class ArticleVisualizer {
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
                 
-                this.animateCamera(event.detail.results);
+                // this.animateCamera(event.detail.results);
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
                 this.articleManager.handleClearSearch();
-                this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
+                // this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
             });
             
         } catch (error) {

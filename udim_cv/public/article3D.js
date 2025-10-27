@@ -20,8 +20,10 @@ class ArticleEntity {
         this.maxCardTitleLines = 2;
         this.maxCardContentLines = 3;
         this.maxCardContentLength = 300;
-        this.score = 1.0;
+        this.score = 0.5;
         this.scale = 1.0;
+
+        this.animation = {targetScore: 1.0, prevScore: 1.0, startTime: null};
         
         // // Load thumbnail if available
         // if (this.thumbnail) {
@@ -165,9 +167,15 @@ class ArticleEntity {
      * Update card to face camera position
      * @param {THREE.Vector3} cameraPosition - The camera position to look at
      */
-    update(rotation) {
+    update(manager) {
+        const rotation = manager.camera.rotation;
         if (this.sphere && rotation) {
             this.sphere.rotation.copy(rotation);
+        }
+
+        if (manager.animation.active) {
+            this.score = this.animation.prevScore + (this.animation.targetScore - this.animation.prevScore) * manager.animation.progress;
+            this.applyScore();
         }
     }
 
@@ -176,7 +184,7 @@ class ArticleEntity {
      * @param {number} similarity - Similarity score (0-1)
      */
     applyScore() {
-       
+
         this.scale = similarityToScale(this.score);
         this.sphere.scale.setScalar(this.scale);
         
@@ -199,16 +207,12 @@ class ArticleEntity {
      */
     resetAppearance() {
         if (this.card) {
-            this.card.scale.setScalar(1.0);
             const material = this.card.material;
             material.opacity = 0.9;
         }
         
-        if (this.sphere){
-            this.sphere.scale.setScalar(1.0);
-        }
-        this.score = 1.0;
-        this.scale = 1.0;
+        this.score = 0.5;
+        this.applyScore();
     }
 
     /**
@@ -354,6 +358,7 @@ class ArticleManager {
         this.entityMap = new Map();
         this.fontsLoaded = false;
         this.reductionMethod = reductionMethod;
+        this.animation = {active: false, progress: 0.0};
         
         // Extract articles and links from data
         this.articles = data.articles || [];
@@ -449,6 +454,8 @@ class ArticleManager {
 
             this.entities.push(entity);
             this.entityMap.set(article.id, entity);
+
+            entity.resetAppearance();
         });
         
         console.log(`Created ${this.entities.length} article entities`);
@@ -470,9 +477,24 @@ class ArticleManager {
      * Update all entities (labels face camera)
      */
     update() {
+        if (this.animation.active) {
+            const currentTime = performance.now();
+            const elapsedTime = currentTime - this.animation.startTime;
+            const duration = 1000; // 1 second
+            const progress = elapsedTime / duration;
+            this.animation.progress = Math.min(progress, 1.0);
+            // console.log(`Animation progress: ${this.animation.progress}`);
+        }
+
         this.entities.forEach(entity => {
-            entity.update(this.camera.rotation);
+            entity.update(this);
         });
+
+        if (this.animation.active && this.animation.progress >= 1.0) {
+            this.animation.active = false;
+            this.animation.progress = 0.0;
+            this.animation.startTime = null;            
+        }
     }
 
     /**
@@ -494,12 +516,22 @@ class ArticleManager {
 
         } 
         
-        // Apply similarity scaling to all entities
-        this.entities.forEach(entity => {
-            entity.score = similarityMap.get(entity.id) || 0;
-            entity.applyScore();
-            // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.scale.toFixed(3)}  || Scale:${entity.scale}` )
-        });
+        if (!this.animation.active) {
+            this.animation.active = true;
+            this.animation.startTime = performance.now();
+            this.entities.forEach(entity => {
+                entity.animation.targetScore = similarityMap.get(entity.id) || 0;
+                entity.animation.prevScore = entity.score;
+            });
+        
+        }
+
+        // // Apply similarity scaling to all entities
+        // this.entities.forEach(entity => {
+        //     entity.score = similarityMap.get(entity.id) || 0;
+        //     entity.applyScore();
+        //     // console.log(`${entity.title.substr(0,6)} (${entity.id}): Score:${entity.scale.toFixed(3)}  || Scale:${entity.scale}` )
+        // });
         
 
         if (this.linksManager.linksMesh) {
@@ -507,11 +539,11 @@ class ArticleManager {
             this.linksManager.dispose();
         }
 
-        const linksMesh = this.linksManager.createLinks(this.entityMap)
-        if (linksMesh) {
-            console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
-            this.scene.add(linksMesh);
-        }
+        // const linksMesh = this.linksManager.createLinks(this.entityMap)
+        // if (linksMesh) {
+        //     console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
+        //     this.scene.add(linksMesh);
+        // }
     }
 
     /**
