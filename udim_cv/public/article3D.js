@@ -167,11 +167,14 @@ class ArticleEntity {
      * @param {ArticleManager} manager - The article manager containing camera and scene
      */
     update(manager) {
+        if (window.__stop_animation__) {
+            return; // Stop animation if debug flag is set
+        }
+
         const rotation = manager.camera.rotation;
         if (this.sphere && rotation) {
             this.sphere.rotation.copy(rotation);
         }
-
     }
     
     /**
@@ -539,9 +542,12 @@ class ArticleManager {
         if (!this.animation.active) {
             this.animation.active = true;
             this.animation.startTime = performance.now();
+
             this.entities.forEach(entity => {
                 entity.animation.targetScore = similarityMap.get(entity.id) || 0;
                 entity.animation.prevScore = entity.score;
+                entity.animation.targetScale = similarityToScale(entity.animation.targetScore);
+
             });
         
         }

@@ -229,6 +229,7 @@ class ArticleVisualizer {
                 
         let startTime = null;
 
+
         const animation = (time) => {
             if (!startTime) startTime = time;
             const t = Math.min((time - startTime) / this.cameraAnimationDuration, 1);

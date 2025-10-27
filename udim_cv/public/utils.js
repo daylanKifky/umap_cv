@@ -1,11 +1,16 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-const DEBUG_VIEW_DIRECTION = true;
+const DEBUG_VIEW_DIRECTION = false;
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
 const SIM_TO_SCALE_MAX = 1.5
+
+// Camera distance multiplier for correct framing
+const SINGLE_TARGET_MULTIPLIER = 1.5;
+const MULTI_TARGET_MULTIPLIER = 1.1;
+
 
 /**
  * Convert similarity score to scale factor
@@ -181,78 +186,110 @@ function findOptimalCameraView(entities, camera) {
         min.min(pos);
         max.max(pos);
     }
-    const centroid = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5);
     
-    // 3. Center the points
-    const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
+    let centroid, viewDirection, tempMatrix, flip;
     
-    // 4. Compute covariance matrix (3x3)
-    const cov = [
-      [0, 0, 0],
-      [0, 0, 0],
-      [0, 0, 0]
-    ];
-    
-    centered.forEach(p => {
-      cov[0][0] += p.x * p.x;
-      cov[0][1] += p.x * p.y;
-      cov[0][2] += p.x * p.z;
-      cov[1][0] += p.y * p.x;
-      cov[1][1] += p.y * p.y;
-      cov[1][2] += p.y * p.z;
-      cov[2][0] += p.z * p.x;
-      cov[2][1] += p.z * p.y;
-      cov[2][2] += p.z * p.z;
-    });
-    
-    const n = points.length;
-    for (let i = 0; i < 3; i++) {
-      for (let j = 0; j < 3; j++) {
-        cov[i][j] /= n;
-      }
-    }
-    
-    // 5. Power iteration to find largest eigenvector (principal direction)
-    let principalDir = new THREE.Vector3(1, 1, 1).normalize();
-    
-    for (let iter = 0; iter < 20; iter++) {
-      const Av = new THREE.Vector3(
-        cov[0][0] * principalDir.x + cov[0][1] * principalDir.y + cov[0][2] * principalDir.z,
-        cov[1][0] * principalDir.x + cov[1][1] * principalDir.y + cov[1][2] * principalDir.z,
-        cov[2][0] * principalDir.x + cov[2][1] * principalDir.y + cov[2][2] * principalDir.z
-      );
-      principalDir = Av.normalize();
-    }
-    
-    // 6. Find a direction orthogonal to the principal direction
-    // Choose a vector that's not parallel to principalDir
-    let arbitrary = new THREE.Vector3(0, 1, 0);
-    if (Math.abs(principalDir.dot(arbitrary)) > 0.9) {
-      arbitrary = new THREE.Vector3(1, 0, 1);
-    }
-    
-    // Get orthogonal direction using cross product
-    const viewDirection = new THREE.Vector3().crossVectors(principalDir, arbitrary).normalize();
+    // Handle single point case
+    if (points.length === 1) {
+        // 2. Set centroid to the single point
+        centroid = points[0].clone();
+        
+        // 3. Calculate view direction from horizontal (XZ) direction of the point
+        const horizontalDir = new THREE.Vector3(centroid.x, 0, centroid.z);
+        const horizontalLength = horizontalDir.length();
+        
+        // If point is at origin in XZ plane, use default direction
+        if (horizontalLength < 0.001) {
+            viewDirection = new THREE.Vector3(1, 0, 1).normalize();
+        } else {
+            viewDirection = horizontalDir.normalize();
+        }
+        
+        flip = false;
+        
+        // 4. Calculate camera transform matrix from view direction and centroid
+        tempMatrix = new THREE.Matrix4();
+        const upVector = new THREE.Vector3(0, 1, 0);
+        tempMatrix.lookAt(
+            new THREE.Vector3().addVectors(viewDirection, centroid),
+            centroid,
+            upVector
+        );
+    } else {
+        // Multiple points: use PCA to find optimal view
+        centroid = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5);
+        
+        // 3. Center the points
+        const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
+        
+        // 4. Compute covariance matrix (3x3)
+        const cov = [
+          [0, 0, 0],
+          [0, 0, 0],
+          [0, 0, 0]
+        ];
+        
+        centered.forEach(p => {
+          cov[0][0] += p.x * p.x;
+          cov[0][1] += p.x * p.y;
+          cov[0][2] += p.x * p.z;
+          cov[1][0] += p.y * p.x;
+          cov[1][1] += p.y * p.y;
+          cov[1][2] += p.y * p.z;
+          cov[2][0] += p.z * p.x;
+          cov[2][1] += p.z * p.y;
+          cov[2][2] += p.z * p.z;
+        });
+        
+        const n = points.length;
+        for (let i = 0; i < 3; i++) {
+          for (let j = 0; j < 3; j++) {
+            cov[i][j] /= n;
+          }
+        }
+        
+        // 5. Power iteration to find largest eigenvector (principal direction)
+        let principalDir = new THREE.Vector3(1, 1, 1).normalize();
+        
+        for (let iter = 0; iter < 20; iter++) {
+          const Av = new THREE.Vector3(
+            cov[0][0] * principalDir.x + cov[0][1] * principalDir.y + cov[0][2] * principalDir.z,
+            cov[1][0] * principalDir.x + cov[1][1] * principalDir.y + cov[1][2] * principalDir.z,
+            cov[2][0] * principalDir.x + cov[2][1] * principalDir.y + cov[2][2] * principalDir.z
+          );
+          principalDir = Av.normalize();
+        }
+        
+        // 6. Find a direction orthogonal to the principal direction
+        // Choose a vector that's not parallel to principalDir
+        let arbitrary = new THREE.Vector3(0, 1, 0);
+        if (Math.abs(principalDir.dot(arbitrary)) > 0.9) {
+          arbitrary = new THREE.Vector3(1, 0, 1);
+        }
+        
+        // Get orthogonal direction using cross product
+        viewDirection = new THREE.Vector3().crossVectors(principalDir, arbitrary).normalize();
 
-    // Calculate view direction in XZ plane to check if it points away from center
-    const viewDirXZLength = Math.sqrt(
-        (viewDirection.x + centroid.x) ** 2 + (viewDirection.z + centroid.z) ** 2
-    );
-    const centroidXZLength = Math.sqrt(centroid.x ** 2 + centroid.z ** 2);
-    const flip = viewDirXZLength < centroidXZLength;
-    if (flip) {
-        console.log("View direction is pointing away from center, flipping!!!");
-        viewDirection.negate();
-    }
+        // Calculate view direction in XZ plane to check if it points away from center
+        const viewDirXZLength = Math.sqrt(
+            (viewDirection.x + centroid.x) ** 2 + (viewDirection.z + centroid.z) ** 2
+        );
+        const centroidXZLength = Math.sqrt(centroid.x ** 2 + centroid.z ** 2);
+        flip = viewDirXZLength < centroidXZLength;
+        if (flip) {
+            console.log("View direction is pointing away from center, flipping!!!");
+            viewDirection.negate();
+        }
 
-    // 7. Calculate camera transform matrix from view direction and centroid
-    const tempMatrix = new THREE.Matrix4();
-    const upVector = new THREE.Vector3(0, 1, 0);
-    tempMatrix.lookAt(
-        new THREE.Vector3().addVectors(viewDirection, centroid),
-        centroid,
-        upVector
-    );
+        // 7. Calculate camera transform matrix from view direction and centroid
+        tempMatrix = new THREE.Matrix4();
+        const upVector = new THREE.Vector3(0, 1, 0);
+        tempMatrix.lookAt(
+            new THREE.Vector3().addVectors(viewDirection, centroid),
+            centroid,
+            upVector
+        );
+    }
     
     // 8. Transform card corners and calculate adjusted geometric center in single pass
     const allPoints = [...points];
@@ -263,8 +300,13 @@ function findOptimalCameraView(entities, camera) {
         const entity = entities[i];
         if (entity.cardCorner) {
             // Rotate card corner by camera transform matrix (entities face camera)
-            const rotatedCorner = entity.cardCorner.clone().applyMatrix4(tempMatrix);
-            // Apply entity position as offset
+            const scale = entity.animation.targetScale ? entity.animation.targetScale : entity.scale;
+            const rotatedCorner = entity.cardCorner
+                                        .clone()
+                                        .multiplyScalar(scale)
+                                        .applyMatrix4(tempMatrix);
+            
+                                        // Apply entity position as offset
             const worldCorner = rotatedCorner.add(entity.position);
             allPoints.push(worldCorner);
             adjustedMin.min(worldCorner);
@@ -274,8 +316,9 @@ function findOptimalCameraView(entities, camera) {
     const adjustedCentroid = new THREE.Vector3().addVectors(adjustedMin, adjustedMax).multiplyScalar(0.5);
     
     // 9. Calculate optimal distance based on camera frustum with all points
-    const distance = calculateOptimalDistance(allPoints, adjustedCentroid, viewDirection, camera);
-    
+    let distance = calculateOptimalDistance(allPoints, adjustedCentroid, viewDirection, camera);
+
+
     // 10. Position camera orthogonal to principal direction
     const cameraPosition = new THREE.Vector3()
         .copy(viewDirection)
@@ -302,6 +345,23 @@ function findOptimalCameraView(entities, camera) {
         );
         scene.add(arrowHelper);
         window.__debug_view_direction__ = arrowHelper;
+
+        // Remove previous debug points if they exist
+        if (window.__debug_points__) {
+            window.__debug_points__.forEach(point => scene.remove(point));
+            window.__debug_points__ = null;
+        }
+
+        // Create white boxes for each point
+        window.__debug_points__ = allPoints.map(point => {
+            const geometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+            const material = new THREE.MeshBasicMaterial({color: 0xffffff});
+            const box = new THREE.Mesh(geometry, material);
+            box.position.copy(point);
+            box.scale.setScalar(2);
+            scene.add(box);
+            return box;
+        });
     }
     
     return {
@@ -362,7 +422,6 @@ function findOptimalCameraView(entities, camera) {
     
     // Try to find distance where maxNDC is close to 1.0
     for (let iter = 0; iter < 10; iter++) {
-        console.log(`Iteration ${iter}: minDist = ${minDist}, maxDist = ${maxDist}`);
       const midDist = (minDist + maxDist) / 2;
       const maxNDC = getMaxNDC(midDist);
       
@@ -379,9 +438,11 @@ function findOptimalCameraView(entities, camera) {
         break;
       }
     }
+
+    const multiplier = points.length > 2 ? MULTI_TARGET_MULTIPLIER : SINGLE_TARGET_MULTIPLIER;
     
     // Add 10% margin
-    return maxDist * 1.1;
+    return maxDist * multiplier;
   }
   
 
