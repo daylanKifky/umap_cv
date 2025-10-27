@@ -130,7 +130,7 @@ function markdownToHtml(markdown) {
  * @param {number} maxLines - Maximum number of lines
  * @returns {number} The final Y position after all lines
  */
-function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines) {
+function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines, strokeWidth = 3) {
     let line = '';
     let currentY = y;
     let lines = 0;
@@ -140,8 +140,8 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
     }
     const words = text.split(' ');
 
-    // Save original fill style
-    const originalFillStyle = context.fillStyle;
+    context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    context.lineWidth = strokeWidth;
 
     for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
@@ -150,11 +150,8 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
 
         if (testWidth > maxWidth && n > 0) {
             // Draw outline
-            context.strokeStyle = '#000000';
-            context.lineWidth = 3;
             context.strokeText(line, x, currentY);
             // Draw fill
-            context.fillStyle = originalFillStyle;
             context.fillText(line, x, currentY);
 
             line = words[n] + ' ';
@@ -169,12 +166,7 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
         }
     }
 
-    // Draw final line with outline
-    context.strokeStyle = '#000000';
-    context.lineWidth = 3;
     context.strokeText(line, x, currentY);
-    // Draw final line fill
-    context.fillStyle = originalFillStyle;
     context.fillText(line, x, currentY);
     
     // Return the Y position after the last line

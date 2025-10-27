@@ -1,6 +1,8 @@
 const FONT_NAME = "Space Grotesk";
-const CARD_WINDOW_SCALE = 0.3; // Cards are scaled to this factor of the window size
+const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
 const DEBUG_CARD_CORNER = false;
+const SM_CARD_W = 300;
+const SM_CARD_H = 400;
 /**
  * ArticleEntity - Handles a single article's 3D representation
  */
@@ -60,10 +62,13 @@ class ArticleEntity {
      * @param {number} z - Z position
      * @returns {THREE.Mesh} The created card mesh
      */
-    createCard(x, y, z) {
-        // Calculate dimensions based on window size
-        const width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
-        const height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
+    createCard(x, y, z, width=null, height=null, image=null) {
+
+        if (!width || !height) {
+            // Calculate dimensions based on window size
+            width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
+            height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
+        }
 
         // Create canvas for texture
         const canvas = document.createElement('canvas');
@@ -75,7 +80,7 @@ class ArticleEntity {
         const texture = new THREE.CanvasTexture(canvas);
 
         // Create texture from canvas and update it
-        this.updateCardTexture(context, width, height);
+        this.updateCardTexture(context, width, height, image);
 
         // Create plane geometry with correct aspect ratio
         const aspectRatio = width / height;
@@ -105,8 +110,8 @@ class ArticleEntity {
 
         this.card = new THREE.Mesh(geometry, material);
         this.card.position.set(x, y, z);
-        this.card.castShadow = true;
-        this.card.receiveShadow = true;
+        this.card.castShadow = false;
+        this.card.receiveShadow = false;
 
         if (DEBUG_CARD_CORNER) {
             const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -126,13 +131,85 @@ class ArticleEntity {
             this.card.add(cornerBox3);
         }
 
-        // Store article data in userData
+        // Store article data and card parameters in userData
         this.card.userData = {
             article: this.article,
             originalIndex: this.index,
-            entity: this
+            entity: this,
+            // Card parameters for updateCard
+            position: { x, y, z },
+            width: width,
+            height: height,
+            image: image
         };
 
+        return this.card;
+    }
+
+    /**
+     * Update the card, only recreating if parameters differ from current card
+     * @param {number} x - X position
+     * @param {number} y - Y position  
+     * @param {number} z - Z position
+     * @param {number} width - Canvas width (optional)
+     * @param {number} height - Canvas height (optional)
+     * @param {Image} image - Thumbnail image (optional)
+     */
+    updateCard(x, y, z, width=null, height=null, image=null) {
+        // Calculate default dimensions if not provided
+        const targetWidth = width || Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
+        const targetHeight = height || Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
+        
+        // Check if card exists and parameters match
+        if (this.card && this.card.userData) {
+            const userData = this.card.userData;
+            const paramsMatch = 
+                userData.position.x === x &&
+                userData.position.y === y &&
+                userData.position.z === z &&
+                userData.width === targetWidth &&
+                userData.height === targetHeight &&
+                userData.image === image;
+            
+            if (paramsMatch) {
+                // Parameters match, no need to recreate
+                return this.card;
+            }
+        }
+        
+        // Parameters don't match or card doesn't exist - dispose and recreate
+        if (this.card) {
+            // Remove card from sphere
+            if (this.sphere) {
+                this.sphere.remove(this.card);
+            }
+            
+            // Get canvas reference before disposing
+            const canvas = this.card.material.map ? this.card.material.map.image : null;
+            
+            // Dispose of geometry, material and textures
+            this.card.geometry.dispose();
+            if (this.card.material.map) {
+                this.card.material.map.dispose();
+            }
+            this.card.material.dispose();
+            
+            // Clean up canvas DOM element
+            if (canvas && canvas.parentNode) {
+                canvas.parentNode.removeChild(canvas);
+            }
+            
+            this.card = null;
+        }
+        
+        // Create new card with updated parameters
+        this.createCard(x, y, z, targetWidth, targetHeight, image);
+        
+        // Add card back to sphere if it exists
+        if (this.sphere) {
+            this.sphere.add(this.card);
+        }
+        
         return this.card;
     }
 
@@ -215,11 +292,7 @@ class ArticleEntity {
      * Reset card to original appearance
      */
     resetAppearance() {
-        if (this.card) {
-            const material = this.card.material;
-            material.opacity = 0.9;
-        }
-        
+        this.updateCard(0, 0, 0, SM_CARD_W, SM_CARD_H);
         this.score = 0.5;
         this.applyScore();
     }
@@ -271,7 +344,7 @@ class ArticleEntity {
      * Update the card's canvas texture
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
-    updateCardTexture(context, width, height) {
+    updateCardTexture(context, width, height, image=null) {
         
         // Clear canvas with transparency
         context.clearRect(0, 0, width, height);
@@ -296,15 +369,15 @@ class ArticleEntity {
         context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines);
+        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines, width * 0.01);
 
         // Draw content after title with some spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
-        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines);
+        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines, width * 0.005);
 
         // Draw thumbnail image if available and loaded
-        if (this.thumbnailImage && this.thumbnailImage.complete) {
+        if (image && this.thumbnailImage && this.thumbnailImage.complete) {
             const imageY = contentEndY + padding;
             const availableHeight = height - imageY - padding;
             const availableWidth = width - padding * 2;
@@ -445,7 +518,7 @@ class ArticleManager {
 
             // Create entity with its visual components
             const entity = new ArticleEntity(article, index, color);
-            const card = entity.createCard(0, 0, 0); // Create card at origin
+            const card = entity.createCard(0, 0, 0, SM_CARD_W, SM_CARD_H); // Create card at origin
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
             
             if (DEBUG_CARD_CORNER) {
@@ -547,6 +620,17 @@ class ArticleManager {
                 entity.animation.targetScore = similarityMap.get(entity.id) || 0;
                 entity.animation.prevScore = entity.score;
                 entity.animation.targetScale = similarityToScale(entity.animation.targetScore);
+
+                // If entity is in similarityMap, update card with thumbnail
+                if (similarityMap.has(entity.id)) {
+                    entity.updateCard(0, 0, 0, null, null);
+                } else {
+                    entity.updateCard(0, 0, 0, SM_CARD_W, SM_CARD_H);
+                }
+
+                // if (entity.card) {
+                //     entity.card.material.opacity = 0.9;
+                // }
 
             });
         
