@@ -1,7 +1,7 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-const DEBUG_VIEW_DIRECTION = false;
+const DEBUG_VIEW_DIRECTION = true;
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
@@ -171,15 +171,17 @@ function findOptimalCameraView(entities, camera) {
       return { position: null, target: null };
     }
     
-    // 1. Extract points and calculate centroid in single pass
+    // 1. Extract points and calculate geometric center (bounding box center)
     const points = [];
-    const centroid = new THREE.Vector3();
+    const min = new THREE.Vector3(Infinity, Infinity, Infinity);
+    const max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
     for (let i = 0; i < entities.length; i++) {
         const pos = entities[i].position;
         points.push(pos);
-        centroid.add(pos);
+        min.min(pos);
+        max.max(pos);
     }
-    centroid.divideScalar(entities.length);
+    const centroid = new THREE.Vector3().addVectors(min, max).multiplyScalar(0.5);
     
     // 3. Center the points
     const centered = points.map(p => new THREE.Vector3().subVectors(p, centroid));
@@ -252,9 +254,10 @@ function findOptimalCameraView(entities, camera) {
         upVector
     );
     
-    // 8. Transform card corners and calculate adjusted centroid in single pass
+    // 8. Transform card corners and calculate adjusted geometric center in single pass
     const allPoints = [...points];
-    const adjustedCentroid = centroid.clone().multiplyScalar(points.length);
+    const adjustedMin = min.clone();
+    const adjustedMax = max.clone();
     
     for (let i = 0; i < entities.length; i++) {
         const entity = entities[i];
@@ -264,10 +267,11 @@ function findOptimalCameraView(entities, camera) {
             // Apply entity position as offset
             const worldCorner = rotatedCorner.add(entity.position);
             allPoints.push(worldCorner);
-            adjustedCentroid.add(worldCorner);
+            adjustedMin.min(worldCorner);
+            adjustedMax.max(worldCorner);
         }
     }
-    adjustedCentroid.divideScalar(allPoints.length);
+    const adjustedCentroid = new THREE.Vector3().addVectors(adjustedMin, adjustedMax).multiplyScalar(0.5);
     
     // 9. Calculate optimal distance based on camera frustum with all points
     const distance = calculateOptimalDistance(allPoints, adjustedCentroid, viewDirection, camera);
@@ -307,42 +311,77 @@ function findOptimalCameraView(entities, camera) {
   }
   
   function calculateOptimalDistance(points, centroid, viewDirection, camera) {
-    // Create view matrix for transforming points to camera space
-    const viewMatrix = new THREE.Matrix4();
-    const upVector = new THREE.Vector3(0, 1, 0);
-    viewMatrix.lookAt(
-        centroid,
-        new THREE.Vector3().addVectors(centroid, viewDirection),
-        upVector
-    );
-    viewMatrix.invert(); // Convert to world-to-camera matrix
+    // Helper function to calculate max NDC coordinate at a given distance
+    const getMaxNDC = (distance) => {
+      const testCamera = new THREE.PerspectiveCamera(
+        camera.fov,
+        camera.aspect,
+        0.1,
+        10000
+      );
+      
+      const testCameraPos = new THREE.Vector3()
+        .copy(viewDirection)
+        .multiplyScalar(distance)
+        .add(centroid);
+      
+      testCamera.position.copy(testCameraPos);
+      testCamera.lookAt(centroid);
+      testCamera.updateMatrixWorld();
+      testCamera.updateProjectionMatrix();
+      
+      const viewProjectionMatrix = new THREE.Matrix4();
+      viewProjectionMatrix.multiplyMatrices(
+        testCamera.projectionMatrix,
+        testCamera.matrixWorldInverse
+      );
+      
+      let maxNDC = 0;
+      for (let i = 0; i < points.length; i++) {
+        const point4 = new THREE.Vector4(points[i].x, points[i].y, points[i].z, 1);
+        point4.applyMatrix4(viewProjectionMatrix);
+        
+        if (point4.w > 0) {  // Point in front of camera
+          const ndcX = Math.abs(point4.x / point4.w);
+          const ndcY = Math.abs(point4.y / point4.w);
+          maxNDC = Math.max(maxNDC, ndcX, ndcY);
+        }
+      }
+      return maxNDC;
+    };
     
-    // Pre-calculate FOV parameters
-    const fovRadians = THREE.MathUtils.degToRad(camera.fov);
-    const verticalHalfAngle = fovRadians / 2;
-    const horizontalHalfAngle = Math.atan(Math.tan(verticalHalfAngle) * camera.aspect);
-    const tanVertical = Math.tan(verticalHalfAngle);
-    const tanHorizontal = Math.tan(horizontalHalfAngle);
-    
-    let maxDistance = 0;
-    
+    // Calculate initial bounds
+    let maxDistFromCentroid = 0;
     for (let i = 0; i < points.length; i++) {
-      // Transform point to camera space
-      const pointCameraSpace = points[i].clone().applyMatrix4(viewMatrix);
+      maxDistFromCentroid = Math.max(maxDistFromCentroid, points[i].distanceTo(centroid));
+    }
+    
+    // Binary search for optimal distance
+    let minDist = Math.max(maxDistFromCentroid * 0.5, 1);
+    let maxDist = maxDistFromCentroid * 10;
+    
+    // Try to find distance where maxNDC is close to 1.0
+    for (let iter = 0; iter < 10; iter++) {
+        console.log(`Iteration ${iter}: minDist = ${minDist}, maxDist = ${maxDist}`);
+      const midDist = (minDist + maxDist) / 2;
+      const maxNDC = getMaxNDC(midDist);
       
-      // Distance along view direction (z-axis in camera space)
-      const distAlongView = Math.abs(pointCameraSpace.z);
+      if (maxNDC > 1.0) {
+        // Points outside view, need more distance
+        minDist = midDist;
+      } else {
+        // Points inside view, can try closer
+        maxDist = midDist;
+      }
       
-      // Radius from camera center axis
-      const radius = Math.sqrt(pointCameraSpace.x * pointCameraSpace.x + pointCameraSpace.y * pointCameraSpace.y);
-      
-      // Calculate required distance using tighter constraint
-      const requiredDist = Math.max(radius / tanVertical, radius / tanHorizontal);
-      maxDistance = Math.max(maxDistance, requiredDist + distAlongView);
+      // Stop if close enough
+      if (Math.abs(maxNDC - 1.0) < 0.01) {
+        break;
+      }
     }
     
     // Add 10% margin
-    return maxDistance * 1.1;
+    return maxDist * 1.1;
   }
   
 
