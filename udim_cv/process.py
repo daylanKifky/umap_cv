@@ -210,6 +210,7 @@ def relax_clusters(
     min_distance: float = 1.5,
     displacement_amount_horizontal: float = 0.5,
     displacement_amount_vertical: float = 0.5,
+    vertical_distribution_factor: float = 0.0,
     random_factor: float = 0.3,
     random_seed: int = 42,
     verbose: bool = False
@@ -226,6 +227,7 @@ def relax_clusters(
         min_distance: Distance threshold for clustering (points closer than this are in same cluster)
         displacement_amount_horizontal: How far to push points horizontally XZ plane (as fraction of min_distance)
         displacement_amount_vertical: How far to push points vertically Y axis (as fraction of min_distance)
+        vertical_distribution_factor: How evenly to distribute cluster points vertically (0=off, 1=fully even spacing)
         random_factor: Amount of random variation in displacement direction (0-1)
         random_seed: Random seed for reproducibility
         verbose: Print progress information
@@ -272,7 +274,8 @@ def relax_clusters(
         if verbose:
             print(f"  Cluster {cluster_id}: {len(cluster_points_idx)} points")
         
-        # Push each point away from center
+        # First pass: calculate natural displacements to find vertical extent
+        natural_displacements = []
         for idx in cluster_points_idx:
             # Direction from center to point
             direction = points[idx] - cluster_center
@@ -291,6 +294,30 @@ def relax_clusters(
                 direction = direction + random_component
                 direction = direction / np.linalg.norm(direction)
             
+            natural_displacements.append((direction, distance_from_center))
+        
+        # Calculate even vertical distribution within natural range (3D only)
+        even_vertical_positions = None
+        if vertical_distribution_factor > 0 and n_dims >= 3:
+            # Get natural Y displacements
+            natural_y_values = [d[0][1] * min_distance * displacement_amount_vertical 
+                               for d in natural_displacements]
+            y_min = min(natural_y_values)
+            y_max = max(natural_y_values)
+            
+            # Create evenly spaced positions within the natural range
+            n_cluster_points = len(cluster_points_idx)
+            if n_cluster_points > 1:
+                even_vertical_positions = np.linspace(y_min, y_max, n_cluster_points)
+                # Shuffle to avoid ordering bias
+                np.random.shuffle(even_vertical_positions)
+            else:
+                even_vertical_positions = [0]
+        
+        # Second pass: apply displacements
+        for point_idx, idx in enumerate(cluster_points_idx):
+            direction, distance_from_center = natural_displacements[point_idx]
+            
             # Apply displacement with separate horizontal (XZ) and vertical (Y) amounts
             if n_dims == 2:
                 # 2D: use horizontal displacement for both dimensions
@@ -301,7 +328,16 @@ def relax_clusters(
                 # X displacement (first dimension - horizontal)
                 displacement[0] = direction[0] * min_distance * displacement_amount_horizontal
                 # Y displacement (second dimension - vertical)
-                displacement[1] = direction[1] * min_distance * displacement_amount_vertical
+                y_displacement_natural = direction[1] * min_distance * displacement_amount_vertical
+                
+                # Blend between natural displacement and even distribution
+                if even_vertical_positions is not None:
+                    y_displacement_even = even_vertical_positions[point_idx]
+                    displacement[1] = (1 - vertical_distribution_factor) * y_displacement_natural + \
+                                     vertical_distribution_factor * y_displacement_even
+                else:
+                    displacement[1] = y_displacement_natural
+                
                 # Z displacement (third dimension - horizontal)
                 displacement[2] = direction[2] * min_distance * displacement_amount_horizontal
             
@@ -640,6 +676,7 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 min_distance=2.5,
                 displacement_amount_horizontal=0.2,
                 displacement_amount_vertical=2,
+                vertical_distribution_factor=1,
                 random_factor=0.3,
                 random_seed=42,
                 verbose=True
