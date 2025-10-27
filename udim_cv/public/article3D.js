@@ -1,6 +1,13 @@
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
-const DEBUG_CARD_CORNER = false;
+const DEBUG_CARD_CORNER = true;
+
+// Move pivot point to upper left corner
+// Translate geometry so pivot is at upper left instead of center
+const SM_CARD_offsetX = -0.4; // negative value moves the card to the left
+const SM_CARD_offsetY = -0.25; // negative value moves the card up
+const SM_CARD_offsetZ = 0;
+
 const SM_CARD_W = 300;
 const SM_CARD_H = 400;
 /**
@@ -18,10 +25,12 @@ class ArticleEntity {
         this.color = color;
         this.image = image;
         this.thumbnailImage = null; // Will store loaded Image object
-        this.maxCardTitleLength = 100;
-        this.maxCardTitleLines = 2;
-        this.maxCardContentLines = 3;
-        this.maxCardContentLength = 300;
+        
+        this.defCardTitleLength = 100;
+        this.defCardTitleLines = 2;
+        this.defCardContentLines = 3;
+        this.defCardContentLength = 300;
+        
         this.score = 0.5;
         this.scale = 1.0;
 
@@ -57,18 +66,33 @@ class ArticleEntity {
 
     /**
      * Create the 3D card representation for this article
-     * @param {number} x - X position
-     * @param {number} y - Y position  
-     * @param {number} z - Z position
+     * @param {string} mode - Card mode: "small" (SM_ constants), "screen" (window size), "hide" (hidden)
+     * @param {Image} image - Optional thumbnail image
      * @returns {THREE.Mesh} The created card mesh
      */
-    createCard(x, y, z, width=null, height=null, image=null) {
+    createCard(mode = "small", image = null) {
+        let offsetX, offsetY, offsetZ, width, height, text_length;
 
-        if (!width || !height) {
-            // Calculate dimensions based on window size
+        if (mode === "small") {
+            offsetX = SM_CARD_offsetX;
+            offsetY = SM_CARD_offsetY;
+            offsetZ = SM_CARD_offsetZ;
+            width = SM_CARD_W;
+            height = SM_CARD_H;
+            text_length = 1;
+        } else if (mode === "screen") {
             width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
             height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
-        }
+            if ((width/height)> 1){
+                offsetX = -0.8;
+                offsetY = SM_CARD_offsetY * 2;
+            } else {
+                offsetX = 0.3;
+                offsetY = 0.5;
+            }
+            text_length = 2;
+            offsetZ = 0;
+        } 
 
         // Create canvas for texture
         const canvas = document.createElement('canvas');
@@ -80,22 +104,18 @@ class ArticleEntity {
         const texture = new THREE.CanvasTexture(canvas);
 
         // Create texture from canvas and update it
-        this.updateCardTexture(context, width, height, image);
+        this.updateCardTexture(context, width, height, image, text_length);
 
         // Create plane geometry with correct aspect ratio
         const aspectRatio = width / height;
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
         
-        // Move pivot point to upper left corner
-        // Translate geometry so pivot is at upper left instead of center
-        const offsetX = -0.6; // negative value moves the card to the left
-        const offsetY = -0.2; // negative value moves the card up
-        geometry.translate(2 * aspectRatio - offsetX, -2 - offsetY, 0);
+        geometry.translate(2*aspectRatio -offsetX, -2 -offsetY, offsetZ);
         geometry.computeBoundingBox();
 
         this.cardCorner = new THREE.Vector3(geometry.boundingBox.max.x, 
                                             geometry.boundingBox.min.y,
-                                            0);
+                                            offsetZ);
 
 
         const material = new THREE.MeshBasicMaterial({
@@ -109,7 +129,6 @@ class ArticleEntity {
         });
 
         this.card = new THREE.Mesh(geometry, material);
-        this.card.position.set(x, y, z);
         this.card.castShadow = false;
         this.card.receiveShadow = false;
 
@@ -137,9 +156,7 @@ class ArticleEntity {
             originalIndex: this.index,
             entity: this,
             // Card parameters for updateCard
-            position: { x, y, z },
-            width: width,
-            height: height,
+            mode: mode,
             image: image
         };
 
@@ -148,27 +165,15 @@ class ArticleEntity {
 
     /**
      * Update the card, only recreating if parameters differ from current card
-     * @param {number} x - X position
-     * @param {number} y - Y position  
-     * @param {number} z - Z position
-     * @param {number} width - Canvas width (optional)
-     * @param {number} height - Canvas height (optional)
-     * @param {Image} image - Thumbnail image (optional)
+     * @param {string} mode - Card mode: "small" (SM_ constants), "screen" (window size), "hide" (hidden)
+     * @param {Image} image - Optional thumbnail image
      */
-    updateCard(x, y, z, width=null, height=null, image=null) {
-        // Calculate default dimensions if not provided
-        const targetWidth = width || Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
-        const targetHeight = height || Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
-        
+    updateCard(mode = "small", image = null) {
         // Check if card exists and parameters match
         if (this.card && this.card.userData) {
             const userData = this.card.userData;
             const paramsMatch = 
-                userData.position.x === x &&
-                userData.position.y === y &&
-                userData.position.z === z &&
-                userData.width === targetWidth &&
-                userData.height === targetHeight &&
+                userData.mode === mode &&
                 userData.image === image;
             
             if (paramsMatch) {
@@ -203,7 +208,7 @@ class ArticleEntity {
         }
         
         // Create new card with updated parameters
-        this.createCard(x, y, z, targetWidth, targetHeight, image);
+        this.createCard(mode, image);
         
         // Add card back to sphere if it exists
         if (this.sphere) {
@@ -222,7 +227,7 @@ class ArticleEntity {
      */
     createSphere(x, y, z) {
         // Create sphere with entity color
-        const sphereGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 8, 8);
         const sphereMaterial = new THREE.MeshBasicMaterial({
             color: this.color,
             transparent: true,
@@ -292,7 +297,7 @@ class ArticleEntity {
      * Reset card to original appearance
      */
     resetAppearance() {
-        this.updateCard(0, 0, 0, SM_CARD_W, SM_CARD_H);
+        this.updateCard("small");
         this.score = 0.5;
         this.applyScore();
     }
@@ -344,7 +349,7 @@ class ArticleEntity {
      * Update the card's canvas texture
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
-    updateCardTexture(context, width, height, image=null) {
+    updateCardTexture(context, width, height, image=null, text_length=1) {
         
         // Clear canvas with transparency
         context.clearRect(0, 0, width, height);
@@ -369,12 +374,12 @@ class ArticleEntity {
         context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.maxCardTitleLength, this.maxCardTitleLines, width * 0.01);
+        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.defCardTitleLength, this.defCardTitleLines, width * 0.01);
 
         // Draw content after title with some spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
-        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.maxCardContentLength, this.maxCardContentLines, width * 0.005);
+        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
 
         // Draw thumbnail image if available and loaded
         if (image && this.thumbnailImage && this.thumbnailImage.complete) {
@@ -518,7 +523,7 @@ class ArticleManager {
 
             // Create entity with its visual components
             const entity = new ArticleEntity(article, index, color);
-            const card = entity.createCard(0, 0, 0, SM_CARD_W, SM_CARD_H); // Create card at origin
+            const card = entity.createCard("small"); // Create card at origin
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
             
             if (DEBUG_CARD_CORNER) {
@@ -621,11 +626,11 @@ class ArticleManager {
                 entity.animation.prevScore = entity.score;
                 entity.animation.targetScale = similarityToScale(entity.animation.targetScore);
 
-                // If entity is in similarityMap, update card with thumbnail
+                // If entity is in similarityMap, update card to screen mode
                 if (similarityMap.has(entity.id)) {
-                    entity.updateCard(0, 0, 0, null, null);
+                    entity.updateCard("screen");
                 } else {
-                    entity.updateCard(0, 0, 0, SM_CARD_W, SM_CARD_H);
+                    entity.updateCard("small");
                 }
 
                 // if (entity.card) {

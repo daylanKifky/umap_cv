@@ -1,7 +1,7 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-const DEBUG_VIEW_DIRECTION = false;
+const DEBUG_VIEW_DIRECTION = true;
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
