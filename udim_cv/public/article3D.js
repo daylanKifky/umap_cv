@@ -364,7 +364,7 @@ class ArticleManager {
         this.entityMap = new Map();
         this.fontsLoaded = false;
         this.reductionMethod = reductionMethod;
-        this.animation = {active: false, progress: 0.0, duration: 1000};
+        this.animation = {active: false, progress: 0.0, duration: 1000, linkRefresh: 200, lastLinkUpdate: 0};
         
         // Extract articles and links from data
         this.articles = data.articles || [];
@@ -488,14 +488,22 @@ class ArticleManager {
             const elapsedTime = currentTime - this.animation.startTime;
             const progress = elapsedTime / this.animation.duration;
             this.animation.progress = Math.min(progress, 1.0);
-            console.log(`Animation progress: ${this.animation.progress}`);
+
             this.entities.forEach(entity => {
                 entity.animate(this);
             });
             
-            this.updateLinks();
-            
-            if (this.animation.progress >= 1.0) {
+            if (this.animation.progress < 1) {
+                // Throttle link updates to avoid excessive re-calculation  
+                if (currentTime - this.animation.lastLinkUpdate >= this.animation.linkRefresh) {
+                    this.updateLinks();
+                    this.animation.lastLinkUpdate = currentTime;
+                }
+            } else {
+                // Update links at the end of the animation
+                this.updateLinks();
+                this.animation.lastLinkUpdate = currentTime;
+                // Reset animation state
                 this.animation.active = false;
                 this.animation.progress = 0.0;
                 this.animation.startTime = null;
