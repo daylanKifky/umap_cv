@@ -205,6 +205,114 @@ def standardize_embeddings(embeddings: np.ndarray) -> np.ndarray:
     return scaler.fit_transform(embeddings)
 
 
+def relax_clusters(
+    points: np.ndarray,
+    min_distance: float = 1.5,
+    displacement_amount_horizontal: float = 0.5,
+    displacement_amount_vertical: float = 0.5,
+    random_factor: float = 0.3,
+    random_seed: int = 42,
+    verbose: bool = False
+) -> np.ndarray:
+    """
+    Simple cluster-based relaxation to spread out overlapping points.
+    
+    Finds clusters of nearby points and pushes them away from their cluster center
+    with some random variation in direction. Allows separate control of horizontal
+    (XZ) and vertical (Y) displacement (Y-up coordinate system).
+    
+    Args:
+        points: Input points array of shape (n_points, n_dimensions)
+        min_distance: Distance threshold for clustering (points closer than this are in same cluster)
+        displacement_amount_horizontal: How far to push points horizontally XZ plane (as fraction of min_distance)
+        displacement_amount_vertical: How far to push points vertically Y axis (as fraction of min_distance)
+        random_factor: Amount of random variation in displacement direction (0-1)
+        random_seed: Random seed for reproducibility
+        verbose: Print progress information
+        
+    Returns:
+        Relaxed points array with same shape as input
+    """
+    if points.size == 0 or len(points) < 2:
+        return points
+    
+    from sklearn.cluster import DBSCAN
+    
+    points = points.copy().astype(float)
+    n_points, n_dims = points.shape
+    
+    np.random.seed(random_seed)
+    
+    if verbose:
+        print(f"Finding clusters with min_distance={min_distance}...")
+    
+    # Find clusters using DBSCAN
+    clustering = DBSCAN(eps=min_distance, min_samples=1).fit(points)
+    labels = clustering.labels_
+    
+    unique_labels = set(labels)
+    n_clusters = len(unique_labels)
+    
+    if verbose:
+        print(f"Found {n_clusters} clusters")
+    
+    # Process each cluster
+    for cluster_id in unique_labels:
+        cluster_mask = labels == cluster_id
+        cluster_points_idx = np.where(cluster_mask)[0]
+        
+        if len(cluster_points_idx) < 2:
+            # Single point, no need to relax
+            continue
+        
+        # Calculate cluster center
+        cluster_points = points[cluster_points_idx]
+        cluster_center = np.mean(cluster_points, axis=0)
+        
+        if verbose:
+            print(f"  Cluster {cluster_id}: {len(cluster_points_idx)} points")
+        
+        # Push each point away from center
+        for idx in cluster_points_idx:
+            # Direction from center to point
+            direction = points[idx] - cluster_center
+            distance_from_center = np.linalg.norm(direction)
+            
+            if distance_from_center < 1e-6:
+                # Point is at center, use random direction
+                direction = np.random.randn(n_dims)
+                distance_from_center = np.linalg.norm(direction)
+            
+            direction = direction / distance_from_center
+            
+            # Add random variation to direction
+            if random_factor > 0:
+                random_component = np.random.randn(n_dims) * random_factor
+                direction = direction + random_component
+                direction = direction / np.linalg.norm(direction)
+            
+            # Apply displacement with separate horizontal (XZ) and vertical (Y) amounts
+            if n_dims == 2:
+                # 2D: use horizontal displacement for both dimensions
+                displacement = direction * min_distance * displacement_amount_horizontal
+            else:
+                # 3D (Y-up system): separate XZ (horizontal) and Y (vertical) displacement
+                displacement = np.zeros(n_dims)
+                # X displacement (first dimension - horizontal)
+                displacement[0] = direction[0] * min_distance * displacement_amount_horizontal
+                # Y displacement (second dimension - vertical)
+                displacement[1] = direction[1] * min_distance * displacement_amount_vertical
+                # Z displacement (third dimension - horizontal)
+                displacement[2] = direction[2] * min_distance * displacement_amount_horizontal
+            
+            points[idx] = cluster_center + direction * distance_from_center + displacement
+    
+    if verbose:
+        print("Cluster-based relaxation complete")
+    
+    return points
+
+
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]:
     """
     Split text into overlapping chunks.
@@ -479,7 +587,7 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         'title': 1,
         'category': 0,
         'technologies': 3,
-        'description': 1,
+        'description': 1.2,
         'features': 0,
         'use_cases': 0,
         'technical_details': 0,
@@ -524,6 +632,19 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
                 reduced_coords = generator.reduce_tsne(embeddings, n_components=dim)
             elif method == "umap":
                 reduced_coords, _ = generator.reduce_umap(embeddings, n_components=dim)
+            
+            # Apply cluster-based relaxation to reduce point overlap
+            print(f"Applying cluster-based relaxation to {method}_{dim}d...")
+            reduced_coords = relax_clusters(
+                reduced_coords,
+                min_distance=2.5,
+                displacement_amount_horizontal=0.2,
+                displacement_amount_vertical=2,
+                random_factor=0.3,
+                random_seed=42,
+                verbose=True
+            )
+            
             reductions[key] = reduced_coords
 
     # Build each article entry combining metadata and dim reductions
