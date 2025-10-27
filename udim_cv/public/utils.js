@@ -140,13 +140,23 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
     }
     const words = text.split(' ');
 
+    // Save original fill style
+    const originalFillStyle = context.fillStyle;
+
     for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
         const metrics = context.measureText(testLine);
         const testWidth = metrics.width;
 
         if (testWidth > maxWidth && n > 0) {
+            // Draw outline
+            context.strokeStyle = '#000000';
+            context.lineWidth = 3;
+            context.strokeText(line, x, currentY);
+            // Draw fill
+            context.fillStyle = originalFillStyle;
             context.fillText(line, x, currentY);
+
             line = words[n] + ' ';
             currentY += lineHeight;
             lines++;
@@ -158,6 +168,13 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines)
             break;
         }
     }
+
+    // Draw final line with outline
+    context.strokeStyle = '#000000';
+    context.lineWidth = 3;
+    context.strokeText(line, x, currentY);
+    // Draw final line fill
+    context.fillStyle = originalFillStyle;
     context.fillText(line, x, currentY);
     
     // Return the Y position after the last line
