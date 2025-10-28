@@ -1,6 +1,6 @@
 const FONT_NAME = "Space Grotesk";
 const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
-const DEBUG_CARD_CORNER = true;
+const DEBUG_CARD_CORNER = false;
 
 // Move pivot point to upper left corner
 // Translate geometry so pivot is at upper left instead of center
@@ -36,33 +36,8 @@ class ArticleEntity {
 
         this.animation = {targetScore: 1.0, prevScore: 1.0, startTime: null};
         
-        // Load thumbnail if available
-        if (this.thumbnail) {
-            this.loadThumbnail();
-        }
     }
     
-    /**
-     * Load the thumbnail image
-     */
-    loadThumbnail() {
-        this.thumbnailImage = new Image();
-        this.thumbnailImage.crossOrigin = 'anonymous';
-        // this.thumbnailImage.onload = () => {
-        //     // Re-render the card once the image is loaded
-        //     if (this.card) {
-        //         const canvas = this.card.material.map.image;
-        //         const context = canvas.getContext('2d');
-        //         this.updateCardTexture(context, canvas.width, canvas.height);
-        //     }
-        // };
-        // this.thumbnailImage.onerror = () => {
-        //     console.warn(`Failed to load thumbnail: ${this.thumbnail}`);
-        //     this.thumbnailImage = null;
-        // };
-        this.thumbnailImage.src = this.thumbnail;
-    }
-
 
     /**
      * Create the 3D card representation for this article
@@ -346,6 +321,22 @@ class ArticleEntity {
     }
 
     /**
+     * Load the thumbnail image
+     */
+    loadThumbnail(onload=null) {
+        console.log("loading thumbnail", this.thumbnail);
+        this.thumbnailImage = new Image();
+        this.thumbnailImage.crossOrigin = 'anonymous';
+        this.thumbnailImage.addEventListener('load', onload);
+        this.thumbnailImage.onerror = () => {
+            console.warn(`Failed to load thumbnail: ${this.thumbnail}`);
+            this.thumbnailImage = null;
+        };
+        this.thumbnailImage.src = this.thumbnail;
+    }
+    
+
+    /**
      * Update the card's canvas texture
      * @param {CanvasRenderingContext2D} context - The canvas context to draw on
      */
@@ -381,41 +372,70 @@ class ArticleEntity {
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
         const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
 
-        console.log("about to draw thumbnail", image, this.thumbnailImage, this.thumbnailImage.complete);
+        // console.log("about to draw thumbnail", image, this.thumbnailImage, this.thumbnailImage.complete);
+        
         // Draw thumbnail image if available and loaded
-        if (image && this.thumbnailImage && this.thumbnailImage.complete) {
+        if (image) {
             const imageY = contentEndY + padding;
             const availableHeight = height - imageY - padding;
             const availableWidth = width - padding * 2;
             
-            if (availableHeight > 0 && availableWidth > 0) {
-                // Fit to the largest dimension of the available space
-                let drawWidth, drawHeight, drawX, drawY;
-                
-                if (availableWidth > availableHeight) {
-                    // Width is the largest dimension - fit to width
-                    drawWidth = availableWidth;
-                    drawHeight = (this.thumbnailImage.height / this.thumbnailImage.width) * availableWidth;
-                } else {
-                    // Height is the largest dimension - fit to height
-                    drawHeight = availableHeight;
-                    drawWidth = (this.thumbnailImage.width / this.thumbnailImage.height) * availableHeight;
+            if (this.thumbnailImage !== null) {
+                if (!this.thumbnailImage.complete) {
+                    return;
                 }
                 
-                // Center the image in the available space
-                drawX = padding + (availableWidth - drawWidth) / 2;
-                drawY = imageY + (availableHeight - drawHeight) / 2;
+                if (availableHeight > 0 && availableWidth > 0) {
+                    // Fit to the largest dimension of the available space
+                    let drawWidth, drawHeight, drawX, drawY;
+                    
+                    if (availableWidth > availableHeight) {
+                        // Width is the largest dimension - fit to width
+                        drawWidth = availableWidth;
+                        drawHeight = (this.thumbnailImage.height / this.thumbnailImage.width) * availableWidth;
+                    } else {
+                        // Height is the largest dimension - fit to height
+                        drawHeight = availableHeight;
+                        drawWidth = (this.thumbnailImage.width / this.thumbnailImage.height) * availableHeight;
+                    }
+                    
+                    // Center the image in the available space
+                    drawX = padding + (availableWidth - drawWidth) / 2;
+                    drawY = imageY + (availableHeight - drawHeight) / 2;
+
+                    // Use clipping to ensure image doesn't overflow the available space
+                    context.save();
+                    context.beginPath();
+                    context.rect(padding, imageY, availableWidth, availableHeight);
+                    context.clip();
+                    
+                    // Draw the image
+                    context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
+                    
+                    context.restore();
+                }
+            } else { //this.thumbnailImage is null, draw loading rectangle
+                this.loadThumbnail(() => {
+                    console.log("thumbnail loaded, re-rendering...");
+                    this.updateCardTexture(context, width, height, image, text_length);
+                });
+
+                // For loading state, use full available space
+                const loadingX = padding;
+                const loadingY = imageY;
+                const loadingWidth = availableWidth;
+                const loadingHeight = availableHeight;
+
+                // Draw grey loading rectangle
+                context.fillStyle = '#CCCCCC';
+                context.fillRect(loadingX, loadingY, loadingWidth, loadingHeight);
                 
-                // Use clipping to ensure image doesn't overflow the available space
-                context.save();
-                context.beginPath();
-                context.rect(padding, imageY, availableWidth, availableHeight);
-                context.clip();
-                
-                // Draw the image
-                context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
-                
-                context.restore();
+                // Draw "Loading..." text
+                context.fillStyle = '#666666';
+                context.font = `${contentFontSize}px "${FONT_NAME}"`;
+                context.textAlign = 'center';
+                context.textBaseline = 'middle';
+                context.fillText('Loading...', loadingX + loadingWidth/2, loadingY + loadingHeight/2);
             }
         }
 
