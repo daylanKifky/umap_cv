@@ -77,6 +77,11 @@ class ArticleVisualizer {
         this.cameraDistance = 5;
         this.cameraAnimationDuration = 1000;
         
+        // Hover functionality
+        this.lastHoverCheck = 0;
+        this.hoverCheckInterval = 100; // Check every 150ms max
+        this.hoveredObject = null;
+        
         this.init();
         this.setupBloom();
         this.setupBloomControls();
@@ -133,6 +138,9 @@ class ArticleVisualizer {
         
         // Handle mouse clicks for sphere selection
         this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
+        
+        // Handle mouse move for hover effects
+        this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
         
        
         // Initialize Article manager (will receive links later)
@@ -384,6 +392,70 @@ class ArticleVisualizer {
             if (entity) {
                 this.searchManager.searchFor(entity.article.title);
             }
+        }
+    }
+    
+    onMouseMove(event) {
+        const now = performance.now();
+        if (now - this.lastHoverCheck < this.hoverCheckInterval) {
+            return; // Skip this check - throttling
+        }
+        this.lastHoverCheck = now;
+        this.performHoverCheck(event);
+    }
+    
+    performHoverCheck(event) {
+        // Don't check if articleManager not ready
+        if (!this.articleManager) return;
+        
+        // Update mouse position
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        
+        // Check spheres for hover
+        const spheres = this.articleManager.getSpheres();
+        const intersects = this.raycaster.intersectObjects(spheres);
+        
+        if (intersects.length > 0) {
+            const hoveredSphere = intersects[0].object;
+            if (this.hoveredObject !== hoveredSphere) {
+                // New hover
+                if (this.hoveredObject) {
+                    this.clearHover(this.hoveredObject);
+                }
+                this.setHover(hoveredSphere);
+                this.hoveredObject = hoveredSphere;
+            }
+        } else {
+            if (this.hoveredObject) {
+                this.clearHover(this.hoveredObject);
+                this.hoveredObject = null;
+            }
+        }
+    }
+    
+    setHover(sphere) {
+        // Visual feedback: cursor and increase opacity
+        document.body.style.cursor = 'pointer';
+        if (sphere.material) {
+            sphere.userData.prev_opacity = sphere.material.opacity;
+            const pScale = sphere.scale.x;
+            sphere.userData.prev_scale = pScale;  
+            sphere.material.opacity = 1.0;
+            sphere.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
+            console.log("setHover: ", sphere.scale);
+        }
+    }
+    
+    clearHover(sphere) {
+        // Reset cursor and opacity
+        document.body.style.cursor = 'default';
+        if (sphere.material) {
+            sphere.material.opacity = sphere.userData.prev_opacity;
+            sphere.scale.setScalar(sphere.userData.prev_scale);
         }
     }
 }
