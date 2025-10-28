@@ -98,7 +98,7 @@ class ArticleVisualizer {
         
         // Camera
         this.camera = new THREE.PerspectiveCamera(
-            75, 
+            35, 
             window.innerWidth / window.innerHeight, 
             0.1, 
             1000
@@ -141,7 +141,6 @@ class ArticleVisualizer {
         
         // Handle mouse move for hover effects
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
-        
        
         // Initialize Article manager (will receive links later)
         this.articleManager = null;
@@ -415,7 +414,25 @@ class ArticleVisualizer {
         
         this.raycaster.setFromCamera(this.mouse, this.camera);
         
-        // Check only active spheres for hover (spheres without active cards)
+        // First check for active card intersections (higher priority)
+        const activeCards = this.articleManager.getActiveCards();
+        if (activeCards.length > 0) {
+            const cardIntersects = this.raycaster.intersectObjects(activeCards);
+            if (cardIntersects.length > 0) {
+                const hoveredCard = cardIntersects[0].object;
+                if (this.hoveredObject !== hoveredCard) {
+                    // New hover on card
+                    if (this.hoveredObject) {
+                        this.clearHover(this.hoveredObject);
+                    }
+                    this.setHover(hoveredCard);
+                    this.hoveredObject = hoveredCard;
+                }
+                return; // Exit early, card has priority
+            }
+        }
+        
+        // Then check active spheres for hover (spheres without active cards)
         const activeSpheres = this.articleManager.getActiveSpheres();
         const intersects = this.raycaster.intersectObjects(activeSpheres);
         
@@ -437,25 +454,58 @@ class ArticleVisualizer {
         }
     }
     
-    setHover(sphere) {
-        // Visual feedback: cursor and increase opacity
+    setHover(object) {
+        // Visual feedback: cursor and effects
         document.body.style.cursor = 'pointer';
-        if (sphere.material) {
-            sphere.userData.prev_opacity = sphere.material.opacity;
-            const pScale = sphere.scale.x;
-            sphere.userData.prev_scale = pScale;  
-            sphere.material.opacity = 1.0;
-            sphere.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
-            console.log("setHover: ", sphere.scale);
+        
+        if (!object.material) return;
+        
+        // Check if it's a card (PlaneGeometry) or sphere (SphereGeometry)
+        const isCard = object.geometry.type === 'PlaneGeometry';
+        
+        if (isCard) {
+            // Card hover effects
+            object.userData.prev_opacity = object.material.opacity;
+            object.userData.prev_position = object.position.clone();
+            object.material.opacity = 1.0;
+            object.position.set(0, 0, 0.1);
+        } else {
+            // Sphere hover effects
+            object.userData.prev_opacity = object.material.opacity;
+            const pScale = object.scale.x;
+            object.userData.prev_scale = pScale;  
+            object.material.opacity = 1.0;
+            object.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
         }
     }
     
-    clearHover(sphere) {
-        // Reset cursor and opacity
+    clearHover(object) {
+        // Reset cursor and effects
         document.body.style.cursor = 'default';
-        if (sphere.material) {
-            sphere.material.opacity = sphere.userData.prev_opacity;
-            sphere.scale.setScalar(sphere.userData.prev_scale);
+        
+        if (!object.material) return;
+        
+        // Check if it's a card (PlaneGeometry) or sphere (SphereGeometry)
+        const isCard = object.geometry.type === 'PlaneGeometry';
+        
+        if (isCard) {
+            // Restore card state
+            if (object.userData.prev_opacity !== undefined) {
+                object.material.opacity = object.userData.prev_opacity;
+            }
+            if (object.userData.prev_position) {
+                object.position.copy(object.userData.prev_position);
+            } else {
+                object.position.set(0, 0, 0);
+            }
+        } else {
+            // Restore sphere state
+            if (object.userData.prev_opacity !== undefined) {
+                object.material.opacity = object.userData.prev_opacity;
+            }
+            if (object.userData.prev_scale !== undefined) {
+                object.scale.setScalar(object.userData.prev_scale);
+            }
         }
     }
 }
