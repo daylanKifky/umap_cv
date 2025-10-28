@@ -46,7 +46,7 @@ class ArticleEntity {
      * @returns {THREE.Mesh} The created card mesh
      */
     createCard(mode = "small", image = null) {
-        let offsetX, offsetY, offsetZ, width, height, text_length;
+        let offsetX, offsetY, offsetZ, width, height, text_length, aspectRatio;
 
         if (mode === "small") {
             offsetX = SM_CARD_offsetX;
@@ -55,19 +55,26 @@ class ArticleEntity {
             width = SM_CARD_W;
             height = SM_CARD_H;
             text_length = 1;
+            aspectRatio = width / height;
         } else if (mode === "active") {
             width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
             height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
-            if ((width/height)> 1){
+            aspectRatio = width / height;
+            if (aspectRatio > 1){
                 offsetX = -0.8;
                 offsetY = SM_CARD_offsetY * 2;
             } else {
-                offsetX = 0.3;
+                offsetX = 0.1;
                 offsetY = 0.5;
             }
             text_length = 2;
             offsetZ = 0;
         } 
+        
+        if (aspectRatio < 0.6) {
+            aspectRatio = 0.6;
+            height = width / aspectRatio;
+        }
 
         // Create canvas for texture
         const canvas = document.createElement('canvas');
@@ -82,7 +89,6 @@ class ArticleEntity {
         this.updateCardTexture(context, width, height, image, text_length);
 
         // Create plane geometry with correct aspect ratio
-        const aspectRatio = width / height;
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
         
         geometry.translate(2*aspectRatio -offsetX, -2 -offsetY, offsetZ);
