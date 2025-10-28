@@ -513,11 +513,31 @@ class ArticleVisualizer {
                 }
                 this.setHover(hoveredSphere);
                 this.hoveredObject = hoveredSphere;
+                
+                // Create ad-hoc entityMap for link highlighting
+                const hoveredEntity = hoveredSphere.userData.entity;
+                const hoverEntityMap = new Map();
+                
+                // Populate ad-hoc map: all entities with min scale except hovered one
+                this.articleManager.entityMap.forEach((entity) => {
+                    hoverEntityMap.set(entity.id, {scale: SIM_TO_SCALE_MIN});
+                });
+                // Highlight hovered entity
+                // We make it slightly larger than the others 
+                // to prevent the createLinks from skipping it
+                hoverEntityMap.set(hoveredEntity.id, {scale: hoveredEntity.scale * 1.01});
+                
+                // Update links with ad-hoc map to highlight hovered entity's connections
+                this.articleManager.hoverEntityMap = hoverEntityMap;
+                this.articleManager.updateLinks(hoverEntityMap);
             }
         } else {
             if (this.hoveredObject) {
                 this.clearHover(this.hoveredObject);
                 this.hoveredObject = null;
+                this.articleManager.hoverEntityMap = null;
+                // Restore original links when hover is cleared
+                this.articleManager.updateLinks();
             }
         }
     }

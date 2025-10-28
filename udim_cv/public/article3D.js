@@ -638,29 +638,38 @@ class ArticleManager {
      * @param {Array} searchResults - Array of search results with similarity scores
      */
     handleSearch(searchResults) {
-        // Reset active cards and active spheres arrays on each search
-        this.activeCards = [];
-        this.activeSpheres = [];
         
         // Create a map of article ID to similarity
         const similarityMap = new Map();
         // Get max score from search results
         const maxScore = Math.max(...searchResults.map(result => result.score));
-
+        
         if (searchResults.clearWinner) {
             similarityMap.set(searchResults[0].id, 1.0)
         }  else {
             searchResults.forEach(result => {
                 similarityMap.set(result.id, result.score / maxScore);
             });
-
+            
         } 
         
+        if (this.hoverEntityMap) {
+            this.entities.forEach(entity => {
+                entity.scale = this.hoverEntityMap.get(entity.id).scale || 0;
+                entity.score = entity.scale > SIM_TO_SCALE_MIN ? 1.0 : 0.0;
+            });
+            this.hoverEntityMap = null;
+            
+        } 
         if (!this.animation.active) {
+            // Reset active cards and active spheres arrays on each search
+            this.activeCards = [];
+            this.activeSpheres = [];
             this.animation.active = true;
             this.animation.startTime = performance.now();
 
             this.entities.forEach(entity => {
+                
                 entity.animation.targetScore = similarityMap.get(entity.id) || 0;
                 entity.animation.prevScore = entity.score;
                 entity.animation.targetScale = similarityToScale(entity.animation.targetScore);
@@ -693,12 +702,12 @@ class ArticleManager {
     }
 
 
-    updateLinks() {
+    updateLinks(entityMap = null) {
         if (this.linksManager.linksMesh) {
             this.scene.remove(this.linksManager.linksMesh);
             this.linksManager.dispose();
         }
-        const linksMesh = this.linksManager.createLinks(this.entityMap)
+        const linksMesh = this.linksManager.createLinks(entityMap || this.entityMap)
         if (linksMesh) {
             console.log(`Updated link mesh with ${this.linksManager.vertcount} vertices`);
             this.scene.add(linksMesh);
