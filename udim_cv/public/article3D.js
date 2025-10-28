@@ -379,6 +379,7 @@ class ArticleEntity {
             const imageY = contentEndY + padding;
             const availableHeight = height - imageY - padding;
             const availableWidth = width - padding * 2;
+            const rectRadius = availableHeight * 0.06;
             
             if (this.thumbnailImage !== null) {
                 if (!this.thumbnailImage.complete) {
@@ -406,13 +407,22 @@ class ArticleEntity {
                     // Use clipping to ensure image doesn't overflow the available space
                     context.save();
                     context.beginPath();
-                    context.rect(padding, imageY, availableWidth, availableHeight);
+                    context.roundRect(padding, imageY, availableWidth, availableHeight, rectRadius);
                     context.clip();
                     
                     // Draw the image
                     context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
                     
                     context.restore();
+                    // Apply dither transparency to the entire image region
+                    // Available styles: "checkerboard", "grid", "dots", "lines"
+                    applyDitherTransparency(context, {
+                        x: padding,
+                        y: imageY,
+                        width: availableWidth,
+                        height: availableHeight
+                    }, 2, 4, 0.5, "lines");
+
                 }
             } else { //this.thumbnailImage is null, draw loading rectangle
                 this.loadThumbnail(() => {
@@ -426,9 +436,12 @@ class ArticleEntity {
                 const loadingWidth = availableWidth;
                 const loadingHeight = availableHeight;
 
-                // Draw grey loading rectangle
-                context.fillStyle = '#CCCCCC';
-                context.fillRect(loadingX, loadingY, loadingWidth, loadingHeight);
+                // Draw grey loading rectangle with rounded corners
+                context.fillStyle = 'rgba(145, 145, 145, 0.5)';
+                context.beginPath();
+
+                context.roundRect(loadingX, loadingY, loadingWidth, loadingHeight, rectRadius);
+                context.fill();
                 
                 // Draw "Loading..." text
                 context.fillStyle = '#666666';
@@ -437,6 +450,7 @@ class ArticleEntity {
                 context.textBaseline = 'middle';
                 context.fillText('Loading...', loadingX + loadingWidth/2, loadingY + loadingHeight/2);
             }
+            
         }
 
         // Update texture

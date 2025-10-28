@@ -1,7 +1,7 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-const DEBUG_VIEW_DIRECTION = true;
+const DEBUG_VIEW_DIRECTION = false;
 
 const SIM_TO_SCALE_POW = 0.3
 const SIM_TO_SCALE_MIN = 0.2
@@ -117,6 +117,86 @@ function markdownToHtml(markdown) {
 }
 
 
+/**
+ * Apply a dither transparency pattern to a region
+ * @param {CanvasRenderingContext2D} context - The canvas context
+ * @param {Object} region - Region object with x, y, width, height properties
+ * @param {number} ditherSize - Size of dither pixels (default: 2)
+ * @param {number} ditherSpacing - Spacing between dither pixels (default: 4)
+ * @param {string} style - Dither style: "checkerboard", "grid", "dots", "lines" (default: "checkerboard")
+ */
+function applyDitherTransparency(context, region, ditherSize = 2, ditherSpacing = 4, alpha = 1, style = "checkerboard") {
+    context.save();
+    context.fillStyle = `rgba(0,0,0,${alpha})`;
+    context.globalCompositeOperation = 'destination-out';
+    
+    const startX = Math.floor(region.x);
+    const startY = Math.floor(region.y);
+    const endX = startX + region.width;
+    const endY = startY + region.height;
+    
+    switch(style) {
+        case "checkerboard":
+            // Checkerboard pattern - alternating squares
+            for (let y = startY; y < endY; y += ditherSpacing) {
+                for (let x = startX; x < endX; x += ditherSpacing) {
+                    if ((Math.floor(x / ditherSpacing) + Math.floor(y / ditherSpacing)) % 2 === 0) {
+                        context.fillRect(x, y, ditherSize, ditherSize);
+                    }
+                }
+            }
+            break;
+            
+        case "grid":
+            // Grid pattern - horizontal and vertical lines
+            for (let y = startY; y < endY; y += ditherSpacing) {
+                context.fillRect(startX, y, region.width, ditherSize);
+            }
+            for (let x = startX; x < endX; x += ditherSpacing) {
+                context.fillRect(x, startY, ditherSize, region.height);
+            }
+            break;
+            
+        case "dots":
+            // Dots pattern - evenly spaced dots
+            for (let y = startY; y < endY; y += ditherSpacing) {
+                for (let x = startX; x < endX; x += ditherSpacing) {
+                    context.beginPath();
+                    context.arc(x + ditherSize / 2, y + ditherSize / 2, ditherSize / 2, 0, Math.PI * 2);
+                    context.fill();
+                }
+            }
+            break;
+            
+        case "lines":
+            // Diagonal lines pattern - 45 degree lines
+            context.lineWidth = ditherSize;
+            context.strokeStyle = `rgba(0,0,0,${alpha})`;
+            
+            // Calculate diagonal lines from top-left to bottom-right
+            const diagonalSpacing = ditherSpacing * Math.sqrt(2);
+            const maxDimension = Math.max(region.width, region.height);
+            const numLines = Math.ceil((region.width + region.height) / diagonalSpacing);
+            
+            for (let i = -numLines; i <= numLines; i++) {
+                const offset = i * diagonalSpacing;
+                const x1 = startX + offset;
+                const y1 = startY;
+                const x2 = startX + offset + maxDimension;
+                const y2 = startY + maxDimension;
+                
+                context.beginPath();
+                context.moveTo(x1, y1);
+                context.lineTo(x2, y2);
+                context.stroke();
+            }
+            break;
+       
+    }
+    
+    context.globalCompositeOperation = 'source-over';
+    context.restore();
+}
 
 /**
  * Helper function to wrap text in canvas
@@ -461,6 +541,7 @@ if (typeof module !== 'undefined' && module.exports) {
         coordinateConverter, 
         markdownToHtml, 
         similarityToScale, 
+        applyDitherTransparency,
         wrapText,
         degToRad,
         findOptimalCameraView
