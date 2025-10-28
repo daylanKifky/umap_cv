@@ -255,14 +255,13 @@ class ArticleEntity {
         this.sphere.scale.setScalar(this.scale);
         
         // Adjust material opacity and color intensity based on similarity
-        const material = this.card.material;
-        if (this.scale > 0) {
+        const material = this.sphere.material;
+        if (this.scale > SIM_TO_SCALE_MIN) {
             // Highlight matching articles
-            material.opacity = 0.9;
+            material.opacity = 0.8;
         } else {
             // Dim non-matching articles
-            material.opacity = 0.3;
-            // material.emissive.setRGB(0, 0, 0);
+            material.opacity = 0.5;
         }
 
         return this.scale;
@@ -275,21 +274,6 @@ class ArticleEntity {
         this.updateCard("small");
         this.score = 0.5;
         this.applyScore();
-    }
-
-    /**
-     * Generate HTML content for article modal
-     * @returns {Object} Object containing title, content, and filepath
-     */
-    getModalHTML() {
-        const content = this.article.full_content || this.article.content;
-        const htmlContent = markdownToHtml(content);
-        
-        return {
-            title: this.article.title,
-            content: htmlContent,
-            filepath: this.article.filepath
-        };
     }
 
     /**
@@ -697,26 +681,6 @@ class ArticleManager {
         });
         
         this.updateLinks();
-    }
-
-    /**
-     * Generate HTML content for article modal
-     * @param {Object} article - Article object
-     * @returns {Object} Object containing title, content, and filepath
-     */
-    getModalHTML(article) {
-        // Find the entity for this article
-        const entity = this.entities.find(e => e.article.id === article.id);
-        if (entity) {
-            return entity.getModalHTML();
-        }
-        
-        // Fallback if entity not found
-        return {
-            title: article.title,
-            content: article.full_content || article.content,
-            filepath: article.filepath
-        };
     }
 
     /**

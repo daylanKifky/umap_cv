@@ -233,4 +233,12 @@ class SearchManager extends EventTarget {
     getSearchResults() {
         return this.searchResults;
     }
+    
+    searchFor(query) {
+        const searchInput = document.getElementById('search-input');
+        if (searchInput && query) {
+            searchInput.value = query;
+            this.performSearch();
+        }
+    }
 }

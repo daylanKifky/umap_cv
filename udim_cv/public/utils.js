@@ -4,7 +4,7 @@
 const DEBUG_VIEW_DIRECTION = false;
 
 const SIM_TO_SCALE_POW = 0.3
-const SIM_TO_SCALE_MIN = 0.2
+const SIM_TO_SCALE_MIN = 0.5
 const SIM_TO_SCALE_MAX = 1.5
 
 // Camera distance multiplier for correct framing
@@ -80,42 +80,6 @@ class coordinateConverter {
         };
     }
 }
-
-/**
- * Convert markdown to HTML (basic conversion)
- * @param {string} markdown - Markdown text
- * @returns {string} HTML content
- */
-function markdownToHtml(markdown) {
-    let html = markdown;
-    
-    // Headers
-    html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-    html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-    html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-    
-    // Bold
-    html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-    
-    // Italic
-    html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-    
-    // Code blocks
-    html = html.replace(/```([\s\S]*?)```/gim, '<pre><code>$1</code></pre>');
-    
-    // Inline code
-    html = html.replace(/`([^`]*)`/gim, '<code>$1</code>');
-    
-    // Line breaks
-    html = html.replace(/\n/gim, '<br>');
-    
-    // Clean up extra breaks
-    html = html.replace(/<br><br>/gim, '</p><p>');
-    html = '<p>' + html + '</p>';
-    
-    return html;
-}
-
 
 /**
  * Apply a dither transparency pattern to a region

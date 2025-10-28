@@ -81,7 +81,6 @@ class ArticleVisualizer {
         this.setupBloom();
         this.setupBloomControls();
         this.loadArticles();
-        this.setupModal();
 
     }
     
@@ -368,60 +367,9 @@ class ArticleVisualizer {
             const clickedSphere = intersects[0].object;
             const entity = this.articleManager.getEntityBySphere(clickedSphere);
             if (entity) {
-                this.showArticleModal(entity.article);
+                this.searchManager.searchFor(entity.article.title);
             }
         }
-    }
-    
-    setupModal() {
-        const modal = document.getElementById('article-modal');
-        const closeBtn = document.getElementById('modal-close');
-        
-        // Close modal when clicking the X button
-        closeBtn.addEventListener('click', () => this.closeModal());
-        
-        // Close modal when clicking outside the modal content
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                this.closeModal();
-            }
-        });
-        
-        // Close modal with Escape key
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') {
-                this.closeModal();
-            }
-        });
-    }
-    
-    showArticleModal(article) {
-        const modal = document.getElementById('article-modal');
-        const title = document.getElementById('modal-title');
-        const body = document.getElementById('modal-body');
-        const filepath = document.getElementById('modal-filepath');
-        
-        // Get modal content from Article manager
-        const modalData = this.articleManager.getModalHTML(article);
-        
-        // Set modal content
-        title.textContent = modalData.title;
-        filepath.textContent = modalData.filepath;
-        body.innerHTML = modalData.content;
-        
-        // Show modal
-        modal.style.display = 'block';
-        
-        // Prevent body scrolling when modal is open
-        document.body.style.overflow = 'hidden';
-    }
-    
-    closeModal() {
-        const modal = document.getElementById('article-modal');
-        modal.style.display = 'none';
-        
-        // Re-enable body scrolling
-        document.body.style.overflow = 'auto';
     }
 }
 
