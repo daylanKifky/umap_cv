@@ -123,13 +123,19 @@ class SearchManager extends EventTarget {
             suggestionsDiv.innerHTML = suggestionsHtml;
             suggestionsDiv.style.display = 'block';
             
-            // Add click handlers to suggestions
+            // Add click/touch handlers to suggestions
             suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
-                item.addEventListener('click', () => {
+                const handleSelect = () => {
                     const suggestion = item.getAttribute('data-suggestion');
-                    document.getElementById('search-input').value = suggestion;
+                    const searchInput = document.getElementById('search-input');
+                    searchInput.value = suggestion;
                     suggestionsDiv.style.display = 'none';
                     this.performSearch();
+                };
+                item.addEventListener('click', handleSelect);
+                item.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    handleSelect();
                 });
             });
             
@@ -161,6 +167,9 @@ class SearchManager extends EventTarget {
         
         // Hide suggestions when searching
         suggestionsDiv.style.display = 'none';
+        
+        // Blur input to dismiss mobile keyboard
+        searchInput.blur();
         
         try {
             const results = this.miniSearch.search(query, {

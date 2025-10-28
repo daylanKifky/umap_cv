@@ -82,6 +82,11 @@ class ArticleVisualizer {
         this.hoverCheckInterval = 100; // Check every 150ms max
         this.hoveredObject = null;
         
+        // Touch tracking for mobile
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchMoved = false;
+        
         this.init();
         this.setupBloom();
         this.setupBloomControls();
@@ -96,10 +101,14 @@ class ArticleVisualizer {
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0a0a);
         
+        // Get actual container dimensions
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
         // Camera
         this.camera = new THREE.PerspectiveCamera(
             35, 
-            window.innerWidth / window.innerHeight, 
+            width / height, 
             0.1, 
             1000
         );
@@ -107,7 +116,8 @@ class ArticleVisualizer {
         
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2 for performance
+        this.renderer.setSize(width, height);
         this.renderer.shadowMap.enabled = true;
         this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         container.appendChild(this.renderer.domElement);
@@ -138,6 +148,11 @@ class ArticleVisualizer {
         
         // Handle mouse clicks for sphere selection
         this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
+        
+        // Handle touch events for mobile
+        this.renderer.domElement.addEventListener('touchstart', (event) => this.onTouchStart(event));
+        this.renderer.domElement.addEventListener('touchend', (event) => this.onTouchEnd(event));
+        this.renderer.domElement.addEventListener('touchmove', (event) => this.onTouchMove(event));
         
         // Handle mouse move for hover effects
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
@@ -287,9 +302,14 @@ class ArticleVisualizer {
         const renderPass = new THREE.RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
         
+        // Get actual container dimensions
+        const container = document.getElementById('container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
         // Bloom pass - adds bloom effect
         this.bloomPass = new THREE.UnrealBloomPass(
-            new THREE.Vector2(window.innerWidth, window.innerHeight),
+            new THREE.Vector2(width, height),
             0.3,  // strength
             0.09,  // radius
             0.58   // threshold
@@ -356,13 +376,17 @@ class ArticleVisualizer {
     }
     
     onWindowResize() {
-        this.camera.aspect = window.innerWidth / window.innerHeight;
+        const container = document.getElementById('container');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        this.renderer.setSize(width, height);
         
         // Update composer size
         if (this.composer) {
-            this.composer.setSize(window.innerWidth, window.innerHeight);
+            this.composer.setSize(width, height);
         }
     }
     
@@ -372,6 +396,42 @@ class ArticleVisualizer {
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
         
+        this.handleClick();
+    }
+    
+    onTouchStart(event) {
+        // Store the initial touch position
+        if (event.touches.length === 1) {
+            this.touchStartX = event.touches[0].clientX;
+            this.touchStartY = event.touches[0].clientY;
+            this.touchMoved = false;
+        }
+    }
+    
+    onTouchMove(event) {
+        // Track if touch moved significantly (to distinguish from tap)
+        if (event.touches.length === 1) {
+            const deltaX = Math.abs(event.touches[0].clientX - this.touchStartX);
+            const deltaY = Math.abs(event.touches[0].clientY - this.touchStartY);
+            if (deltaX > 10 || deltaY > 10) {
+                this.touchMoved = true;
+            }
+        }
+    }
+    
+    onTouchEnd(event) {
+        // Only treat as click if touch didn't move (tap vs drag)
+        if (!this.touchMoved && event.changedTouches.length === 1) {
+            const touch = event.changedTouches[0];
+            const rect = this.renderer.domElement.getBoundingClientRect();
+            this.mouse.x = ((touch.clientX - rect.left) / rect.width) * 2 - 1;
+            this.mouse.y = -((touch.clientY - rect.top) / rect.height) * 2 + 1;
+            
+            this.handleClick();
+        }
+    }
+    
+    handleClick() {
         // Update the raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
         
