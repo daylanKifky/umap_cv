@@ -471,6 +471,7 @@ class ArticleManager {
         this.reductionMethod = reductionMethod;
         this.animation = {active: false, progress: 0.0, duration: 1000, linkRefresh: 200, lastLinkUpdate: 0};
         this.activeCards = []; // Track active cards for click detection
+        this.activeSpheres = []; // Track spheres without active cards for hover detection
         
         // Extract articles and links from data
         this.articles = data.articles || [];
@@ -572,6 +573,9 @@ class ArticleManager {
         
         console.log(`Created ${this.entities.length} article entities`);
         
+        // Initialize active spheres to all spheres (no search yet)
+        this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
+        
         // Create links
         const linksMesh = this.linksManager.createLinks(this.entityMap)
         if (linksMesh) {
@@ -628,8 +632,9 @@ class ArticleManager {
      * @param {Array} searchResults - Array of search results with similarity scores
      */
     handleSearch(searchResults) {
-        // Reset active cards array on each search
+        // Reset active cards and active spheres arrays on each search
         this.activeCards = [];
+        this.activeSpheres = [];
         
         // Create a map of article ID to similarity
         const similarityMap = new Map();
@@ -660,9 +665,18 @@ class ArticleManager {
                     // Add active cards to the list for click detection
                     if (entity.card && searchResults.clearWinner) {
                         this.activeCards.push(entity.card);
+                    } else {
+                        // No active card, so sphere is still active for hover
+                        if (entity.sphere) {
+                            this.activeSpheres.push(entity.sphere);
+                        }
                     }
                 } else {
                     entity.updateCard("small");
+                    // Entity not in search results, sphere is active for hover
+                    if (entity.sphere) {
+                        this.activeSpheres.push(entity.sphere);
+                    }
                 }
 
             });
@@ -690,6 +704,9 @@ class ArticleManager {
     handleClearSearch() {
         // Reset active cards array
         this.activeCards = [];
+        
+        // Reset active spheres to all spheres (no active cards)
+        this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
         
         // Reset all entities to original appearance
         this.entities.forEach(entity => {
@@ -733,6 +750,14 @@ class ArticleManager {
      */
     getActiveCards() {
         return this.activeCards;
+    }
+
+    /**
+     * Get all active spheres for hover detection
+     * @returns {Array} Array of sphere meshes without active cards
+     */
+    getActiveSpheres() {
+        return this.activeSpheres;
     }
 
     /**

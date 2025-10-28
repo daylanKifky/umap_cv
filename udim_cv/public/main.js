@@ -383,8 +383,8 @@ class ArticleVisualizer {
             }
         }
         
-        // Then check for sphere intersections (fallback)
-        const intersects = this.raycaster.intersectObjects(this.articleManager.getSpheres());
+        // Then check for sphere intersections
+        const intersects = this.raycaster.intersectObjects(this.articleManager.getActiveSpheres());
 
         if (intersects.length > 0) {
             const clickedSphere = intersects[0].object;
@@ -415,9 +415,9 @@ class ArticleVisualizer {
         
         this.raycaster.setFromCamera(this.mouse, this.camera);
         
-        // Check spheres for hover
-        const spheres = this.articleManager.getSpheres();
-        const intersects = this.raycaster.intersectObjects(spheres);
+        // Check only active spheres for hover (spheres without active cards)
+        const activeSpheres = this.articleManager.getActiveSpheres();
+        const intersects = this.raycaster.intersectObjects(activeSpheres);
         
         if (intersects.length > 0) {
             const hoveredSphere = intersects[0].object;
