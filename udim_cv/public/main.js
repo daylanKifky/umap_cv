@@ -73,7 +73,7 @@ class ArticleVisualizer {
         this.bloomPass = null;
         this.bloomEnabled = true;
 
-        this.cameraInitialPosition = new THREE.Vector3(20, 15, 20); 
+        this.cameraInitialPosition = new THREE.Vector3(10, 7, 10); 
         this.cameraDistance = 5;
         this.cameraAnimationDuration = 1000;
         
@@ -167,6 +167,14 @@ class ArticleVisualizer {
             this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
 
             await this.articleManager.createArticleObjects();
+
+            // Animate camera to optimal position
+            const points = this.articleManager.entities.map(e => e.position);
+            const centroid = new THREE.Vector3(0, 0, 0);
+            const viewDirection = this.cameraInitialPosition.clone().normalize();
+            const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
+            this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
+            this.animateCamera(this.cameraInitialPosition, centroid);
 
             // Initialize search manager after articles are loaded
             this.searchManager = new SearchManager(data.articles);
