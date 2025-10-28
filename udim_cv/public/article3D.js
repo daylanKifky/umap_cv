@@ -41,7 +41,7 @@ class ArticleEntity {
 
     /**
      * Create the 3D card representation for this article
-     * @param {string} mode - Card mode: "small" (SM_ constants), "screen" (window size), "hide" (hidden)
+     * @param {string} mode - Card mode: "small" (SM_ constants), "active" (window size), "hide" (hidden)
      * @param {Image} image - Optional thumbnail image
      * @returns {THREE.Mesh} The created card mesh
      */
@@ -55,7 +55,7 @@ class ArticleEntity {
             width = SM_CARD_W;
             height = SM_CARD_H;
             text_length = 1;
-        } else if (mode === "screen") {
+        } else if (mode === "active") {
             width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
             height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
             if ((width/height)> 1){
@@ -140,7 +140,7 @@ class ArticleEntity {
 
     /**
      * Update the card, only recreating if parameters differ from current card
-     * @param {string} mode - Card mode: "small" (SM_ constants), "screen" (window size), "hide" (hidden)
+     * @param {string} mode - Card mode: "small" (SM_ constants), "active" (window size), "hide" (hidden)
      * @param {Image} image - Optional thumbnail image
      */
     updateCard(mode = "small", image = null) {
@@ -215,6 +215,11 @@ class ArticleEntity {
         this.position = this.sphere.position;
         this.rotation = this.sphere.rotation;
         this.quaternion = this.sphere.quaternion;
+        
+        // Store entity reference in userData
+        this.sphere.userData = {
+            entity: this
+        };
         
         return this.sphere;
     }
@@ -465,6 +470,7 @@ class ArticleManager {
         this.fontsLoaded = false;
         this.reductionMethod = reductionMethod;
         this.animation = {active: false, progress: 0.0, duration: 1000, linkRefresh: 200, lastLinkUpdate: 0};
+        this.activeCards = []; // Track active cards for click detection
         
         // Extract articles and links from data
         this.articles = data.articles || [];
@@ -622,6 +628,9 @@ class ArticleManager {
      * @param {Array} searchResults - Array of search results with similarity scores
      */
     handleSearch(searchResults) {
+        // Reset active cards array on each search
+        this.activeCards = [];
+        
         // Create a map of article ID to similarity
         const similarityMap = new Map();
         // Get max score from search results
@@ -647,7 +656,11 @@ class ArticleManager {
 
                 // If entity is in similarityMap, update card to screen mode
                 if (similarityMap.has(entity.id)) {
-                    entity.updateCard("screen", searchResults.clearWinner);
+                    entity.updateCard("active", searchResults.clearWinner);
+                    // Add active cards to the list for click detection
+                    if (entity.card && searchResults.clearWinner) {
+                        this.activeCards.push(entity.card);
+                    }
                 } else {
                     entity.updateCard("small");
                 }
@@ -675,6 +688,9 @@ class ArticleManager {
      * Clear search by resetting all objects (cards and links) to original state
      */
     handleClearSearch() {
+        // Reset active cards array
+        this.activeCards = [];
+        
         // Reset all entities to original appearance
         this.entities.forEach(entity => {
             entity.resetAppearance();
@@ -711,6 +727,13 @@ class ArticleManager {
         return this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
     }
 
+    /**
+     * Get all active cards for interaction
+     * @returns {Array} Array of active card meshes
+     */
+    getActiveCards() {
+        return this.activeCards;
+    }
 
     /**
      * Get entity by sphere
@@ -718,8 +741,8 @@ class ArticleManager {
      * @returns {ArticleEntity} The corresponding entity
      */
     getEntityBySphere(sphere) {
-        // Find entity by matching sphere reference
-        return this.entities.find(entity => entity.sphere === sphere);
+        // Get entity from sphere's userData
+        return sphere.userData.entity;
     }
 
 

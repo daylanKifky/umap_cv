@@ -360,12 +360,27 @@ class ArticleVisualizer {
         // Update the raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
         
-        // Calculate objects intersecting the picking ray
+        // First check for active card intersections (higher priority)
+        const activeCards = this.articleManager.getActiveCards();
+        if (activeCards.length > 0) {
+            const cardIntersects = this.raycaster.intersectObjects(activeCards);
+            if (cardIntersects.length > 0) {
+                const clickedCard = cardIntersects[0].object;
+                const entity = clickedCard.userData.entity;
+                if (entity && entity.article.html_filepath) {
+                    // Open the HTML file in a new tab
+                    window.open(entity.article.html_filepath, '_blank');
+                    return;
+                }
+            }
+        }
+        
+        // Then check for sphere intersections (fallback)
         const intersects = this.raycaster.intersectObjects(this.articleManager.getSpheres());
 
         if (intersects.length > 0) {
             const clickedSphere = intersects[0].object;
-            const entity = this.articleManager.getEntityBySphere(clickedSphere);
+            const entity = clickedSphere.userData.entity;
             if (entity) {
                 this.searchManager.searchFor(entity.article.title);
             }
