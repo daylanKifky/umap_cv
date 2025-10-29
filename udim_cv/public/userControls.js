@@ -1,4 +1,5 @@
-const UPDATE_INTERVAL = 5000;
+// Configuration constants
+const UPDATE_INTERVAL = 2500;
 
 /**
  * ButtonFactory - Handles all button rendering and visual updates
@@ -71,6 +72,30 @@ class ButtonFactory {
         
         wrapper.appendChild(button);
         return wrapper;
+    }
+    
+    /**
+     * Create the search input overlay
+     */
+    createSearchOverlay() {
+        const overlay = document.createElement('div');
+        overlay.className = 'search-overlay';
+        
+        // Search icon (magnifying glass)
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'search-overlay-icon';
+        iconDiv.innerHTML = this.getSearchSVG();
+        
+        // Search input field
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'search-overlay-input';
+        input.placeholder = 'Search articles...';
+        
+        overlay.appendChild(iconDiv);
+        overlay.appendChild(input);
+        
+        return overlay;
     }
     
     /**
@@ -165,11 +190,13 @@ class UserControls {
         
         // State
         this.state = 'playing'; // Only 'playing' or 'paused'
+        this.searchOpen = false;
         
         // UI Components
         this.factory = new ButtonFactory();
         this.container = null;
         this.buttons = {};
+        this.searchOverlay = null;
         
         // Timer properties
         this.timer = null;
@@ -195,10 +222,14 @@ class UserControls {
         this.buttons.play = this.factory.createPlayButton(this.factory.getPlaySVG());
         this.buttons.search = this.factory.createSimpleButton('search', this.factory.getSearchSVG());
         
+        // Create search overlay
+        this.searchOverlay = this.factory.createSearchOverlay();
+        
         // Append to container
         this.container.appendChild(this.buttons.home);
         this.container.appendChild(this.buttons.play);
         this.container.appendChild(this.buttons.search);
+        this.container.appendChild(this.searchOverlay);
         
         // Add to document
         document.body.appendChild(this.container);
@@ -214,9 +245,35 @@ class UserControls {
             console.log('Home button clicked');
         });
         
-        // Search button (dummy for now)
-        this.buttons.search.addEventListener('click', () => {
-            console.log('Search button clicked');
+        // Search button - toggle search overlay
+        this.buttons.search.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleSearch();
+        });
+        
+        // Search overlay input
+        const searchInput = this.searchOverlay.querySelector('.search-overlay-input');
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.performSearch(searchInput.value);
+            } else if (e.key === 'Escape') {
+                this.closeSearch();
+            }
+        });
+        
+        // Click search overlay icon to focus input
+        const searchIcon = this.searchOverlay.querySelector('.search-overlay-icon');
+        searchIcon.addEventListener('click', () => {
+            searchInput.focus();
+        });
+        
+        // Click outside to close search
+        document.addEventListener('click', (e) => {
+            if (this.searchOpen && 
+                !this.searchOverlay.contains(e.target) && 
+                !this.buttons.search.contains(e.target)) {
+                this.closeSearch();
+            }
         });
     }
     
@@ -299,6 +356,62 @@ class UserControls {
         
         // Continue animation
         this.animationFrame = requestAnimationFrame(() => this.animateProgress());
+    }
+    
+    // Search functionality
+    toggleSearch() {
+        if (this.searchOpen) {
+            this.closeSearch();
+        } else {
+            this.openSearch();
+        }
+    }
+    
+    openSearch() {
+        this.searchOpen = true;
+        this.searchOverlay.classList.add('open');
+        
+        // Hide other buttons
+        this.buttons.home.style.opacity = '0';
+        this.buttons.home.style.pointerEvents = 'none';
+        this.buttons.play.style.opacity = '0';
+        this.buttons.play.style.pointerEvents = 'none';
+        
+        // Focus input
+        const input = this.searchOverlay.querySelector('.search-overlay-input');
+        setTimeout(() => input.focus(), 100);
+        
+        this.emit('searchOpen');
+    }
+    
+    closeSearch() {
+        this.searchOpen = false;
+        this.searchOverlay.classList.remove('open');
+        
+        // Show other buttons
+        this.buttons.home.style.opacity = '1';
+        this.buttons.home.style.pointerEvents = 'auto';
+        this.buttons.play.style.opacity = '1';
+        this.buttons.play.style.pointerEvents = 'auto';
+        
+        // Clear input
+        const input = this.searchOverlay.querySelector('.search-overlay-input');
+        input.value = '';
+        input.blur();
+        
+        this.emit('searchClose');
+    }
+    
+    performSearch(query) {
+        if (!query.trim()) return;
+        
+        console.log('Performing search:', query);
+        
+        // Emit search event with query
+        this.emit('search', { query });
+        
+        // Optionally close search after performing search
+        // this.closeSearch();
     }
     
     // Simple event emitter
