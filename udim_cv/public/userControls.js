@@ -1,5 +1,5 @@
 // Configuration constants
-const UPDATE_INTERVAL = 2500;
+const UPDATE_INTERVAL = 15000;
 
 /**
  * ButtonFactory - Handles all button rendering and visual updates
@@ -184,13 +184,16 @@ class ButtonFactory {
  * UserControls - State machine and event logic for user controls
  */
 class UserControls {
-    constructor() {
+    constructor(searchManager = null) {
         // Configuration
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
         // State
         this.state = 'playing'; // Only 'playing' or 'paused'
         this.searchOpen = false;
+        
+        // Search integration
+        this.searchManager = searchManager;
         
         // UI Components
         this.factory = new ButtonFactory();
@@ -206,6 +209,14 @@ class UserControls {
         
         this.init();
         this.play()
+    }
+    
+    /**
+     * Set search manager after construction
+     * @param {SearchManager} searchManager - Search manager instance
+     */
+    setSearchManager(searchManager) {
+        this.searchManager = searchManager;
     }
     
     init() {
@@ -240,9 +251,15 @@ class UserControls {
         const playButton = this.buttons.play.querySelector('.fab-play-button');
         playButton.addEventListener('click', () => this.onPlayPauseClick());
         
-        // Home button (dummy for now)
+        // Home button - clear search
         this.buttons.home.addEventListener('click', () => {
-            console.log('Home button clicked');
+            console.log('Home button clicked - clearing search');
+            if (this.searchManager) {
+                this.searchManager.clearSearch();
+            }
+            if (this.searchOpen) {
+                this.closeSearch();
+            }
         });
         
         // Search button - toggle search overlay
@@ -403,15 +420,44 @@ class UserControls {
     }
     
     performSearch(query) {
-        if (!query.trim()) return;
+        if (!query || !query.trim()) return;
         
         console.log('Performing search:', query);
         
-        // Emit search event with query
-        this.emit('search', { query });
+        // Use SearchManager to perform search
+        if (this.searchManager) {
+            this.searchManager.performSearch(query);
+            // SearchManager will dispatch 'performSearch' event
+        }
         
-        // Optionally close search after performing search
-        // this.closeSearch();
+        // Close search after performing search
+        this.closeSearch();
+    }
+    
+    /**
+     * Open search overlay and perform search with given query
+     * Used when clicking on articles
+     * @param {string} query - Search query
+     */
+    searchFor(query) {
+        if (!query || !query.trim()) return;
+        
+        // Open search overlay
+        this.openSearch();
+        
+        // Set the input value
+        const input = this.searchOverlay.querySelector('.search-overlay-input');
+        if (input) {
+            input.value = query;
+        }
+        
+        // Perform the search
+        if (this.searchManager) {
+            this.searchManager.performSearch(query);
+        }
+        
+        // Close search after a delay to show what was searched
+        setTimeout(() => this.closeSearch(), 1500);
     }
     
     // Simple event emitter
@@ -443,12 +489,6 @@ class UserControls {
     }
 }
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        window.userControls = new UserControls();
-    });
-} else {
-    window.userControls = new UserControls();
-}
+// Note: UserControls should be initialized in main.js after SearchManager is created
+// Example: window.userControls = new UserControls(searchManager);
 

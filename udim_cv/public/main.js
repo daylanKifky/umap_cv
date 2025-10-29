@@ -194,6 +194,9 @@ class ArticleVisualizer {
             // Initialize search manager after articles are loaded
             this.searchManager = new SearchManager(data.articles);
             
+            // Initialize user controls with search manager
+            this.userControls = new UserControls(this.searchManager);
+            
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
@@ -457,7 +460,7 @@ class ArticleVisualizer {
             const clickedSphere = intersects[0].object;
             const entity = clickedSphere.userData.entity;
             if (entity) {
-                this.searchManager.searchFor(entity.article.title);
+                this.userControls.searchFor(entity.article.title);
             }
         }
     }

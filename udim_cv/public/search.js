@@ -37,7 +37,6 @@ class SearchManager extends EventTarget {
         this.miniSearch = null;
         
         this.initializeMiniSearch(articles);
-        this.setupSearch();
     }
     
     initializeMiniSearch(articles) {
@@ -67,112 +66,16 @@ class SearchManager extends EventTarget {
         console.log(`Indexed ${articles.length} articles for search`);
     }
     
-    setupSearch() {
-        const searchInput = document.getElementById('search-input');
-        const searchButton = document.getElementById('search-button');
-        const clearButton = document.getElementById('clear-button');
-        
-        // Search on button click
-        searchButton.addEventListener('click', () => this.performSearch());
-        
-        // Search on Enter key
-        searchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                this.performSearch();
-            }
-        });
-        
-        // Show suggestions on input
-        searchInput.addEventListener('input', (e) => {
-            this.showSuggestions(e.target.value);
-        });
-        
-        // Clear search
-        clearButton.addEventListener('click', () => this.clearSearch());
-    }
-    
-    showSuggestions(query) {
-        const suggestionsDiv = document.getElementById('search-suggestions');
-        
-        if (!query || query.trim().length < 2) {
-            suggestionsDiv.style.display = 'none';
-            return;
-        }
+    /**
+     * Perform search with given query
+     * @param {string} query - Search query
+     * @returns {Array} - Search results
+     */
+    performSearch(query) {
+        if (!query || !query.trim()) return [];
         
         try {
-            const suggestions = this.miniSearch.autoSuggest(query.trim(), {
-                boost: { 
-                    title: 3,
-                    technologies: 2 
-                },
-                fuzzy: 0.2,
-                prefix: true
-            });
-            
-            if (suggestions.length === 0) {
-                suggestionsDiv.style.display = 'none';
-                return;
-            }
-            
-            const suggestionsHtml = suggestions.slice(0, 5).map(suggestion => {
-                return `<div class="suggestion-item" data-suggestion="${suggestion.suggestion}">
-                    ${this.highlightSuggestion(suggestion.suggestion, query)}
-                </div>`;
-            }).join('');
-            
-            suggestionsDiv.innerHTML = suggestionsHtml;
-            suggestionsDiv.style.display = 'block';
-            
-            // Add click/touch handlers to suggestions
-            suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
-                const handleSelect = () => {
-                    const suggestion = item.getAttribute('data-suggestion');
-                    const searchInput = document.getElementById('search-input');
-                    searchInput.value = suggestion;
-                    suggestionsDiv.style.display = 'none';
-                    this.performSearch();
-                };
-                item.addEventListener('click', handleSelect);
-                item.addEventListener('touchend', (e) => {
-                    e.preventDefault();
-                    handleSelect();
-                });
-            });
-            
-        } catch (error) {
-            console.error('Suggestion failed:', error);
-            suggestionsDiv.style.display = 'none';
-        }
-    }
-    
-    highlightSuggestion(suggestion, query) {
-        const queryWords = query.toLowerCase().split(/\s+/);
-        let highlighted = suggestion;
-        
-        queryWords.forEach(word => {
-            const regex = new RegExp(`(${word})`, 'gi');
-            highlighted = highlighted.replace(regex, '<strong>$1</strong>');
-        });
-        
-        return highlighted;
-    }
-    
-    performSearch() {
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results');
-        const suggestionsDiv = document.getElementById('search-suggestions');
-        
-        const query = searchInput.value.trim();
-        if (!query) return;
-        
-        // Hide suggestions when searching
-        suggestionsDiv.style.display = 'none';
-        
-        // Blur input to dismiss mobile keyboard
-        searchInput.blur();
-        
-        try {
-            const results = this.miniSearch.search(query, {
+            const results = this.miniSearch.search(query.trim(), {
                 boost: { 
                     title: 3,
                     technologies: 2 
@@ -182,72 +85,39 @@ class SearchManager extends EventTarget {
             });
 
             const { clearWinner, ratio, zTop } = detectClearWinner(results);
-            console.log(`Clear winner: ${clearWinner}, Ratio: ${ratio}, Z-score: ${zTop}`);
+            console.log(`Search: "${query}" - Clear winner: ${clearWinner}, Ratio: ${ratio.toFixed(2)}, Z-score: ${zTop.toFixed(2)}`);
             results.clearWinner = clearWinner;
             
             this.searchResults = results;
             
-            // this.displaySearchResults(results);
-            
             // Dispatch custom event with search results
             this.dispatchEvent(new CustomEvent('performSearch', { 
-                detail: { results } 
+                detail: { query, results } 
             }));
+            
+            return results;
             
         } catch (error) {
             console.error('Search failed:', error);
-            searchResults.innerHTML = `<div style="color: #ff6b6b;">Search failed: ${error.message}</div>`;
-            searchResults.style.display = 'block';
+            return [];
         }
     }
     
-    displaySearchResults(results) {
-        const searchResults = document.getElementById('search-results');
-        
-        if (results.length === 0) {
-            searchResults.innerHTML = '<div>No results found</div>';
-        } else {
-            const resultsHtml = results.map((result, index) => {
-                const technologies = result.technologies ? 
-                    (Array.isArray(result.technologies) ? result.technologies.join(', ') : result.technologies) : 
-                    'N/A';
-                
-                return `<div style="margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid #333;">
-                    <div style="font-weight: bold;">${result.title}</div>
-                    <div style="color: #888; font-size: 10px; margin-top: 2px;">${technologies}</div>
-                    <div style="color: #aaa; font-size: 11px; margin-top: 2px;">Score: ${result.score.toFixed(2)}</div>
-                </div>`;
-            }).join('');
-            
-            searchResults.innerHTML = `<div style="margin-bottom: 10px; font-weight: bold;">Found ${results.length} results:</div>${resultsHtml}`;
-        }
-        
-        searchResults.style.display = 'block';
-    }
-    
+    /**
+     * Clear current search results
+     */
     clearSearch() {
-        const searchInput = document.getElementById('search-input');
-        const searchResults = document.getElementById('search-results');
-        const suggestionsDiv = document.getElementById('search-suggestions');
-        
-        searchInput.value = '';
-        searchResults.style.display = 'none';
-        suggestionsDiv.style.display = 'none';
         this.searchResults = null;
         
         // Dispatch custom event to clear search
         this.dispatchEvent(new CustomEvent('clearSearch'));
     }
     
+    /**
+     * Get current search results
+     * @returns {Array|null} - Current search results or null
+     */
     getSearchResults() {
         return this.searchResults;
-    }
-    
-    searchFor(query) {
-        const searchInput = document.getElementById('search-input');
-        if (searchInput && query) {
-            searchInput.value = query;
-            this.performSearch();
-        }
     }
 }
