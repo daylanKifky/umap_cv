@@ -190,6 +190,19 @@ class ButtonFactory {
             </svg>
         `;
     }
+
+    getBackSVG() {
+        return `
+            <svg viewBox="120 223 10 10" class="fab-icon">
+                <g style="display:inline;opacity:1" transform="translate(0.6130886,-1.9507365)">
+                    <g transform="matrix(0.89865056,0,0,0.89865056,12.614703,23.056622)">
+                        <path class="fab-icon-stroke" d="m 122.21427,227.7894 h 3.70353 c 1.46402,0 2.64263,1.21876 2.64263,2.73265 0,1.51389 -1.17861,2.73265 -2.64263,2.73265 h -5.5434" />
+                        <path class="fab-icon-stroke" d="m 123.3353,226.40422 -1.58163,1.42831 1.58163,1.42832" />
+                    </g>
+                </g>
+            </svg>
+        `;
+    }
 }
 
 /**
@@ -204,8 +217,6 @@ class UserControls {
         this.state = 'playing'; // Only 'playing' or 'paused'
         this.searchOpen = false;
         
-        // Search integration
-        this.searchManager = searchManager;
         
         // Articles for autoplay
         this.articles = articles;
@@ -223,6 +234,23 @@ class UserControls {
         this.elapsed = 0;
         this.animationFrame = null;
         
+        // Search integration
+        this.searchManager = searchManager;
+        searchManager.addEventListener('performSearch', (event) => {
+            // Skip adding to history if we're navigating back
+            if (this.isNavigatingBack) return;
+    
+            const query = event.detail?.query;
+            if (query && query.trim()) {
+                this.addToSearchHistory(query.trim());
+            }
+        });
+        // Search history stack
+        this.searchHistory = [];
+        this.maxHistorySize = 10; // Fixed size stack
+        this.isNavigatingBack = false; // Flag to prevent re-adding searches during back navigation
+        this._recentlyAddedSearch = false; // Flag to track if a search was recently added
+
         this.init();
         this.play()
     }
@@ -304,12 +332,79 @@ class UserControls {
         return this.weightedArticles[randomIndex];
     }
     
+    
     /**
-     * Set search manager after construction
-     * @param {SearchManager} searchManager - Search manager instance
+     * Add a search query to the history stack
+     * @param {string} query - The search query to add
      */
-    setSearchManager(searchManager) {
-        this.searchManager = searchManager;
+    addToSearchHistory(query) {
+        console.log('Adding to search history:', query);
+        // Remove if already exists (avoid duplicates)
+        const existingIndex = this.searchHistory.indexOf(query);
+        if (existingIndex !== -1) {
+            this.searchHistory.splice(existingIndex, 1);
+        }
+
+        // Add to end of stack
+        this.searchHistory.push(query);
+
+        // Maintain fixed size
+        if (this.searchHistory.length > this.maxHistorySize) {
+            this.searchHistory.shift();
+        }
+        this._recentlyAddedSearch = true;
+        // Update home button appearance
+        this.updateHomeButtonAppearance();
+    }
+
+    /**
+     * Update the home button to show back icon when there's search history
+     */
+    updateHomeButtonAppearance() {
+        if (!this.buttons.home) return;
+
+        if (this.searchHistory.length > 0) {
+            // Show back button
+            this.buttons.home.innerHTML = this.factory.getBackSVG();
+            this.buttons.home.classList.add('back-button');
+        } else {
+            // Show home button
+            this.buttons.home.innerHTML = this.factory.getHomeSVG();
+            this.buttons.home.classList.remove('back-button');
+        }
+    }
+
+    /**
+     * Go back to the previous search in history
+     */
+    goBackInHistory() {
+        if (this.searchHistory.length === 0) return;
+
+        if (this._recentlyAddedSearch) {
+            // This discards the last entry, except if the user
+            // was already going back
+            this.searchHistory.pop();
+            this._recentlyAddedSearch = false;
+        }
+        
+        // Pop the last search from history
+        const previousSearch = this.searchHistory.pop();
+
+        // Update button appearance
+        this.updateHomeButtonAppearance();
+
+        // Perform the previous search
+        if (this.searchManager && previousSearch) {
+            console.log('Going back to search:', previousSearch);
+
+            // Temporarily disable event listener to avoid re-adding to history
+            this.isNavigatingBack = true;
+            this.searchManager.performSearch(previousSearch);
+            this.isNavigatingBack = false;
+
+            // Show bubble to indicate back navigation
+            this.showBubble(`Back to: ${previousSearch}`, this.factory.getBackSVG());
+        }
     }
     
     init() {
@@ -338,26 +433,31 @@ class UserControls {
         // Add to document
         document.body.appendChild(this.container);
     }
-    
+
     attachEventListeners() {
         // Play/pause button
         const playButton = this.buttons.play.querySelector('.fab-play-button');
         playButton.addEventListener('click', () => this.onPlayPauseClick());
         
-        // Home button - clear search
+        // Home/Back button - clear search or go back in history
         this.buttons.home.addEventListener('click', () => {
-            this.pause();
-            if (!this._hintHomeShown){
-                this.showBubble("Reset view: Autoplay gets paused. You can resume it by clicking the play button again.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
-                this._hintHomeShown = true;
-            } 
+            if (this.searchHistory.length > 0) {
+                // Back button functionality
+                this.goBackInHistory();
+            } else {
+                // Home button functionality
+                this.pause();
+                if (!this._hintHomeShown){
+                    this.showBubble("Reset view: Autoplay gets paused. You can resume it by clicking the play button again.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                    this._hintHomeShown = true;
+                }
 
-
-            if (this.searchManager) {
-                this.searchManager.clearSearch();
-            }
-            if (this.searchOpen) {
-                this.closeSearch();
+                if (this.searchManager) {
+                    this.searchManager.clearSearch();
+                }
+                if (this.searchOpen) {
+                    this.closeSearch();
+                }
             }
         });
         
