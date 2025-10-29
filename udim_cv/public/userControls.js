@@ -1,5 +1,5 @@
 // Configuration constants
-const UPDATE_INTERVAL = 2500;
+const UPDATE_INTERVAL = 15000;
 
 /**
  * ButtonFactory - Handles all button rendering and visual updates
@@ -380,6 +380,7 @@ class UserControls {
         if (this.state === 'playing') {
             this.pause();
         } else {
+            this.triggerAutoplay();
             this.play();
         }
     }
@@ -418,17 +419,23 @@ class UserControls {
         console.log('Pause mode');
     }
     
+
+    triggerAutoplay() {
+        // Autoplay: select random article and search for it
+        const article = this.selectRandomArticle();
+        if (article && this.searchManager) {
+            console.log('Autoplay: searching for article:', article.title);
+            this.searchManager.performSearch(article.title);
+            this.showSearchBubble(article.title);
+        }
+    }
+
     startTimer() {
         this.timer = setInterval(() => {
             this.emit('change');
             console.log('Change event fired');
-            
-            // Autoplay: select random article and search for it
-            const article = this.selectRandomArticle();
-            if (article && this.searchManager) {
-                console.log('Autoplay: searching for article:', article.title);
-                this.searchManager.performSearch(article.title);
-            }
+            this.triggerAutoplay();
+
             
             // Reset progress for next interval
             this.startTime = performance.now();
@@ -548,6 +555,36 @@ class UserControls {
         setTimeout(() => this.closeSearch(), 1500);
     }
     
+    /**
+     * Show a temporary bubble with the search string over the controls
+     * @param {string} searchText - The text that was searched for
+     */
+    showSearchBubble(searchText) {
+        // Remove any existing bubble
+        const existingBubble = this.container.querySelector('.search-bubble');
+        if (existingBubble) {
+            existingBubble.remove();
+        }
+
+        // Create bubble element
+        const bubble = document.createElement('div');
+        bubble.className = 'search-bubble';
+        bubble.innerHTML = searchText + ' ' + this.factory.getSearchSVG();
+
+        // Add to container
+        this.container.appendChild(bubble);
+
+        // Trigger animation
+        setTimeout(() => {
+            bubble.classList.add('show');
+            // Remove after interval
+            setTimeout(() => {
+                bubble.classList.remove('show');
+            }, Math.max(UPDATE_INTERVAL * 0.1, 2000));
+        }, 20);
+
+    }
+
     // Simple event emitter
     emit(eventName, data) {
         const event = new CustomEvent(`userControls:${eventName}`, { detail: data });

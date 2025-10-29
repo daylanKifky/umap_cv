@@ -27,6 +27,7 @@
             --fab-progress: #838383;
             --fab-search-bg: #eeeeee;
             --fab-search-border: #7f7f7f;
+            --fab-bubble-bg: #5e5e5e67;
         }
         * {
             margin: 0;
@@ -367,6 +368,7 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
             padding: 0;
             position: relative;
+            z-index: 10;
         }
         
         .fab-button:hover {
@@ -426,7 +428,7 @@
         
         .fab-play-button {
             position: relative;
-            z-index: 1;
+            z-index: 8;
         }
         
         .fab-play-button.playing {
@@ -583,3 +585,41 @@
                 font-size: 14px;
             }
         }
+
+/* Search Bubble Styles */
+.search-bubble {
+    position: absolute;
+    top: -50px;
+    left: 0;
+    right: 0;
+    background: var(--fab-bubble-bg, rgba(0, 0, 0, 0.9));
+    color: white;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0;
+    transform: translateY(100px);
+    transition: all 0.5s ease-out;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.search-bubble.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.search-bubble .fab-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+
+.search-bubble .fab-icon-stroke {
+    stroke:  white;
+}
