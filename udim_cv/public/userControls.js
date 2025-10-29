@@ -93,8 +93,8 @@ class ButtonFactory {
         input.className = 'search-overlay-input';
         input.placeholder = 'Search articles...';
         
-        overlay.appendChild(iconDiv);
         overlay.appendChild(input);
+        overlay.appendChild(iconDiv);
         
         return overlay;
     }
@@ -377,10 +377,10 @@ class UserControls {
             }
         });
         
-        // Click search overlay icon to focus input
+        // Click search overlay icon to perform search
         const searchIcon = this.searchOverlay.querySelector('.search-overlay-icon');
         searchIcon.addEventListener('click', () => {
-            searchInput.focus();
+            this.performSearch(searchInput.value);
         });
         
         // Click outside to close search
