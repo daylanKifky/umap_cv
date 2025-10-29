@@ -1,5 +1,5 @@
 // Configuration constants
-const UPDATE_INTERVAL = 15000;
+const UPDATE_INTERVAL = 2500;
 
 /**
  * ButtonFactory - Handles all button rendering and visual updates
@@ -184,7 +184,7 @@ class ButtonFactory {
  * UserControls - State machine and event logic for user controls
  */
 class UserControls {
-    constructor(searchManager = null) {
+    constructor(searchManager = null, articles = []) {
         // Configuration
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
@@ -194,6 +194,10 @@ class UserControls {
         
         // Search integration
         this.searchManager = searchManager;
+        
+        // Articles for autoplay
+        this.articles = articles;
+        this.weightedArticles = this.buildWeightedArticleList(articles);
         
         // UI Components
         this.factory = new ButtonFactory();
@@ -209,6 +213,83 @@ class UserControls {
         
         this.init();
         this.play()
+    }
+    
+    /**
+     * Build a weighted article list based on boost values
+     * Articles without boost property default to boost = 1
+     * @param {Array} articles - Array of article objects
+     * @returns {Array} - Flattened array where articles appear multiple times based on boost
+     */
+    buildWeightedArticleList(articles) {
+        const weightedList = [];
+
+        // Initialize counters for technologies and tags
+        const technologyCount = {};
+        const tagCount = {};
+
+        articles.forEach(article => {
+            // Count technologies
+            if (article.technologies && Array.isArray(article.technologies)) {
+                article.technologies.forEach(tech => {
+                    technologyCount[tech] = (technologyCount[tech] || 0) + 1;
+                });
+            }
+
+            // Count tags
+            if (article.tags && Array.isArray(article.tags)) {
+                article.tags.forEach(tag => {
+                    tagCount[tag] = (tagCount[tag] || 0) + 1;
+                });
+            }
+
+            // Get boost value, default to 1 if not present
+            const boost = article.boost || 1;
+
+            // Add article multiple times based on boost value
+            for (let i = 0; i < boost; i++) {
+                weightedList.push(article);
+            }
+        });
+
+        const technologiesRatio = 0.3;
+        const tagsRatio = 0.3;
+
+        // Sort technologies by count (most popular first) and add top ones
+        const sortedTechnologies = Object.entries(technologyCount)
+            .filter(([tech, count]) => count > 1)
+            .sort((a, b) => b[1] - a[1]) // Sort by count descending
+            .slice(0, technologiesRatio * weightedList.length);
+
+        sortedTechnologies.forEach(([tech, count]) => {
+                weightedList.push({ title: tech, type: 'technology' });
+        });
+
+        // Sort tags by count (most popular first) and add top ones
+        const sortedTags = Object.entries(tagCount)
+            .filter(([tag, count]) => count > 1)
+            .sort((a, b) => b[1] - a[1]) // Sort by count descending
+            .slice(0, tagsRatio * weightedList.length);
+
+        sortedTags.forEach(([tag, count]) => {
+                weightedList.push({ title: tag, type: 'tag' });
+        });
+
+        console.log(`Built weighted article list: ${weightedList.length} entries from ${articles.length} articles and ${sortedTechnologies.length} technologies and ${sortedTags.length} tags`);
+        return weightedList;
+    }
+    
+    /**
+     * Select a random article from the weighted list
+     * @returns {Object|null} - Randomly selected article or null if list is empty
+     */
+    selectRandomArticle() {
+        if (this.weightedArticles.length === 0) {
+            return null;
+        }
+        
+        const randomIndex = Math.floor(Math.random() * this.weightedArticles.length);
+        return this.weightedArticles[randomIndex];
     }
     
     /**
@@ -341,6 +422,13 @@ class UserControls {
         this.timer = setInterval(() => {
             this.emit('change');
             console.log('Change event fired');
+            
+            // Autoplay: select random article and search for it
+            const article = this.selectRandomArticle();
+            if (article && this.searchManager) {
+                console.log('Autoplay: searching for article:', article.title);
+                this.searchManager.performSearch(article.title);
+            }
             
             // Reset progress for next interval
             this.startTime = performance.now();
@@ -490,5 +578,5 @@ class UserControls {
 }
 
 // Note: UserControls should be initialized in main.js after SearchManager is created
-// Example: window.userControls = new UserControls(searchManager);
+// Example: window.userControls = new UserControls(searchManager, articles);
 

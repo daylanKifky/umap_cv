@@ -194,8 +194,8 @@ class ArticleVisualizer {
             // Initialize search manager after articles are loaded
             this.searchManager = new SearchManager(data.articles);
             
-            // Initialize user controls with search manager
-            this.userControls = new UserControls(this.searchManager);
+            // Initialize user controls with search manager and articles for autoplay
+            this.userControls = new UserControls(this.searchManager, data.articles);
             
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
