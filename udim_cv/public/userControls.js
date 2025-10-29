@@ -164,7 +164,7 @@ class UserControls {
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
         // State
-        this.state = 'paused'; // Only 'playing' or 'paused'
+        this.state = 'playing'; // Only 'playing' or 'paused'
         
         // UI Components
         this.factory = new ButtonFactory();
@@ -178,6 +178,7 @@ class UserControls {
         this.animationFrame = null;
         
         this.init();
+        this.play()
     }
     
     init() {
