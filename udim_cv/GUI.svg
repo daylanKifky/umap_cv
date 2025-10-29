@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="484.92993mm"
+   height="298.89172mm"
+   viewBox="0 0 484.92993 298.89172"
+   version="1.1"
+   id="svg1"
+   sodipodi:docname="GUI.svg"
+   inkscape:version="1.4.2 (1:1.4.2+202505120738+ebf0e940d0)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     showgrid="false"
+     inkscape:zoom="0.61872341"
+     inkscape:cx="916.40302"
+     inkscape:cy="564.06465"
+     inkscape:window-width="1920"
+     inkscape:window-height="1176"
+     inkscape:window-x="1920"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1" />
+  <g
+     id="layer1"
+     transform="translate(0,1.8917198)">
+    <rect
+       style="fill:#b6b6b6;fill-opacity:1;stroke:#000000;stroke-width:3.765;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       id="rect23"
+       width="99.21875"
+       height="214.84166"
+       x="188.90689"
+       y="37.834393"
+       ry="6.6145835"
+       rx="6.6145835"
+       transform="translate(0,-1.8917198)"
+       inkscape:label="phone_screen_1" />
+    <rect
+       style="fill:#b6b6b6;fill-opacity:1;stroke:#000000;stroke-width:3.765;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       id="rect1"
+       width="99.21875"
+       height="214.84166"
+       x="46.031849"
+       y="37.834393"
+       ry="6.6145835"
+       rx="6.6145835"
+       transform="translate(0,-1.8917198)"
+       inkscape:label="phone_screen_0" />
+    <g
+       id="g11"
+       transform="translate(1.3251738)"
+       inkscape:label="user_controls_0">
+      <g
+         id="g4"
+         inkscape:label="search button">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="path1"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g3"
+           style="stroke-width:1.4;stroke-dasharray:none"
+           transform="matrix(0.86291097,0,0,0.86291097,17.123299,31.296952)"
+           inkscape:label="magnifing_glass_symbol">
+          <circle
+             style="fill:none;stroke:#000000;stroke-width:1.2;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+             id="path2"
+             cx="126.07944"
+             cy="227.03169"
+             r="2.8267136" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 123.96732,229.32748 -3.06064,3.06064"
+             id="path3" />
+        </g>
+      </g>
+      <g
+         id="g6"
+         transform="translate(-30.770658)">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle4"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g7"
+           style="stroke-width:1.4;stroke-dasharray:none"
+           inkscape:label="pause symbol">
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.27361;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 123.21387,225.17809 v 6.10004"
+             id="path6" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.27361;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 126.7296,225.17809 v 6.10004"
+             id="path7" />
+        </g>
+      </g>
+      <g
+         id="g10"
+         transform="translate(-61.541316)"
+         inkscape:label="home_back_button">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle7"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g32"
+           inkscape:label="home symbol">
+          <path
+             id="rect31"
+             style="fill:none;stroke:#000000;stroke-width:0.990593;stroke-linecap:round;paint-order:stroke fill markers"
+             d="m 127.77858,228.01328 0.0197,2.76117 c 0.003,0.48986 -0.33315,0.77587 -0.72249,0.77587 h -4.05254 c -0.38933,0 -0.67957,-0.28601 -0.68306,-0.77587 l -0.0197,-2.76117" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:0.990593;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1"
+             d="m 121.09018,227.15503 4.04314,-2.83714 3.99526,2.83714"
+             id="path32" />
+        </g>
+      </g>
+    </g>
+    <g
+       id="g31"
+       transform="translate(144.20021)"
+       inkscape:label="user_controls_1">
+      <g
+         id="g25"
+         inkscape:label="search button">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle23"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g24"
+           style="stroke-width:1.4;stroke-dasharray:none"
+           transform="matrix(0.86291097,0,0,0.86291097,17.123299,31.296952)"
+           inkscape:label="magnifing_glass_symbol">
+          <circle
+             style="fill:none;stroke:#000000;stroke-width:1.2;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+             id="circle24"
+             cx="126.07944"
+             cy="227.03169"
+             r="2.8267136" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.2;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 123.96732,229.32748 -3.06064,3.06064"
+             id="path24" />
+        </g>
+      </g>
+      <g
+         id="g35"
+         transform="translate(-30.770657)"
+         style="display:inline"
+         inkscape:label="tick_arc">
+        <path
+           style="fill:#838383;fill-opacity:1;stroke:none;stroke-width:1.19514;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle32"
+           d="m 136.27744,228.39624 a 11.190728,11.190728 0 0 1 -11.18673,11.19073 11.190728,11.190728 0 0 1 -11.19473,-11.18273 11.190728,11.190728 0 0 1 11.17873,-11.19872 l 0.012,11.19072 z" />
+      </g>
+      <g
+         id="g27"
+         transform="translate(-30.770658)"
+         style="display:inline"
+         inkscape:label="play_pause_button">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle25"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g26"
+           style="display:inline;stroke-width:1.4;stroke-dasharray:none"
+           inkscape:label="pause symbol">
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.27361;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 123.21387,225.17809 v 6.10004"
+             id="path25" />
+          <path
+             style="fill:none;stroke:#000000;stroke-width:1.27361;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+             d="m 126.7296,225.17809 v 6.10004"
+             id="path26" />
+        </g>
+      </g>
+      <g
+         id="g30"
+         transform="translate(-61.541316)"
+         inkscape:label="home_back_button">
+        <circle
+           style="fill:#f9f9f9;stroke:#7f7f7f;stroke-width:1;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+           id="circle27"
+           cx="125.08671"
+           cy="228.39624"
+           r="9.3635349" />
+        <g
+           id="g29"
+           style="display:inline;opacity:1"
+           transform="translate(0.6130886,-1.9507365)"
+           inkscape:label="back symbol">
+          <g
+             id="g28"
+             transform="matrix(0.89865056,0,0,0.89865056,12.614703,23.056622)">
+            <path
+               style="baseline-shift:baseline;display:inline;overflow:visible;fill:none;stroke:#000000;stroke-width:1.14663;stroke-linecap:round;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers;enable-background:accumulate;stop-color:#000000;stop-opacity:1"
+               d="m 122.21427,227.7894 h 3.70353 c 1.46402,0 2.64263,1.21876 2.64263,2.73265 0,1.51389 -1.17861,2.73265 -2.64263,2.73265 h -5.5434"
+               id="path27" />
+            <path
+               style="fill:none;stroke:#000000;stroke-width:1.14663;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+               d="m 123.3353,226.40422 -1.58163,1.42831 1.58163,1.42832"
+               id="path28" />
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

@@ -12,12 +12,12 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="loading">Loading articles...</div>
+    <!-- <div id="loading">Loading articles...</div>
     <div id="info">
         <div>3D Article Visualization</div>
         <div>Mouse: Rotate | Scroll: Zoom | Right-click: Pan</div>
         <div id="article-count">Articles: 0</div>
-    </div>
+    </div> -->
     
     <div id="search-container">
         <div id="search-bar">
@@ -87,21 +87,6 @@
         </div>
     </div>
 
-    <!-- Article Modal -->
-    <div id="article-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2 class="modal-title" id="modal-title">Article Title</h2>
-                <button class="modal-close" id="modal-close">&times;</button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                Article content will appear here...
-            </div>
-            <div class="modal-meta" id="modal-meta">
-                <div>File: <span id="modal-filepath"></span></div>
-            </div>
-        </div>
-    </div>
 
     <!-- THREE.js -->
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -121,6 +106,7 @@
     <script src="links.js"></script>
     <script src="article3D.js"></script>
     <script src="search.js"></script>
+    <script src="userControls.js"></script>
     <script src="main.js"></script>
 </body>
 </html>

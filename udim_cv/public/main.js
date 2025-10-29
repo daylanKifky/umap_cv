@@ -174,8 +174,8 @@ class ArticleVisualizer {
                 return;
             }
 
-            document.getElementById('article-count').textContent = `Articles: ${data.articles.length}`;
-            document.getElementById('loading').style.display = 'none';
+            // document.getElementById('article-count').textContent = `Articles: ${data.articles.length}`;
+            // document.getElementById('loading').style.display = 'none';
             
             // Initialize ArticleManager with full data and reduction method
             this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
