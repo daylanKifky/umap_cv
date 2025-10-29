@@ -26,6 +26,7 @@ class ButtonFactory {
             fabIcon: root.getPropertyValue('--fab-icon').trim(),
             fabIconActive: root.getPropertyValue('--fab-icon-active').trim(),
             fabProgress: root.getPropertyValue('--fab-progress').trim(),
+            fabBubbleHint: root.getPropertyValue('--fab-bubble-hint').trim(),
         };
     }
     
@@ -175,6 +176,17 @@ class ButtonFactory {
             <svg viewBox="120 223 10 10" class="fab-icon">
                 <circle class="fab-icon-stroke" cx="126.08" cy="227.03" r="2.83" />
                 <path class="fab-icon-stroke" d="m 123.96732,229.32748 -3.06064,3.06064" />
+            </svg>
+        `;
+    }
+
+    getHintSVG() {
+        return `
+            <svg viewBox="120 223 10 10" class="fab-icon">
+                <circle class="fab-icon-stroke" cx="125.5" cy="226.5" r="2.5" />
+                <path class="fab-icon-stroke" d="m 124.2,229.2 h 2.6" />
+                <path class="fab-icon-stroke" d="m 124.2,230.2 h 2.6" />
+                <path class="fab-icon-stroke" d="m 124.8,231.2 h 1.4" />
             </svg>
         `;
     }
@@ -334,7 +346,13 @@ class UserControls {
         
         // Home button - clear search
         this.buttons.home.addEventListener('click', () => {
-            console.log('Home button clicked - clearing search');
+            this.pause();
+            if (!this._hintHomeShown){
+                this.showBubble("Reset view: Autoplay gets paused. You can resume it by clicking the play button again.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                this._hintHomeShown = true;
+            } 
+
+
             if (this.searchManager) {
                 this.searchManager.clearSearch();
             }
@@ -426,7 +444,7 @@ class UserControls {
         if (article && this.searchManager) {
             console.log('Autoplay: searching for article:', article.title);
             this.searchManager.performSearch(article.title);
-            this.showSearchBubble(article.title);
+                this.showBubble(article.title, this.factory.getSearchSVG());
         }
     }
 
@@ -556,10 +574,12 @@ class UserControls {
     }
     
     /**
-     * Show a temporary bubble with the search string over the controls
-     * @param {string} searchText - The text that was searched for
+     * Show a temporary bubble with custom content over the controls
+     * @param {string} text - The text to display
+     * @param {string} iconHTML - HTML string for the icon (optional)
+     * @param {string} borderColor - Border color for the bubble ('none' for no border)
      */
-    showSearchBubble(searchText) {
+    showBubble(text, iconHTML = '', borderColor = null, timeMultiplier = 1) {
         // Remove any existing bubble
         const existingBubble = this.container.querySelector('.search-bubble');
         if (existingBubble) {
@@ -569,7 +589,25 @@ class UserControls {
         // Create bubble element
         const bubble = document.createElement('div');
         bubble.className = 'search-bubble';
-        bubble.innerHTML = searchText + ' ' + this.factory.getSearchSVG();
+
+        // Set content based on parameters
+        const textSpan = document.createElement('span');
+        textSpan.className = 'bubble-text';
+        textSpan.textContent = text;
+        
+        bubble.appendChild(textSpan);
+        
+        if (iconHTML) {
+            const iconWrapper = document.createElement('span');
+            iconWrapper.className = 'bubble-icon';
+            iconWrapper.innerHTML = iconHTML;
+            bubble.appendChild(iconWrapper);
+        }
+
+        // Set border color
+        if (borderColor !== null) {
+            bubble.style.border = `1px solid ${borderColor}`;
+        }
 
         // Add to container
         this.container.appendChild(bubble);
@@ -580,7 +618,7 @@ class UserControls {
             // Remove after interval
             setTimeout(() => {
                 bubble.classList.remove('show');
-            }, Math.max(UPDATE_INTERVAL * 0.1, 2000));
+            }, Math.max(UPDATE_INTERVAL * 0.1, 2000) * timeMultiplier);
         }, 20);
 
     }
