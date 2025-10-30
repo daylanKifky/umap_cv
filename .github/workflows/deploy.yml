@@ -34,7 +34,7 @@ jobs:
           pip install .
 
       - name: Run processing
-        run: python -m udim_cv process --input udim_cv/articles --output udim_cv/public/embeddings.json
+        run: python -m udim_cv.process --input udim_cv/articles --output udim_cv/public/embeddings.json
 
 
       - name: Setup Pages
