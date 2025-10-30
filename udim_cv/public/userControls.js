@@ -357,20 +357,26 @@ class UserControls {
         this.updateHomeButtonAppearance();
     }
 
+    
+
     /**
      * Update the home button to show back icon when there's search history
      */
     updateHomeButtonAppearance() {
-        if (!this.buttons.home) return;
+        if (!this.buttons.history) return;
 
-        if (this.searchHistory.length > 0) {
+        this.buttons.history.isBack = this.searchHistory.length >= 2 || ( !this._recentlyAddedSearch && this.searchHistory.length >= 1);
+        
+        console.log('[NAV] Hist.l:', this.searchHistory.length, 'RecAdded:', this._recentlyAddedSearch, 'isBack:', this.buttons.history.isBack, "last item:", this.searchHistory[this.searchHistory.length - 1]);
+
+        if (this.buttons.history.isBack) {
             // Show back button
-            this.buttons.home.innerHTML = this.factory.getBackSVG();
-            this.buttons.home.classList.add('back-button');
+            this.buttons.history.innerHTML = this.factory.getBackSVG();
+            this.buttons.history.classList.add('back-button');
         } else {
             // Show home button
-            this.buttons.home.innerHTML = this.factory.getHomeSVG();
-            this.buttons.home.classList.remove('back-button');
+            this.buttons.history.innerHTML = this.factory.getHomeSVG();
+            this.buttons.history.classList.remove('back-button');
         }
     }
 
@@ -389,6 +395,7 @@ class UserControls {
         
         // Pop the last search from history
         const previousSearch = this.searchHistory.pop();
+        console.log('[NAV] Popped:', previousSearch);
 
         // Update button appearance
         this.updateHomeButtonAppearance();
@@ -417,7 +424,7 @@ class UserControls {
         this.container = this.factory.createControlsContainer();
         
         // Create all buttons using factory
-        this.buttons.home = this.factory.createSimpleButton('home', this.factory.getHomeSVG());
+        this.buttons.history = this.factory.createSimpleButton('history', this.factory.getHomeSVG());
         this.buttons.play = this.factory.createPlayButton(this.factory.getPlaySVG());
         this.buttons.search = this.factory.createSimpleButton('search', this.factory.getSearchSVG());
         
@@ -425,7 +432,7 @@ class UserControls {
         this.searchOverlay = this.factory.createSearchOverlay();
         
         // Append to container
-        this.container.appendChild(this.buttons.home);
+        this.container.appendChild(this.buttons.history);
         this.container.appendChild(this.buttons.play);
         this.container.appendChild(this.buttons.search);
         this.container.appendChild(this.searchOverlay);
@@ -440,8 +447,8 @@ class UserControls {
         playButton.addEventListener('click', () => this.onPlayPauseClick());
         
         // Home/Back button - clear search or go back in history
-        this.buttons.home.addEventListener('click', () => {
-            if (this.searchHistory.length > 0) {
+        this.buttons.history.addEventListener('click', () => {
+            if (this.buttons.history.isBack) {
                 // Back button functionality
                 this.goBackInHistory();
             } else {
@@ -453,6 +460,7 @@ class UserControls {
                 }
 
                 if (this.searchManager) {
+                    this.searchHistory = []
                     this.searchManager.clearSearch();
                 }
                 if (this.searchOpen) {
@@ -602,8 +610,8 @@ class UserControls {
         this.searchOverlay.classList.add('open');
         
         // Hide other buttons
-        this.buttons.home.style.opacity = '0';
-        this.buttons.home.style.pointerEvents = 'none';
+        this.buttons.history.style.opacity = '0';
+        this.buttons.history.style.pointerEvents = 'none';
         this.buttons.play.style.opacity = '0';
         this.buttons.play.style.pointerEvents = 'none';
         
@@ -619,8 +627,8 @@ class UserControls {
         this.searchOverlay.classList.remove('open');
         
         // Show other buttons
-        this.buttons.home.style.opacity = '1';
-        this.buttons.home.style.pointerEvents = 'auto';
+        this.buttons.history.style.opacity = '1';
+        this.buttons.history.style.pointerEvents = 'auto';
         this.buttons.play.style.opacity = '1';
         this.buttons.play.style.pointerEvents = 'auto';
         
