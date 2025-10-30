@@ -61,7 +61,7 @@ class ArticleVisualizer {
         this.scene = null;
         this.camera = null;
         this.renderer = null;
-        this.controls = null;
+        this.orbit_controls = null;
         this.articles = [];
         this.articleManager = null;
         this.searchManager = null;
@@ -123,18 +123,18 @@ class ArticleVisualizer {
         container.appendChild(this.renderer.domElement);
         
         // Controls
-        this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
-        this.controls.enableDamping = true;
-        this.controls.dampingFactor = 0.05;
-        this.controls.screenSpacePanning = false;
-        this.controls.minDistance = 5;
-        this.controls.maxDistance = 200;
-        this.controls.minPolarAngle = degToRad(30);
-        this.controls.maxPolarAngle = degToRad(180-30);
+        this.orbit_controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+        this.orbit_controls.enableDamping = true;
+        this.orbit_controls.dampingFactor = 0.05;
+        this.orbit_controls.screenSpacePanning = false;
+        this.orbit_controls.minDistance = 5;
+        this.orbit_controls.maxDistance = 200;
+        this.orbit_controls.minPolarAngle = degToRad(30);
+        this.orbit_controls.maxPolarAngle = degToRad(180-30);
 
         window.getTHREE = () => { return {
             camera: this.camera, 
-            controls: this.controls, 
+            controls: this.orbit_controls, 
             scene: this.scene, 
             renderer: this.renderer 
         }}
@@ -195,7 +195,7 @@ class ArticleVisualizer {
             this.searchManager = new SearchManager(data.articles);
             
             // Initialize user controls with search manager and articles for autoplay
-            this.userControls = new UserControls(this.searchManager, data.articles);
+            this.userControls = new UserControls(this.searchManager, data.articles, this.orbit_controls);
             
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
@@ -217,9 +217,9 @@ class ArticleVisualizer {
     
     animateCamera(targets, centroid = null) {
         // Check if an animation is already in progress
-        if (!this.controls.enabled) return;
+        if (!this.orbit_controls.enabled) return;
         // Disable user control
-        this.controls.enabled = false;
+        this.orbit_controls.enabled = false;
 
         let endPos, endTarget;
         let target_entities = [];
@@ -236,7 +236,7 @@ class ArticleVisualizer {
             const view = findOptimalCameraView(target_entities, this.camera);
 
             if (!view.position) {
-                this.controls.enabled = false;
+                this.orbit_controls.enabled = false;
                 console.log("No optimal camera view found, aborting animation");
                 return;
             }
@@ -247,7 +247,7 @@ class ArticleVisualizer {
         
         
         const startPos = this.camera.position.clone();
-        const startTarget = this.controls.target.clone();
+        const startTarget = this.orbit_controls.target.clone();
 
         // Get relative positions (camera relative to target)
         const startRelative = startPos.clone().sub(startTarget);
@@ -275,20 +275,20 @@ class ArticleVisualizer {
             const relativeHeight = startRelative.y + (endRelative.y - startRelative.y) * ease;
 
             // Interpolate target
-            this.controls.target.lerpVectors(startTarget, endTarget, ease);
+            this.orbit_controls.target.lerpVectors(startTarget, endTarget, ease);
             
             // Convert spherical to cartesian (on XZ plane) and add height
             this.camera.position.setFromSpherical(new THREE.Spherical(radius, Math.PI / 2, theta));
             this.camera.position.y = relativeHeight;
-            this.camera.position.add(this.controls.target);
+            this.camera.position.add(this.orbit_controls.target);
                         
-            this.controls.update();
+            this.orbit_controls.update();
             
             if (t < 1) {
                 requestAnimationFrame(animation);
             } else {
                 console.log("Animate complete camera position: ", endPos.x, endPos.y, endPos.z);
-                this.controls.enabled = true; // Re-enable user control
+                this.orbit_controls.enabled = true; // Re-enable user control
             }
         }
         requestAnimationFrame(animation);
@@ -361,8 +361,8 @@ class ArticleVisualizer {
         requestAnimationFrame(() => this.animate());
         
         // Update controls
-        if (this.controls.enabled) {
-            this.controls.update();
+        if (this.orbit_controls.enabled) {
+            this.orbit_controls.update();
         }
         
         // Update article manager (labels face camera)

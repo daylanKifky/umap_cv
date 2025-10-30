@@ -211,7 +211,7 @@ class ButtonFactory {
  * UserControls - State machine and event logic for user controls
  */
 class UserControls {
-    constructor(searchManager = null, articles = []) {
+    constructor(searchManager = null, articles = [], orbit_controls = null) {
         // Configuration
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
@@ -252,23 +252,139 @@ class UserControls {
         this.maxHistorySize = 10; // Fixed size stack
         this.isNavigatingBack = false; // Flag to prevent re-adding searches during back navigation
         this._recentlyAddedSearch = false; // Flag to track if a search was recently added
+        
+        this.orbit_controls = orbit_controls;
+        this._orbitControlsActive = false;
+        this._orbitEnd = 0;
 
-        this.init();
+        this.createUI();
+        this.attachEventListeners();
+        this.enableAutoplay();
+    
+    }
+
+    enableAutoplay() {
+
+        const startAutoplay = () => {
+            const longEnough = performance.now() - this._orbitEnd > AUTO_PLAY_DELAY;
+            if (this.state === 'playing' 
+                || this.searchOpen 
+                || this.searchHistory.length > 0 
+                || this._orbitControlsActive 
+                || !longEnough) {
+                console.log('SKIPPING AUTOPLAY');
+                return;
+            }
+            // Start autoplay
+            this.play()
+        }
+
+        if (this.orbit_controls) {
+            this.orbit_controls.addEventListener('start', () => {
+                this._orbitControlsActive = true;
+                this.pause();
+            }); 
+
+            this.orbit_controls.addEventListener('end', () => {
+                this._orbitControlsActive = false;
+                this._orbitEnd = performance.now();
+                if (!this._hintAutoplayStartedShown){
+                    setTimeout(startAutoplay , AUTO_PLAY_DELAY - INITIAL_DELAY);
+                }
+            }); 
+        }
 
         setTimeout(() => {
             if (this.state === 'playing' || this.searchOpen || this.searchHistory.length > 0) return
             // Display fist hint
             this.showBubble("Explore the latent space in 3D, or use these controls 👇 to navigate the articles", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
         
-            setTimeout(() => {
-                if (this.state === 'playing' || this.searchOpen || this.searchHistory.length > 0) return
-                // Start autoplay and second hint
-                this.showBubble("Autoplay started automatically, you can pause it by clicking the button", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
-                this.play()
-
-            }, AUTO_PLAY_DELAY - INITIAL_DELAY);
+            setTimeout(startAutoplay , AUTO_PLAY_DELAY - INITIAL_DELAY);
         
         }, INITIAL_DELAY);
+    
+    }
+
+    createUI() {
+        // Create container
+        this.container = this.factory.createControlsContainer();
+        
+        // Create all buttons using factory
+        this.buttons.history = this.factory.createSimpleButton('history', this.factory.getHomeSVG());
+        this.buttons.play = this.factory.createPlayButton(this.factory.getPlaySVG());
+        this.buttons.search = this.factory.createSimpleButton('search', this.factory.getSearchSVG());
+        
+        // Create search overlay
+        this.searchOverlay = this.factory.createSearchOverlay();
+        
+        // Append to container
+        this.container.appendChild(this.buttons.history);
+        this.container.appendChild(this.buttons.play);
+        this.container.appendChild(this.buttons.search);
+        this.container.appendChild(this.searchOverlay);
+        
+        // Add to document
+        document.body.appendChild(this.container);
+    }
+
+    attachEventListeners() {
+        // Play/pause button
+        const playButton = this.buttons.play.querySelector('.fab-play-button');
+        playButton.addEventListener('click', () => this.onPlayPauseClick());
+        
+        // Home/Back button - clear search or go back in history
+        this.buttons.history.addEventListener('click', () => {
+            if (this.buttons.history.isBack) {
+                // Back button functionality
+                this.goBackInHistory();
+            } else {
+                // Home button functionality
+                this.pause();
+                if (!this._hintResumeShown && this.searchHistory.length > 0){
+                    this.showBubble("Reset view: Autoplay is paused.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                    this._hintResumeShown = true;
+                }
+
+                if (this.searchManager) {
+                    this.searchHistory = []
+                    this.searchManager.clearSearch();
+                }
+                if (this.searchOpen) {
+                    this.closeSearch();
+                }
+            }
+        });
+        
+        // Search button - toggle search overlay
+        this.buttons.search.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleSearch();
+        });
+        
+        // Search overlay input
+        const searchInput = this.searchOverlay.querySelector('.search-overlay-input');
+        searchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.performSearch(searchInput.value);
+            } else if (e.key === 'Escape') {
+                this.closeSearch();
+            }
+        });
+        
+        // Click search overlay icon to perform search
+        const searchIcon = this.searchOverlay.querySelector('.search-overlay-icon');
+        searchIcon.addEventListener('click', () => {
+            this.performSearch(searchInput.value);
+        });
+        
+        // Click outside to close search
+        document.addEventListener('click', (e) => {
+            if (this.searchOpen && 
+                !this.searchOverlay.contains(e.target) && 
+                !this.buttons.search.contains(e.target)) {
+                this.closeSearch();
+            }
+        });
     }
     
     /**
@@ -429,100 +545,17 @@ class UserControls {
             this.showBubble(`Back to: ${previousSearch}`, this.factory.getBackSVG());
         }
     }
-    
-    init() {
-        this.createUI();
-        this.attachEventListeners();
-    }
-    
-    createUI() {
-        // Create container
-        this.container = this.factory.createControlsContainer();
-        
-        // Create all buttons using factory
-        this.buttons.history = this.factory.createSimpleButton('history', this.factory.getHomeSVG());
-        this.buttons.play = this.factory.createPlayButton(this.factory.getPlaySVG());
-        this.buttons.search = this.factory.createSimpleButton('search', this.factory.getSearchSVG());
-        
-        // Create search overlay
-        this.searchOverlay = this.factory.createSearchOverlay();
-        
-        // Append to container
-        this.container.appendChild(this.buttons.history);
-        this.container.appendChild(this.buttons.play);
-        this.container.appendChild(this.buttons.search);
-        this.container.appendChild(this.searchOverlay);
-        
-        // Add to document
-        document.body.appendChild(this.container);
-    }
-
-    attachEventListeners() {
-        // Play/pause button
-        const playButton = this.buttons.play.querySelector('.fab-play-button');
-        playButton.addEventListener('click', () => this.onPlayPauseClick());
-        
-        // Home/Back button - clear search or go back in history
-        this.buttons.history.addEventListener('click', () => {
-            if (this.buttons.history.isBack) {
-                // Back button functionality
-                this.goBackInHistory();
-            } else {
-                // Home button functionality
-                this.pause();
-                if (!this._hintResumeShown && this.searchHistory.length > 0){
-                    this.showBubble("Reset view: Autoplay is paused.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
-                    this._hintResumeShown = true;
-                }
-
-                if (this.searchManager) {
-                    this.searchHistory = []
-                    this.searchManager.clearSearch();
-                }
-                if (this.searchOpen) {
-                    this.closeSearch();
-                }
-            }
-        });
-        
-        // Search button - toggle search overlay
-        this.buttons.search.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.toggleSearch();
-        });
-        
-        // Search overlay input
-        const searchInput = this.searchOverlay.querySelector('.search-overlay-input');
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                this.performSearch(searchInput.value);
-            } else if (e.key === 'Escape') {
-                this.closeSearch();
-            }
-        });
-        
-        // Click search overlay icon to perform search
-        const searchIcon = this.searchOverlay.querySelector('.search-overlay-icon');
-        searchIcon.addEventListener('click', () => {
-            this.performSearch(searchInput.value);
-        });
-        
-        // Click outside to close search
-        document.addEventListener('click', (e) => {
-            if (this.searchOpen && 
-                !this.searchOverlay.contains(e.target) && 
-                !this.buttons.search.contains(e.target)) {
-                this.closeSearch();
-            }
-        });
-    }
-    
+   
+   
     // Main button click handler
     onPlayPauseClick() {
         if (this.state === 'playing') {
             this.pause();
         } else {
-            this.triggerAutoplay();
+            // Prevent hint display if autoplay was started by the user
+            this._hintAutoplayStartedShown = true;
+
+            this.triggerAutoSearch();
             this.play();
         }
     }
@@ -543,6 +576,11 @@ class UserControls {
         
         this.emit('play');
         console.log('Play mode started');
+
+        if (!this._hintAutoplayStartedShown){
+            this.showBubble("Autoplay started automatically, you can pause it by clicking the button", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+            this._hintAutoplayStartedShown = true;
+        }
     }
     
     // Pause mode - stop timer
@@ -562,7 +600,7 @@ class UserControls {
     }
     
 
-    triggerAutoplay() {
+    triggerAutoSearch() {
         // Autoplay: select random article and search for it
         const article = this.selectRandomArticle();
         if (article && this.searchManager) {
@@ -576,7 +614,7 @@ class UserControls {
         this.timer = setInterval(() => {
             this.emit('change');
             console.log('Change event fired');
-            this.triggerAutoplay();
+            this.triggerAutoSearch();
 
             
             // Reset progress for next interval
