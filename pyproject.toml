@@ -10,7 +10,7 @@ authors = [
     {name = "Bruno"}
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
     "markdown>=3.5.0",
     "sentence-transformers>=2.7.0", 
