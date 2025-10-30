@@ -1,7 +1,9 @@
 // Configuration constants for autoplay timing
 const INITIAL_DELAY   =  2000;
-const AUTO_PLAY_DELAY = 20000;
+const AUTO_PLAY_DELAY = 10000;
 const UPDATE_INTERVAL = 12000;
+
+const MAX_HISTORY_SIZE = 5;
 
 /**
  * ButtonFactory
@@ -273,7 +275,6 @@ class UserControls {
         });
         // Search history stack
         this.searchHistory = [];
-        this.maxHistorySize = 10; // Fixed size stack
         this.isNavigatingBack = false; // Flag to prevent re-adding searches during back navigation
         this._recentlyAddedSearch = false; // Flag to track if a search was recently added
         
@@ -519,7 +520,7 @@ class UserControls {
         this.searchHistory.push(query);
 
         // Maintain fixed size
-        if (this.searchHistory.length > this.maxHistorySize) {
+        if (this.searchHistory.length > MAX_HISTORY_SIZE) {
             this.searchHistory.shift();
         }
         this._recentlyAddedSearch = true;
@@ -809,15 +810,6 @@ class UserControls {
      */
     searchFor(query) {
         if (!query || !query.trim()) return;
-        
-        // Open search overlay
-        this.openSearch();
-        
-        // Set the input value
-        const input = this.searchOverlay.querySelector('.search-overlay-input');
-        if (input) {
-            input.value = query;
-        }
         
         // Perform the search
         if (this.searchManager) {
