@@ -283,8 +283,12 @@ class UserControls {
 
         this.createUI();
         this.attachEventListeners();
-        this.enableAutoplay();
-    
+
+        window.addEventListener('modalClosed', () => {
+            this.enableAutoplay();
+            window.removeEventListener('modalClosed', this.enableAutoplay);
+        });
+
     }
 
     /**

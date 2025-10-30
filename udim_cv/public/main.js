@@ -4,9 +4,7 @@ const REDUCTION_METHOD = 'pca';
 // Startup Modal Functions
 function setupStartupModal() {
     const startupModal = document.getElementById('startup-modal');
-    //temporarily hide it
-    startupModal.style.display = 'none';
-    return;
+
     // end of temporarily hide it
     const startupClose = document.getElementById('startup-close');
     const startupExplore = document.getElementById('startup-explore');
@@ -39,6 +37,7 @@ function closeStartupModal() {
     setTimeout(() => {
         startupModal.style.display = 'none';
         document.body.style.overflow = 'auto';
+        window.dispatchEvent(new Event('modalClosed'));
     }, 300);
     
     // Add fade out animation
@@ -174,9 +173,6 @@ class ArticleVisualizer {
                 return;
             }
 
-            // document.getElementById('article-count').textContent = `Articles: ${data.articles.length}`;
-            // document.getElementById('loading').style.display = 'none';
-            
             // Initialize ArticleManager with full data and reduction method
             this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
             this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
@@ -189,8 +185,18 @@ class ArticleVisualizer {
             const viewDirection = this.cameraInitialPosition.clone().normalize();
             const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
             this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
-            this.animateCamera(this.cameraInitialPosition, centroid);
 
+            const startupModal = document.getElementById('startup-modal');
+            if (startupModal.style.display === 'none') {
+                this.animateCamera(this.cameraInitialPosition, centroid);
+            } else {
+                const animateCamera = () => {   
+                    this.animateCamera(this.cameraInitialPosition, centroid);
+                    window.removeEventListener('modalClosed', animateCamera);   
+                };
+                window.addEventListener('modalClosed', animateCamera);
+            }
+            
             // Initialize search manager after articles are loaded
             this.searchManager = new SearchManager(data.articles);
             
