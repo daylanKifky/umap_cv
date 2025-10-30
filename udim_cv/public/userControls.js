@@ -1,5 +1,7 @@
-// Configuration constants
-const UPDATE_INTERVAL = 15000;
+// Configuration constants for autoplay
+const INITIAL_DELAY   =  2000;
+const AUTO_PLAY_DELAY = 20000;
+const UPDATE_INTERVAL = 12000;
 
 /**
  * ButtonFactory - Handles all button rendering and visual updates
@@ -214,7 +216,7 @@ class UserControls {
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
         // State
-        this.state = 'playing'; // Only 'playing' or 'paused'
+        this.state = 'paused'; // Only 'playing' or 'paused'
         this.searchOpen = false;
         
         
@@ -252,7 +254,21 @@ class UserControls {
         this._recentlyAddedSearch = false; // Flag to track if a search was recently added
 
         this.init();
-        this.play()
+
+        setTimeout(() => {
+            if (this.state === 'playing' || this.searchOpen || this.searchHistory.length > 0) return
+            // Display fist hint
+            this.showBubble("Explore the latent space in 3D, or use these controls 👇 to navigate the articles", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+        
+            setTimeout(() => {
+                if (this.state === 'playing' || this.searchOpen || this.searchHistory.length > 0) return
+                // Start autoplay and second hint
+                this.showBubble("Autoplay started automatically, you can pause it by clicking the button", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                this.play()
+
+            }, AUTO_PLAY_DELAY - INITIAL_DELAY);
+        
+        }, INITIAL_DELAY);
     }
     
     /**
@@ -454,9 +470,9 @@ class UserControls {
             } else {
                 // Home button functionality
                 this.pause();
-                if (!this._hintHomeShown){
-                    this.showBubble("Reset view: Autoplay gets paused. You can resume it by clicking the play button again.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
-                    this._hintHomeShown = true;
+                if (!this._hintResumeShown && this.searchHistory.length > 0){
+                    this.showBubble("Reset view: Autoplay is paused.", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                    this._hintResumeShown = true;
                 }
 
                 if (this.searchManager) {
@@ -601,6 +617,25 @@ class UserControls {
         if (this.searchOpen) {
             this.closeSearch();
         } else {
+            this._wasPlaying = this.state === 'playing';
+            this.pause();
+
+            if (!this._hintResumeShown){
+                let msg = "Search for articles. You'll see individual results or clusters.";
+                
+                if (this._wasPlaying){
+                    msg += "\nAutoplay is paused while searching.";
+                }
+                    
+                this.showBubble(
+                    msg,
+                    this.factory.getHintSVG(),
+                    this.factory.colors.fabBubbleHint,
+                    2
+                );
+                this._hintResumeShown = true;
+            }
+
             this.openSearch();
         }
     }
@@ -638,6 +673,14 @@ class UserControls {
         input.blur();
         
         this.emit('searchClose');
+
+        if (this._wasPlaying){
+            if (!this._hintSearchClosedShown){
+                this.showBubble("Autoplay resumed", this.factory.getHintSVG(), this.factory.colors.fabBubbleHint, 2)
+                this._hintSearchShown = true;
+            }
+            this.play();
+        }
     }
     
     performSearch(query) {
