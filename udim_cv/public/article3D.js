@@ -449,7 +449,7 @@ class ArticleEntity {
                 const loadingHeight = availableHeight;
 
                 // Draw neutral loading rectangle with rounded corners
-                context.fillStyle = 'rgba(145, 145, 145, 0.5)';
+                context.fillStyle = 'rgba(95, 95, 95, 0.5)';
                 context.beginPath();
 
                 context.roundRect(loadingX, loadingY, loadingWidth, loadingHeight, rectRadius);
@@ -457,7 +457,7 @@ class ArticleEntity {
                 
                 // Draw loading label
                 context.fillStyle = '#666666';
-                context.font = `${contentFontSize}px "${FONT_NAME}"`;
+                context.font = `bold ${contentFontSize}px "${FONT_NAME}"`;
                 context.textAlign = 'center';
                 context.textBaseline = 'middle';
                 context.fillText('Loading...', loadingX + loadingWidth/2, loadingY + loadingHeight/2);

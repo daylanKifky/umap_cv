@@ -1,16 +1,13 @@
 // Reduction method constant
 const REDUCTION_METHOD = 'pca';
+const SHOW_AXES = false;
 
 // Startup Modal Functions
 function setupStartupModal() {
     const startupModal = document.getElementById('startup-modal');
 
     // end of temporarily hide it
-    const startupClose = document.getElementById('startup-close');
     const startupExplore = document.getElementById('startup-explore');
-    
-    // Close startup modal when clicking the X button
-    startupClose.addEventListener('click', () => closeStartupModal());
     
     // Close startup modal when clicking the explore button
     startupExplore.addEventListener('click', () => closeStartupModal());
@@ -72,7 +69,7 @@ class ArticleVisualizer {
         this.bloomPass = null;
         this.bloomEnabled = true;
 
-        this.cameraInitialPosition = new THREE.Vector3(10, 7, 10); 
+        this.cameraInitialPosition = new THREE.Vector3(20, 10, 20); 
         this.cameraDistance = 5;
         this.cameraAnimationDuration = 1000;
         
@@ -139,9 +136,11 @@ class ArticleVisualizer {
         }}
         
         // Axis Helper
-        const axesHelper = new THREE.AxesHelper(10);
-        this.scene.add(axesHelper);
-        
+        if (SHOW_AXES) {
+            const axesHelper = new THREE.AxesHelper(10);
+            this.scene.add(axesHelper);
+        }
+
         // Handle window resize
         window.addEventListener('resize', () => this.onWindowResize());
         

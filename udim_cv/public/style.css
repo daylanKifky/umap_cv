@@ -24,7 +24,7 @@
             --fab-active-border: #3070ef;
             --fab-icon: #000000;
             --fab-icon-active: #ffffff;
-            --fab-progress: #838383;
+            --fab-progress: #7594d1;;
             --fab-search-bg: #eeeeee;
             --fab-search-border: #7f7f7f;
             --fab-bubble-bg: #5e5e5e67;
@@ -145,14 +145,16 @@
        
         /* Startup Modal styles */
         #startup-modal {
-            display: block;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: fixed;
             z-index: 2000;
             left: 0;
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.6);
             animation: fadeIn 0.5s ease-in;
         }
         
@@ -162,117 +164,98 @@
         }
         
         .startup-modal-content {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-            margin: 3% auto;
+            background: rgba(30, 30, 30, 0.35);
+            -webkit-backdrop-filter: blur(12px) saturate(120%);
+            backdrop-filter: blur(12px) saturate(120%);
+            margin: 0 auto;
             padding: 0;
             border-radius: 20px;
             width: 90%;
-            max-width: 700px;
+            max-width: 740px;
             max-height: 85vh;
             overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-            border: 1px solid #333;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            /* subtle tonal outline */
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.35);
         }
         
         .startup-header {
-            background: linear-gradient(135deg, #4080ff, #6fa8ff);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: transparent;
+            color: #e9e9e9;
+            padding: 28px 30px 10px 30px;
+            text-align: left;
             position: relative;
         }
-        
-        .startup-close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
+
+        .startup-hero {
             display: flex;
+            gap: 18px;
             align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
+        }
+
+        .startup-hero-text {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
         
-        .startup-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
         
         .startup-body {
-            padding: 40px;
-            color: #e0e0e0;
-            text-align: center;
+            padding: 24px 30px 32px 30px;
+            color: #dcdcdc;
+            text-align: left;
         }
         
-        .bruno-photo {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
+        .avatar-photo {
+            width: 92px;
+            height: 92px;
+            border-radius: 16px;
             object-fit: cover;
-            margin: 0 auto 30px;
+            margin: 0;
             display: block;
-            border: 4px solid #4080ff;
-            box-shadow: 0 4px 20px rgba(64, 128, 255, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
         }
         
         .startup-title {
-            font-size: 32px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #4080ff, #6fa8ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            font-size: 30px;
+            font-weight: 700;
+            margin: 0;
+            color: #f2f2f2;
         }
         
         .startup-subtitle {
-            font-size: 18px;
-            color: #aaa;
-            margin-bottom: 30px;
+            font-size: 16px;
+            color: #bdbdbd;
+            margin: 0;
         }
         
         .startup-description {
-            font-size: 18px;
-            line-height: 1.8;
-            margin-bottom: 30px;
-            max-width: 500px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .startup-instructions {
-            background: rgba(64, 128, 255, 0.1);
-            border: 1px solid rgba(64, 128, 255, 0.3);
-            border-radius: 10px;
-            padding: 20px;
-            margin: 20px 0;
             font-size: 16px;
-            color: #ccc;
+            line-height: 1.7;
+            margin-bottom: 22px;
+            max-width: 560px;
         }
         
         .startup-button {
-            background: linear-gradient(135deg, #4080ff, #3070ef);
-            border: none;
-            color: white;
-            padding: 15px 40px;
-            font-size: 18px;
-            border-radius: 50px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #f2f2f2;
+            padding: 12px 28px;
+            font-size: 16px;
+            border-radius: 14px;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 20px;
-            box-shadow: 0 4px 15px rgba(64, 128, 255, 0.3);
+            transition: all 0.25s ease;
+            margin-top: 6px;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.3);
         }
         
         .startup-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(64, 128, 255, 0.4);
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
         
         /* Mobile optimizations */
@@ -294,24 +277,34 @@
             .startup-modal-content {
                 width: 95%;
                 max-width: 95%;
-                margin: 2% auto;
+                margin: 0 auto;
                 max-height: 95vh;
             }
             
             .startup-body {
-                padding: 20px;
+                padding: 18px 20px 24px 20px;
             }
             
             .startup-title {
-                font-size: 24px;
+                font-size: 22px;
             }
             
             .startup-subtitle {
-                font-size: 16px;
+                font-size: 15px;
             }
             
             .startup-description {
                 font-size: 15px;
+            }
+
+            .startup-hero {
+                gap: 14px;
+            }
+
+            .avatar-photo {
+                width: 80px;
+                height: 80px;
+                border-radius: 14px;
             }
             
             .startup-instructions {
@@ -320,12 +313,24 @@
             }
             
             .startup-button {
-                padding: 12px 30px;
-                font-size: 16px;
+                padding: 11px 22px;
+                font-size: 15px;
             }
             
             #bloom-controls {
                 display: none;
+            }
+        }
+
+        /* Stack hero on very small screens */
+        @media (max-width: 520px) {
+            .startup-hero {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .avatar-photo {
+                width: 76px;
+                height: 76px;
             }
         }
         
@@ -359,24 +364,26 @@
             width: 56px;
             height: 56px;
             border-radius: 50%;
-            background: var(--fab-bg);
-            border: 2px solid var(--fab-border);
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            -webkit-backdrop-filter: blur(10px) saturate(120%);
+            backdrop-filter: blur(10px) saturate(120%);
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            transition: all 0.25s ease;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.28);
             padding: 0;
             position: relative;
             z-index: 10;
         }
         
         .fab-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-            background: var(--fab-bg-hover);
-            border-color: var(--fab-border-hover);
+            transform: scale(1.06);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.3);
         }
         
         .fab-button:active {
@@ -391,17 +398,17 @@
         
         .fab-icon-stroke {
             fill: none;
-            stroke: var(--fab-icon);
+            stroke: rgba(242, 242, 242, 0.92);
             stroke-width: 1.2;
             stroke-linecap: round;
             stroke-linejoin: round;
-            transition: stroke 0.3s ease;
+            transition: stroke 0.25s ease;
         }
         
         .fab-icon-fill {
-            fill: var(--fab-icon);
+            fill: rgba(242, 242, 242, 0.92);
             stroke: none;
-            transition: fill 0.3s ease;
+            transition: fill 0.25s ease;
         }
         
         /* Play button wrapper with arc */
@@ -433,13 +440,13 @@
         }
         
         .fab-play-button.playing {
-            background: var(--fab-active-bg);
-            border-color: var(--fab-active-border);
+            background: rgba(64, 128, 255, 0.18);
+            border-color: rgba(64, 128, 255, 0.4);
         }
         
         .fab-play-button.playing:hover {
-            background: var(--fab-active-bg-hover);
-            border-color: var(--fab-border-hover);
+            background: rgba(64, 128, 255, 0.22);
+            border-color: rgba(64, 128, 255, 0.5);
         }
         
         .fab-play-button.playing .fab-icon-stroke {
@@ -554,6 +561,15 @@
         
         .search-overlay-input::placeholder {
             color: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Ensure search icon is visible on light background when open */
+        .search-overlay.open .fab-icon-stroke {
+            stroke: #000000;
+        }
+
+        .search-overlay.open .fab-icon-fill {
+            fill: #000000;
         }
         
         /* Mobile optimizations for search overlay */
