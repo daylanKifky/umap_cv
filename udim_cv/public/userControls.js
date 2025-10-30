@@ -1,10 +1,14 @@
-// Configuration constants for autoplay
+// Configuration constants for autoplay timing
 const INITIAL_DELAY   =  2000;
 const AUTO_PLAY_DELAY = 20000;
 const UPDATE_INTERVAL = 12000;
 
 /**
- * ButtonFactory - Handles all button rendering and visual updates
+ * ButtonFactory
+ *
+ * Responsible for rendering FAB controls (buttons, progress arc, search overlay)
+ * and applying visual state updates. No business logic lives here; it strictly
+ * creates and updates DOM elements/styles used by `UserControls`.
  */
 class ButtonFactory {
     constructor() {
@@ -13,7 +17,9 @@ class ButtonFactory {
     }
     
     /**
-     * Get color palette from CSS custom properties
+     * Read the current color palette from CSS custom properties to keep UI
+     * theming decoupled from logic.
+     * @returns {{fabBg:string,fabBgHover:string,fabBorder:string,fabBorderHover:string,fabActiveBg:string,fabActiveBgHover:string,fabActiveBorder:string,fabIcon:string,fabIconActive:string,fabProgress:string,fabBubbleHint:string}}
      */
     getCSSColors() {
         const root = getComputedStyle(document.documentElement);
@@ -33,7 +39,8 @@ class ButtonFactory {
     }
     
     /**
-     * Create the main controls container with all buttons
+     * Create the main controls container element.
+     * @returns {HTMLDivElement}
      */
     createControlsContainer() {
         const container = document.createElement('div');
@@ -43,7 +50,10 @@ class ButtonFactory {
     }
     
     /**
-     * Create a simple FAB button
+     * Create a simple FAB button with provided SVG content.
+     * @param {string} id - Logical id suffix, used to build the element id.
+     * @param {string} iconSVG - Raw SVG markup for the icon.
+     * @returns {HTMLButtonElement}
      */
     createSimpleButton(id, iconSVG) {
         const button = document.createElement('button');
@@ -54,7 +64,10 @@ class ButtonFactory {
     }
     
     /**
-     * Create the play/pause button with progress arc wrapper
+     * Create the play/pause FAB inside a wrapper that hosts the circular
+     * progress arc rendered via a CSS conic-gradient.
+     * @param {string} iconSVG - SVG markup for the initial icon (play by default).
+     * @returns {HTMLDivElement}
      */
     createPlayButton(iconSVG) {
         const wrapper = document.createElement('div');
@@ -78,7 +91,8 @@ class ButtonFactory {
     }
     
     /**
-     * Create the search input overlay
+     * Create the search overlay (input + icon) that slides in/out atop the FABs.
+     * @returns {HTMLDivElement}
      */
     createSearchOverlay() {
         const overlay = document.createElement('div');
@@ -102,7 +116,9 @@ class ButtonFactory {
     }
     
     /**
-     * Update the play button icon
+     * Swap the inner SVG of the play/pause FAB.
+     * @param {HTMLDivElement} wrapper - The wrapper returned by createPlayButton.
+     * @param {string} iconSVG - The new icon markup.
      */
     updatePlayButtonIcon(wrapper, iconSVG) {
         const button = wrapper.querySelector('.fab-play-button');
@@ -112,7 +128,9 @@ class ButtonFactory {
     }
     
     /**
-     * Set playing state visual
+     * Toggle visual playing state on the play/pause FAB.
+     * @param {HTMLDivElement} wrapper - Wrapper that contains the FAB.
+     * @param {boolean} isPlaying - Whether the control is currently playing.
      */
     setPlayingState(wrapper, isPlaying) {
         const button = wrapper.querySelector('.fab-play-button');
@@ -126,7 +144,8 @@ class ButtonFactory {
     }
     
     /**
-     * Update progress arc to show current progress (0 to 1)
+     * Update the progress arc to reflect the current interval progress.
+     * @param {number} progress - Value in [0, 1].
      */
     updateProgressArc(progress) {
         if (!this.progressArc) return;
@@ -139,7 +158,7 @@ class ButtonFactory {
     }
     
     /**
-     * Reset progress arc to initial state
+     * Reset the progress arc to 0.
      */
     resetProgressArc() {
         if (!this.progressArc) return;
@@ -211,7 +230,12 @@ class ButtonFactory {
  * UserControls - State machine and event logic for user controls
  */
 class UserControls {
-    constructor(searchManager = null, articles = [], orbit_controls = null) {
+    /**
+     * @param {EventTarget} searchManager - Object exposing `performSearch(query)` and dispatching a `performSearch` CustomEvent.
+     * @param {Array<Object>} articles - Article objects used for autoplay suggestions.
+     * @param {EventTarget|null} orbit_controls - Optional camera controls to pause/resume autoplay based on user interaction.
+     */
+    constructor(searchManager, articles = [], orbit_controls = null) {
         // Configuration
         this.CHANGE_INTERVAL = UPDATE_INTERVAL; // Configurable interval in ms
         
@@ -263,6 +287,10 @@ class UserControls {
     
     }
 
+    /**
+     * Wire up autoplay behavior, respecting user interactions and delays so
+     * that autoplay starts unobtrusively.
+     */
     enableAutoplay() {
 
         const startAutoplay = () => {
@@ -305,6 +333,9 @@ class UserControls {
     
     }
 
+    /**
+     * Build and attach the FAB controls and search overlay to the document.
+     */
     createUI() {
         // Create container
         this.container = this.factory.createControlsContainer();
@@ -327,6 +358,9 @@ class UserControls {
         document.body.appendChild(this.container);
     }
 
+    /**
+     * Register event listeners for all controls and overlay interactions.
+     */
     attachEventListeners() {
         // Play/pause button
         const playButton = this.buttons.play.querySelector('.fab-play-button');
@@ -345,10 +379,9 @@ class UserControls {
                     this._hintResumeShown = true;
                 }
 
-                if (this.searchManager) {
-                    this.searchHistory = []
-                    this.searchManager.clearSearch();
-                }
+                this.searchHistory = []
+                this.searchManager.clearSearch();
+
                 if (this.searchOpen) {
                     this.closeSearch();
                 }
@@ -388,10 +421,11 @@ class UserControls {
     }
     
     /**
-     * Build a weighted article list based on boost values
-     * Articles without boost property default to boost = 1
-     * @param {Array} articles - Array of article objects
-     * @returns {Array} - Flattened array where articles appear multiple times based on boost
+     * Build a weighted list used by autoplay to pick items and popular facets.
+     * Articles without `boost` default to 1. Popular technologies and tags are
+     * also appended to diversify autoplay queries.
+     * @param {Array<Object>} articles - Article objects.
+     * @returns {Array<Object>} Flattened list where items can repeat based on weight.
      */
     buildWeightedArticleList(articles) {
         const weightedList = [];
@@ -452,8 +486,8 @@ class UserControls {
     }
     
     /**
-     * Select a random article from the weighted list
-     * @returns {Object|null} - Randomly selected article or null if list is empty
+     * Select a random entry from the weighted list.
+     * @returns {Object|null} Random item or null when no items exist.
      */
     selectRandomArticle() {
         if (this.weightedArticles.length === 0) {
@@ -466,8 +500,8 @@ class UserControls {
     
     
     /**
-     * Add a search query to the history stack
-     * @param {string} query - The search query to add
+     * Push a search query onto the history stack (deduplicated, bounded size).
+     * @param {string} query - The query to add.
      */
     addToSearchHistory(query) {
         console.log('Adding to search history:', query);
@@ -492,7 +526,8 @@ class UserControls {
     
 
     /**
-     * Update the home button to show back icon when there's search history
+     * Toggle the Home button appearance to a Back button when navigation is
+     * available.
      */
     updateHomeButtonAppearance() {
         if (!this.buttons.history) return;
@@ -513,7 +548,7 @@ class UserControls {
     }
 
     /**
-     * Go back to the previous search in history
+     * Navigate to the previous query in the history stack and perform it.
      */
     goBackInHistory() {
         if (this.searchHistory.length === 0) return;
@@ -547,7 +582,7 @@ class UserControls {
     }
    
    
-    // Main button click handler
+    // Main play/pause button click handler
     onPlayPauseClick() {
         if (this.state === 'playing') {
             this.pause();
@@ -560,7 +595,9 @@ class UserControls {
         }
     }
     
-    // Play mode - start timer and animations
+    /**
+     * Enter play mode: update UI, start interval and progress animation.
+     */
     play() {
         this.state = 'playing';
         this.startTime = performance.now();
@@ -583,7 +620,9 @@ class UserControls {
         }
     }
     
-    // Pause mode - stop timer
+    /**
+     * Enter pause mode: clear timers, reset progress arc, update UI.
+     */
     pause() {
         this.state = 'paused';
         
@@ -600,6 +639,9 @@ class UserControls {
     }
     
 
+    /**
+     * Pick a random weighted item and perform a search for its title.
+     */
     triggerAutoSearch() {
         // Autoplay: select random article and search for it
         const article = this.selectRandomArticle();
@@ -610,6 +652,9 @@ class UserControls {
         }
     }
 
+    /**
+     * Start the change interval timer and reset the progress window each tick.
+     */
     startTimer() {
         this.timer = setInterval(() => {
             this.emit('change');
@@ -623,6 +668,9 @@ class UserControls {
         }, this.CHANGE_INTERVAL);
     }
     
+    /**
+     * Stop the active interval and any pending animation frame.
+     */
     stopTimer() {
         if (this.timer) {
             clearInterval(this.timer);
@@ -634,6 +682,9 @@ class UserControls {
         }
     }
     
+    /**
+     * Animate the circular progress arc while in play mode.
+     */
     animateProgress() {
         if (this.state !== 'playing') return;
         
@@ -678,6 +729,9 @@ class UserControls {
         }
     }
     
+    /**
+     * Open the search overlay, hide FABs and focus the input field.
+     */
     openSearch() {
         this.searchOpen = true;
         this.searchOverlay.classList.add('open');
@@ -695,6 +749,10 @@ class UserControls {
         this.emit('searchOpen');
     }
     
+    /**
+     * Close the search overlay, restore FABs, and resume autoplay if it was
+     * previously active.
+     */
     closeSearch() {
         this.searchOpen = false;
         this.searchOverlay.classList.remove('open');
@@ -721,6 +779,10 @@ class UserControls {
         }
     }
     
+    /**
+     * Perform a search via SearchManager and then close the overlay.
+     * @param {string} query - The query to search for.
+     */
     performSearch(query) {
         if (!query || !query.trim()) return;
         
@@ -737,9 +799,9 @@ class UserControls {
     }
     
     /**
-     * Open search overlay and perform search with given query
-     * Used when clicking on articles
-     * @param {string} query - Search query
+     * Open search overlay and perform search with a given query.
+     * Commonly used when clicking on article UI elements.
+     * @param {string} query - Search query.
      */
     searchFor(query) {
         if (!query || !query.trim()) return;
@@ -763,10 +825,11 @@ class UserControls {
     }
     
     /**
-     * Show a temporary bubble with custom content over the controls
-     * @param {string} text - The text to display
-     * @param {string} iconHTML - HTML string for the icon (optional)
-     * @param {string} borderColor - Border color for the bubble ('none' for no border)
+     * Show a temporary hint bubble near the controls.
+     * @param {string} text - Text content for the bubble.
+     * @param {string} [iconHTML=''] - Optional icon markup.
+     * @param {string|null} [borderColor=null] - Optional border color; null keeps default.
+     * @param {number} [timeMultiplier=1] - Multiplier for display duration.
      */
     showBubble(text, iconHTML = '', borderColor = null, timeMultiplier = 1) {
         // Remove any existing bubble
@@ -832,7 +895,9 @@ class UserControls {
         return this.CHANGE_INTERVAL;
     }
     
-    // Cleanup
+    /**
+     * Cleanup DOM and timers created by this instance.
+     */
     destroy() {
         this.stopTimer();
         if (this.container && this.container.parentNode) {

@@ -1,9 +1,12 @@
+// Typeface used when drawing text on card canvas textures
 const FONT_NAME = "Space Grotesk";
+// Cards in "active" mode scale relative to the window size (0-1)
 const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
+// Enable to visualize geometry bounds and pivot offsets for debugging
 const DEBUG_CARD_CORNER = false;
 
-// Move pivot point to upper left corner
-// Translate geometry so pivot is at upper left instead of center
+// Configure a virtual pivot so card geometry behaves as if its origin is the upper-left corner
+// These offsets are applied after creating the plane so UI math can assume top-left origin
 const SM_CARD_offsetX = -0.4; // negative value moves the card to the left
 const SM_CARD_offsetY = -0.25; // negative value moves the card up
 const SM_CARD_offsetZ = 0;
@@ -11,7 +14,12 @@ const SM_CARD_offsetZ = 0;
 const SM_CARD_W = 300;
 const SM_CARD_H = 400;
 /**
- * ArticleEntity - Handles a single article's 3D representation
+ * Represents a single article's visual state in the 3D scene.
+ *
+ * Responsibilities:
+ * - Owns both the small card (billboarded plane) and the sphere marker
+ * - Manages per-article animation state (score → scale)
+ * - Renders text and thumbnail imagery to a canvas-backed texture
  */
 class ArticleEntity {
     constructor(article, index, color, image) {
@@ -40,10 +48,10 @@ class ArticleEntity {
     
 
     /**
-     * Create the 3D card representation for this article
-     * @param {string} mode - Card mode: "small" (SM_ constants), "active" (window size), "hide" (hidden)
-     * @param {Image} image - Optional thumbnail image
-     * @returns {THREE.Mesh} The created card mesh
+     * Create the 2D card (as a plane mesh) used to display title, description and optional thumbnail.
+     * @param {"small"|"active"} mode - Rendering mode. "small" uses SM_ constants; "active" scales to window.
+     * @param {HTMLImageElement|null} image - If truthy, the card allocates space for a thumbnail and draws it when loaded.
+     * @returns {THREE.Mesh} A mesh with a canvas texture; also sets `this.card` and populates `card.userData`.
      */
     createCard(mode = "small", image = null) {
         let offsetX, offsetY, offsetZ, width, height, text_length, aspectRatio;
@@ -76,7 +84,7 @@ class ArticleEntity {
             height = width / aspectRatio;
         }
 
-        // Create canvas for texture
+        // Create an offscreen canvas used as the card's dynamic texture
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = width;
@@ -88,7 +96,7 @@ class ArticleEntity {
         // Create texture from canvas and update it
         this.updateCardTexture(context, width, height, image, text_length);
 
-        // Create plane geometry with correct aspect ratio
+        // Create plane geometry sized to preserve the canvas aspect ratio in world units
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
         
         geometry.translate(2*aspectRatio -offsetX, -2 -offsetY, offsetZ);
@@ -131,7 +139,7 @@ class ArticleEntity {
             this.card.add(cornerBox3);
         }
 
-        // Store article data and card parameters in userData
+        // Store article data and parameters in userData so updates can avoid full re-creation
         this.card.userData = {
             article: this.article,
             originalIndex: this.index,
@@ -145,9 +153,11 @@ class ArticleEntity {
     }
 
     /**
-     * Update the card, only recreating if parameters differ from current card
-     * @param {string} mode - Card mode: "small" (SM_ constants), "active" (window size), "hide" (hidden)
-     * @param {Image} image - Optional thumbnail image
+     * Update the card if its parameters changed; otherwise keep the existing mesh and texture.
+     * Disposes GPU resources when a re-creation is required.
+     * @param {"small"|"active"} mode - Desired rendering mode.
+     * @param {HTMLImageElement|null} image - Whether to reserve and render thumbnail space.
+     * @returns {THREE.Mesh} The current or newly created card mesh.
      */
     updateCard(mode = "small", image = null) {
         // Check if card exists and parameters match
@@ -163,7 +173,7 @@ class ArticleEntity {
             }
         }
         
-        // Parameters don't match or card doesn't exist - dispose and recreate
+        // Parameters differ or no card exists — dispose old resources then recreate
         if (this.card) {
             // Remove card from sphere
             if (this.sphere) {
@@ -188,10 +198,10 @@ class ArticleEntity {
             this.card = null;
         }
         
-        // Create new card with updated parameters
+        // Create a fresh card with the requested parameters
         this.createCard(mode, image);
         
-        // Add card back to sphere if it exists
+        // Re-attach card to its parent sphere if available
         if (this.sphere) {
             this.sphere.add(this.card);
         }
@@ -200,11 +210,11 @@ class ArticleEntity {
     }
 
     /**
-     * Create the 3D sphere representation for this article
-     * @param {number} x - X position
-     * @param {number} y - Y position
-     * @param {number} z - Z position
-     * @returns {THREE.Mesh} The created sphere mesh
+     * Create a sphere marker used as the article's anchor in 3D space.
+     * @param {number} x - Normalized x coordinate (post-reduction and normalization).
+     * @param {number} y - Normalized y coordinate.
+     * @param {number} z - Normalized z coordinate.
+     * @returns {THREE.Mesh} A sphere mesh with this entity stored in `userData.entity`.
      */
     createSphere(x, y, z) {
         // Create sphere with entity color
@@ -222,7 +232,7 @@ class ArticleEntity {
         this.rotation = this.sphere.rotation;
         this.quaternion = this.sphere.quaternion;
         
-        // Store entity reference in userData
+        // Store entity reference for hit-testing and reverse lookups
         this.sphere.userData = {
             entity: this
         };
@@ -231,8 +241,8 @@ class ArticleEntity {
     }
 
     /**
-     * Update entity to match camera rotation
-     * @param {ArticleManager} manager - The article manager containing camera and scene
+     * Billboard the entity so it always faces the camera by copying camera rotation.
+     * @param {ArticleManager} manager - Provides the active camera.
      */
     update(manager) {
         if (window.__stop_animation__) {
@@ -246,8 +256,8 @@ class ArticleEntity {
     }
     
     /**
-     * Animate entity score between previous and target values based on animation progress
-     * @param {ArticleManager} manager - The article manager containing animation state
+     * Interpolate `score` from previous to target using the manager's animation progress, then apply scaling.
+     * @param {ArticleManager} manager - Supplies animation timing and progress.
      */
     animate(manager) {
         this.score = this.animation.prevScore 
@@ -257,8 +267,8 @@ class ArticleEntity {
     }
 
     /**
-     * Apply similarity-based scaling to this article's card
-     * @param {number} similarity - Similarity score (0-1)
+     * Apply similarity-driven scale and visual emphasis to the sphere.
+     * @returns {number} The computed scalar applied to the sphere.
      */
     applyScore() {
 
@@ -279,7 +289,7 @@ class ArticleEntity {
     }
 
     /**
-     * Reset card to original appearance
+     * Restore the entity to its default, non-highlighted appearance and scale.
      */
     resetAppearance() {
         this.updateCard("small");
@@ -288,8 +298,8 @@ class ArticleEntity {
     }
 
     /**
-     * Clean up resources for this article entity
-     * Note: The caller (ArticleManager) should remove objects from scene before calling this
+     * Dispose GPU and DOM resources owned by this entity.
+     * Note: Callers should remove meshes from the scene before disposing.
      */
     dispose() {
         if (this.card) {
@@ -308,15 +318,17 @@ class ArticleEntity {
     }
 
     /**
-     * Get the card mesh for raycasting
-     * @returns {THREE.Mesh} The card mesh
+     * Get the card mesh, primarily for interaction/raycasting.
+     * @returns {THREE.Mesh|null}
      */
     getCard() {
         return this.card;
     }
 
     /**
-     * Load the thumbnail image
+     * Begin loading the thumbnail image. On success, `thumbnailImage` is set and any provided
+     * callback is invoked so the texture can be re-rendered.
+     * @param {Function|null} onload - Optional callback fired when the image finishes loading.
      */
     loadThumbnail(onload=null) {
         console.log("loading thumbnail", this.thumbnail);
@@ -332,12 +344,17 @@ class ArticleEntity {
     
 
     /**
-     * Update the card's canvas texture
-     * @param {CanvasRenderingContext2D} context - The canvas context to draw on
+     * Render the card content (title, description, and optional thumbnail) onto the canvas texture.
+     * Safe to call repeatedly; will set `needsUpdate` on the texture if present.
+     * @param {CanvasRenderingContext2D} context - Canvas 2D context used for drawing.
+     * @param {number} width - Canvas width in device pixels.
+     * @param {number} height - Canvas height in device pixels.
+     * @param {boolean|null} image - If truthy, reserves space and draws thumbnail when available.
+     * @param {number} text_length - Multiplier to allow more lines/length in active mode.
      */
     updateCardTexture(context, width, height, image=null, text_length=1) {
         
-        // Clear canvas with transparency
+        // Clear entire canvas, preserving transparency
         context.clearRect(0, 0, width, height);
 
         if (DEBUG_CARD_CORNER) {    
@@ -345,7 +362,7 @@ class ArticleEntity {
             context.fillStyle = 'rgba(228, 21, 200, 0.1)'; // Semi-transparent white
             context.fillRect(0, 0, width, height);
         }
-        // Convert THREE.Color to CSS color string
+        // Convert THREE.Color to a CSS color string used for text fill
         const colorStr = `rgb(${Math.floor(this.color.r * 255)}, ${Math.floor(this.color.g * 255)}, ${Math.floor(this.color.b * 255)})`;
 
         // Calculate font sizes based on canvas size
@@ -362,14 +379,14 @@ class ArticleEntity {
         const titleY = padding + titleFontSize;
         const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.defCardTitleLength, this.defCardTitleLines, width * 0.01);
 
-        // Draw content after title with some spacing
+        // Draw content after title with small inter-line spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
         const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
 
         // console.log("about to draw thumbnail", image, this.thumbnailImage, this.thumbnailImage.complete);
         
-        // Draw thumbnail image if available and loaded
+        // Draw thumbnail image region when enabled; defers until image is fully loaded
         if (image) {
             const imageY = contentEndY + padding;
             const availableHeight = height - imageY - padding;
@@ -382,7 +399,7 @@ class ArticleEntity {
                 }
                 
                 if (availableHeight > 0 && availableWidth > 0) {
-                    // Fit to the largest dimension of the available space
+                    // Fit image to the largest dimension of the available region while preserving aspect ratio
                     let drawWidth, drawHeight, drawX, drawY;
                     
                     if (availableWidth > availableHeight) {
@@ -395,11 +412,11 @@ class ArticleEntity {
                         drawWidth = (this.thumbnailImage.width / this.thumbnailImage.height) * availableHeight;
                     }
                     
-                    // Center the image in the available space
+                    // Center the image within the reserved rectangle
                     drawX = padding + (availableWidth - drawWidth) / 2;
                     drawY = imageY + (availableHeight - drawHeight) / 2;
 
-                    // Use clipping to ensure image doesn't overflow the available space
+                    // Clip to a rounded-rect so the image never overflows its slot
                     context.save();
                     context.beginPath();
                     context.roundRect(padding, imageY, availableWidth, availableHeight, rectRadius);
@@ -409,7 +426,7 @@ class ArticleEntity {
                     context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
                     
                     context.restore();
-                    // Apply dither transparency to the entire image region
+                    // Apply subtle dither transparency overlay to the entire image region
                     // Available styles: "checkerboard", "grid", "dots", "lines"
                     applyDitherTransparency(context, {
                         x: padding,
@@ -419,7 +436,7 @@ class ArticleEntity {
                     }, 2, 4, 0.5, "lines");
 
                 }
-            } else { //this.thumbnailImage is null, draw loading rectangle
+            } else { // Thumbnail not yet created; draw loading placeholder and kick off loading
                 this.loadThumbnail(() => {
                     console.log("thumbnail loaded, re-rendering...");
                     this.updateCardTexture(context, width, height, image, text_length);
@@ -431,14 +448,14 @@ class ArticleEntity {
                 const loadingWidth = availableWidth;
                 const loadingHeight = availableHeight;
 
-                // Draw grey loading rectangle with rounded corners
+                // Draw neutral loading rectangle with rounded corners
                 context.fillStyle = 'rgba(145, 145, 145, 0.5)';
                 context.beginPath();
 
                 context.roundRect(loadingX, loadingY, loadingWidth, loadingHeight, rectRadius);
                 context.fill();
                 
-                // Draw "Loading..." text
+                // Draw loading label
                 context.fillStyle = '#666666';
                 context.font = `${contentFontSize}px "${FONT_NAME}"`;
                 context.textAlign = 'center';
@@ -448,15 +465,15 @@ class ArticleEntity {
             
         }
 
-        // Update texture
+        // Mark texture as dirty so Three.js uploads the new pixels on the next render
         if (this.card && this.card.material.map) {
             this.card.material.map.needsUpdate = true;
         }
     }
 
     /**
-     * Get the label mesh
-     * @returns {THREE.Mesh} The label mesh
+     * Placeholder for future label mesh support.
+     * @returns {THREE.Mesh|undefined}
      */
     getLabel() {
         return this.label;
@@ -464,7 +481,12 @@ class ArticleEntity {
 }
 
 /**
- * ArticleManager - Manages a collection of ArticleEntity objects
+ * Coordinates the lifecycle and interactions of all `ArticleEntity` instances in the scene.
+ *
+ * Responsibilities:
+ * - Normalizes embedding coordinates and creates entities
+ * - Drives animation timing for score→scale transitions
+ * - Manages active cards/spheres for interaction and updates link geometry
  */
 class ArticleManager {
     constructor(scene, camera, data, reductionMethod) {
@@ -496,7 +518,8 @@ class ArticleManager {
     }
 
     /**
-     * Load fonts required for rendering article cards
+     * Ensure required font faces are available before rendering text to canvas textures.
+     * Uses the Font Loading API when available; falls back gracefully otherwise.
      */
     async loadFonts() {
         if (this.fontsLoaded) return;
@@ -535,8 +558,9 @@ class ArticleManager {
     }
 
     /**
-     * Create all article objects (spheres, cards, and links) for visualization
-     * @returns {Promise<Object>} Object containing count of entities and links mesh
+     * Instantiate all `ArticleEntity` objects from the provided dataset, attach to the scene,
+     * and build the links mesh. Clears any previous state.
+     * @returns {Promise<{entitiesCount:number, linksMesh:THREE.Mesh|null}>}
      */
     async createArticleObjects() {
         await this.loadFonts();
@@ -579,10 +603,10 @@ class ArticleManager {
         
         console.log(`Created ${this.entities.length} article entities`);
         
-        // Initialize active spheres to all spheres (no search yet)
+        // Initially, all spheres are interactable (no active cards yet)
         this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
         
-        // Create links
+        // Create link geometry between related entities
         const linksMesh = this.linksManager.createLinks(this.entityMap)
         if (linksMesh) {
             this.scene.add(linksMesh);
@@ -596,7 +620,7 @@ class ArticleManager {
     }
 
     /**
-     * Update all entities (labels face camera)
+     * Advance animations and billboard entities each frame; throttles link updates during animations.
      */
     update() {
         if (this.animation.active) {
@@ -634,8 +658,9 @@ class ArticleManager {
     }
 
     /**
-     * Handle search by updating objects (cards and links) based on search results
-     * @param {Array} searchResults - Array of search results with similarity scores
+     * React to semantic search results by animating entity scales and toggling card modes.
+     * Also refreshes interaction targets (active cards vs spheres).
+     * @param {Array<{id:string, score:number}> & {clearWinner?:boolean}} searchResults
      */
     handleSearch(searchResults) {
         
@@ -662,7 +687,7 @@ class ArticleManager {
             
         } 
         if (!this.animation.active) {
-            // Reset active cards and active spheres arrays on each search
+            // Reset interaction targets for this search cycle
             this.activeCards = [];
             this.activeSpheres = [];
             this.animation.active = true;
@@ -674,7 +699,7 @@ class ArticleManager {
                 entity.animation.prevScore = entity.score;
                 entity.animation.targetScale = similarityToScale(entity.animation.targetScore);
 
-                // If entity is in similarityMap, update card to screen mode
+                // If entity is relevant to the query, show its card in active mode
                 if (similarityMap.has(entity.id)) {
                     entity.updateCard("active", searchResults.clearWinner);
                     // Add active cards to the list for click detection
@@ -688,7 +713,7 @@ class ArticleManager {
                     }
                 } else {
                     entity.updateCard("small");
-                    // Entity not in search results, sphere is active for hover
+                    // Entity not in search results; keep sphere hoverable
                     if (entity.sphere) {
                         this.activeSpheres.push(entity.sphere);
                     }
@@ -714,13 +739,13 @@ class ArticleManager {
         }
     }
     /**
-     * Clear search by resetting all objects (cards and links) to original state
+     * Clear any search-driven emphasis and restore default appearance and interactions.
      */
     handleClearSearch() {
         // Reset active cards array
         this.activeCards = [];
         
-        // Reset active spheres to all spheres (no active cards)
+        // All spheres are hoverable again (no active cards)
         this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
         
         // Reset all entities to original appearance
@@ -732,7 +757,7 @@ class ArticleManager {
     }
 
     /**
-     * Clean up all resources
+     * Remove all entity meshes from the scene and dispose their resources, including links.
      */
     dispose() {
         this.entities.forEach(entity => {
@@ -752,33 +777,33 @@ class ArticleManager {
     }
 
     /**
-     * Get all spheres for interaction
-     * @returns {Array} Array of sphere meshes
+     * Get all sphere meshes currently owned by entities.
+     * @returns {THREE.Mesh[]} Array of sphere meshes.
      */
     getSpheres() {
         return this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
     }
 
     /**
-     * Get all active cards for interaction
-     * @returns {Array} Array of active card meshes
+     * Get all currently active card meshes used for click interactions.
+     * @returns {THREE.Mesh[]} Active card meshes.
      */
     getActiveCards() {
         return this.activeCards;
     }
 
     /**
-     * Get all active spheres for hover detection
-     * @returns {Array} Array of sphere meshes without active cards
+     * Get all spheres that remain hoverable (i.e., entities without active cards).
+     * @returns {THREE.Mesh[]} Sphere meshes without active cards.
      */
     getActiveSpheres() {
         return this.activeSpheres;
     }
 
     /**
-     * Get entity by sphere
-     * @param {THREE.Mesh} sphere - The sphere mesh
-     * @returns {ArticleEntity} The corresponding entity
+     * Resolve an `ArticleEntity` from its sphere mesh.
+     * @param {THREE.Mesh} sphere - A sphere previously created by `createSphere`.
+     * @returns {ArticleEntity}
      */
     getEntityBySphere(sphere) {
         // Get entity from sphere's userData

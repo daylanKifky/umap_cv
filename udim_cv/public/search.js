@@ -1,10 +1,22 @@
 /**
- * Decide if the top search result is a clear winner or part of a cluster.
- * 
- * @param {Array<{score: number}>} results - array of result objects, sorted descending by score
- * @param {number} ratioThreshold - how much higher the top score must be than the 2nd (default 2.5)
- * @param {number} zThreshold - how many std deviations above mean to count as clear winner (default 2.5)
- * @returns {{clearWinner: boolean, ratio: number, zTop: number}}
+ * Determine whether the highest-scoring result is a statistically clear winner.
+ *
+ * Expects the input results to be sorted in descending order by `score`. The
+ * decision combines two criteria:
+ * - ratio test: topScore / secondScore > ratioThreshold
+ * - z-score test: (topScore - mean) / stdDev > zThreshold
+ * If either criterion holds, the top result is considered a clear winner.
+ *
+ * Edge cases:
+ * - Empty list → returns { clearWinner: false, ratio: 1, zTop: 0 }
+ * - Single item → returns { clearWinner: true, ratio: 1, zTop: 0 }
+ * - Zero variance (stdDev = 0) → zTop = 0
+ * - next score = 0 → ratio = Infinity
+ *
+ * @param {Array<{score: number}>} results - Results sorted by descending score.
+ * @param {number} [ratioThreshold=2.5] - Minimum top/second ratio to qualify.
+ * @param {number} [zThreshold=2.5] - Minimum z-score of top to qualify.
+ * @returns {{ clearWinner: boolean, ratio: number, zTop: number }} Summary metrics and decision.
  */
 function detectClearWinner(results, ratioThreshold = 2.5, zThreshold = 2.5) {
     if (!results || results.length < 1) return { clearWinner: false, ratio: 1, zTop: 0 };
@@ -30,6 +42,13 @@ function detectClearWinner(results, ratioThreshold = 2.5, zThreshold = 2.5) {
   }
 
 
+/**
+ * Manages full-text search via MiniSearch and exposes events for UI consumers.
+ *
+ * Emits custom events:
+ * - `performSearch` with detail { query: string, results: Array & { clearWinner: boolean } }
+ * - `clearSearch`
+ */
 class SearchManager extends EventTarget {
     constructor(articles) {
         super();
@@ -39,6 +58,14 @@ class SearchManager extends EventTarget {
         this.initializeMiniSearch(articles);
     }
     
+    /**
+     * Build the MiniSearch index for the provided documents.
+     *
+     * Fields in array form are joined into a single string for indexing via
+     * `extractField` to keep the index schema simple and consistent.
+     *
+     * @param {Array<Object>} articles - Documents to index.
+     */
     initializeMiniSearch(articles) {
         // Initialize MiniSearch with configuration
         this.miniSearch = new MiniSearch({
@@ -67,9 +94,14 @@ class SearchManager extends EventTarget {
     }
     
     /**
-     * Perform search with given query
-     * @param {string} query - Search query
-     * @returns {Array} - Search results
+     * Execute a query against the MiniSearch index.
+     *
+     * The returned array is MiniSearch results augmented with a `clearWinner`
+     * boolean flag computed by {@link detectClearWinner}. This method also
+     * dispatches a `performSearch` event with the query and results.
+     *
+     * @param {string} query - User-entered query text.
+     * @returns {Array & { clearWinner?: boolean }} Search results (possibly empty).
      */
     performSearch(query) {
         if (!query || !query.trim()) return [];
@@ -104,7 +136,7 @@ class SearchManager extends EventTarget {
     }
     
     /**
-     * Clear current search results
+     * Clear the in-memory search results and notify listeners.
      */
     clearSearch() {
         this.searchResults = null;
@@ -114,8 +146,9 @@ class SearchManager extends EventTarget {
     }
     
     /**
-     * Get current search results
-     * @returns {Array|null} - Current search results or null
+     * Retrieve the last computed search results.
+     *
+     * @returns {Array|null} Current search results or null if none.
      */
     getSearchResults() {
         return this.searchResults;
