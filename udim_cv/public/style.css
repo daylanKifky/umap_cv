@@ -33,8 +33,14 @@
         }
         
         body {
-            font-family: var(--font-family);
+            font-family: var(--font-family), sans-serif;
             background: #000;
+        }
+        #header {
+            color: white;
+            position: relative;
+            z-index: 1;
+            margin: 2%;
         }
         
         #container {
