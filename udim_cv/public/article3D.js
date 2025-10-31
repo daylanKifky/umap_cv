@@ -55,10 +55,10 @@ class ArticleEntity {
     /**
      * Create the 2D card (as a plane mesh) used to display title, description and optional thumbnail.
      * @param {"small"|"active"} mode - Rendering mode. "small" uses SM_ constants; "active" scales to window.
-     * @param {HTMLImageElement|null} image - If truthy, the card allocates space for a thumbnail and draws it when loaded.
+     * @param {HTMLImageElement|null} show_image - If truthy, the card allocates space for a thumbnail and draws it when loaded.
      * @returns {THREE.Mesh} A mesh with a canvas texture; also sets `this.card` and populates `card.userData`.
      */
-    createCard(mode = "small", image = null) {
+    createCard(mode = "small", show_image = null) {
         let offsetX, offsetY, offsetZ, width, height, text_length, aspectRatio;
 
         if (mode === "small") {
@@ -99,7 +99,7 @@ class ArticleEntity {
         const texture = new THREE.CanvasTexture(canvas);
 
         // Create texture from canvas and update it
-        this.updateCardTexture(context, width, height, image, text_length);
+        this.updateCardTexture(context, width, height, show_image, text_length);
 
         // Create plane geometry sized to preserve the canvas aspect ratio in world units
         const geometry = new THREE.PlaneGeometry(4 * aspectRatio, 4);
@@ -151,12 +151,12 @@ class ArticleEntity {
             entity: this,
             // Card parameters for updateCard
             mode: mode,
-            image: image,
+            image: show_image,
             type: "card"
         };
 
         // Create close button when in active mode
-        if (mode === "active" && this.closeImage) {
+        if (mode === "active" && show_image) {
             this.createCloseButton(geometry.boundingBox);
         }
 
@@ -221,16 +221,16 @@ class ArticleEntity {
      * Update the card if its parameters changed; otherwise keep the existing mesh and texture.
      * Disposes GPU resources when a re-creation is required.
      * @param {"small"|"active"} mode - Desired rendering mode.
-     * @param {HTMLImageElement|null} image - Whether to reserve and render thumbnail space.
+     * @param {HTMLImageElement|null} show_image - Whether to reserve and render thumbnail space.
      * @returns {THREE.Mesh} The current or newly created card mesh.
      */
-    updateCard(mode = "small", image = null) {
+    updateCard(mode = "small", show_image = null) {
         // Check if card exists and parameters match
         if (this.card && this.card.userData) {
             const userData = this.card.userData;
-            const paramsMatch = 
+            const paramsMatch =
                 userData.mode === mode &&
-                userData.image === image;
+                userData.image === show_image;
             
             if (paramsMatch) {
                 // Parameters match, no need to recreate
@@ -277,7 +277,7 @@ class ArticleEntity {
         }
         
         // Create a fresh card with the requested parameters
-        this.createCard(mode, image);
+        this.createCard(mode, show_image);
         
         // Re-attach card to its parent sphere if available
         if (this.sphere) {
@@ -441,10 +441,10 @@ class ArticleEntity {
      * @param {CanvasRenderingContext2D} context - Canvas 2D context used for drawing.
      * @param {number} width - Canvas width in device pixels.
      * @param {number} height - Canvas height in device pixels.
-     * @param {boolean|null} image - If truthy, reserves space and draws thumbnail when available.
+     * @param {boolean|null} show_image - If truthy, reserves space and draws thumbnail when available.
      * @param {number} text_length - Multiplier to allow more lines/length in active mode.
      */
-    updateCardTexture(context, width, height, image=null, text_length=1) {
+    updateCardTexture(context, width, height, show_image=null, text_length=1) {
 
         // Clear entire canvas, preserving transparency
         context.clearRect(0, 0, width, height);
@@ -489,7 +489,7 @@ class ArticleEntity {
                                         this.defCardContentLines*text_length);
 
         // Draw thumbnail image region when enabled; defers until image is fully loaded
-        if (image) {
+        if (show_image) {
             // Add background color for content area
             context.fillStyle = 'rgba(31, 31, 31, 0.5)'; // Semi-transparent white
             context.beginPath();
@@ -542,7 +542,7 @@ class ArticleEntity {
             } else { // Thumbnail not yet created; draw loading placeholder and kick off loading
                 this.loadThumbnail(() => {
                     console.log("thumbnail loaded, re-rendering...");
-                    this.updateCardTexture(context, width, height, image, text_length);
+                    this.updateCardTexture(context, width, height, show_image, text_length);
                 });
 
                 // For loading state, use full available space
