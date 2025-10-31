@@ -195,7 +195,7 @@ class ArticleEntity {
             alphaMap: closeTexture,
             color: this.color,
             transparent: true,
-            opacity: 1.0,
+            opacity: 0.8,
             side: THREE.DoubleSide,
             depthWrite: false,
             depthTest: true

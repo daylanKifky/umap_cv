@@ -459,10 +459,24 @@ class ArticleVisualizer {
     handleClick() {
         // Update the raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
-        
+
         // First check for active card intersections (higher priority)
         const activeCards = this.articleManager.getActiveCards();
         if (activeCards.length > 0) {
+            // Check for close button intersections first
+            for (const card of activeCards) {
+                const entity = card.userData.entity;
+                if (entity.closeButton) {
+                    const closeButtonIntersects = this.raycaster.intersectObject(entity.closeButton);
+                    if (closeButtonIntersects.length > 0) {
+                        // Reset view when close button is clicked
+                        this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
+                        return;
+                    }
+                }
+            }
+
+            // Then check for card intersections
             const cardIntersects = this.raycaster.intersectObjects(activeCards);
             if (cardIntersects.length > 0) {
                 const clickedCard = cardIntersects[0].object;
