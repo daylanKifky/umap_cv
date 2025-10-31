@@ -151,7 +151,8 @@ class ArticleEntity {
             entity: this,
             // Card parameters for updateCard
             mode: mode,
-            image: image
+            image: image,
+            type: "card"
         };
 
         // Create close button when in active mode
@@ -178,12 +179,7 @@ class ArticleEntity {
         const padding = 0.1;
         const topRight = cardBoundingBox.max;
         
-        closeGeometry.translate(
-            topRight.x - closeButtonSize * 0.5 - padding,
-            topRight.y - closeButtonSize * 0.5 - padding,
-            topRight.z
-        );
-
+        
         // Create texture from the loaded close image
         const closeTexture = new THREE.Texture(this.closeImage);
         closeTexture.flipY = false;
@@ -200,16 +196,23 @@ class ArticleEntity {
             depthWrite: false,
             depthTest: true
         });
-
+        
         const closeButton = new THREE.Mesh(closeGeometry, closeMaterial);
         closeButton.castShadow = false;
+        closeButton.position.set(
+            topRight.x - closeButtonSize * 0.5 - padding,
+            topRight.y - closeButtonSize * 0.5 - padding,
+            topRight.z
+        );
         closeButton.receiveShadow = false;
-        
+
+        closeButton.userData = {
+            entity: this,
+            type: "closeButton"
+        };
         // Store reference to close button
         this.closeButton = closeButton;
-
-        console.log("closeButton", closeButton);
-        
+      
         // Add close button as child of card
         this.card.add(closeButton);
     }
@@ -309,7 +312,8 @@ class ArticleEntity {
         
         // Store entity reference for hit-testing and reverse lookups
         this.sphere.userData = {
-            entity: this
+            entity: this,
+            type: "sphere"
         };
         
         return this.sphere;

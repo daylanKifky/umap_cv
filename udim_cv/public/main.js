@@ -513,17 +513,36 @@ class ArticleVisualizer {
     performHoverCheck(event) {
         // Don't check if articleManager not ready
         if (!this.articleManager) return;
-        
+
         // Update mouse position
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-        
+
         this.raycaster.setFromCamera(this.mouse, this.camera);
-        
-        // First check for active card intersections (higher priority)
+
+        // First check for close button intersections (highest priority)
         const activeCards = this.articleManager.getActiveCards();
         if (activeCards.length > 0) {
+            for (const card of activeCards) {
+                const entity = card.userData.entity;
+                if (entity.closeButton) {
+                    const closeButtonIntersects = this.raycaster.intersectObject(entity.closeButton);
+                    if (closeButtonIntersects.length > 0) {
+                        if (this.hoveredObject !== entity.closeButton) {
+                            // New hover on close button
+                            if (this.hoveredObject) {
+                                this.clearHover(this.hoveredObject);
+                            }
+                            this.setCloseButtonHover(entity.closeButton);
+                            this.hoveredObject = entity.closeButton;
+                        }
+                        return; // Exit early, close button has priority
+                    }
+                }
+            }
+
+            // Then check for active card intersections
             const cardIntersects = this.raycaster.intersectObjects(activeCards);
             if (cardIntersects.length > 0) {
                 const hoveredCard = cardIntersects[0].object;
@@ -581,15 +600,30 @@ class ArticleVisualizer {
         }
     }
     
+    setCloseButtonHover(closeButton) {
+        // Visual feedback: cursor and effects
+        document.body.style.cursor = 'pointer';
+
+        if (!closeButton.material) return;
+
+        // Store previous values
+        closeButton.userData.prev_opacity = closeButton.material.opacity;
+        closeButton.userData.prev_scale = closeButton.scale.clone();
+
+        // Apply hover effects: scale up and set opacity to 1
+        closeButton.material.opacity = 1.0;
+        closeButton.scale.multiplyScalar(1.1);
+    }
+
     setHover(object) {
         // Visual feedback: cursor and effects
         document.body.style.cursor = 'pointer';
-        
+
         if (!object.material) return;
-        
+
         // Check if it's a card (PlaneGeometry) or sphere (SphereGeometry)
         const isCard = object.geometry.type === 'PlaneGeometry';
-        
+
         if (isCard) {
             // Card hover effects
             object.userData.prev_opacity = object.material.opacity;
@@ -600,7 +634,7 @@ class ArticleVisualizer {
             // Sphere hover effects
             object.userData.prev_opacity = object.material.opacity;
             const pScale = object.scale.x;
-            object.userData.prev_scale = pScale;  
+            object.userData.prev_scale = pScale;
             object.material.opacity = 1.0;
             object.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
         }
@@ -609,13 +643,20 @@ class ArticleVisualizer {
     clearHover(object) {
         // Reset cursor and effects
         document.body.style.cursor = 'default';
-        
+
         if (!object.material) return;
-        
-        // Check if it's a card (PlaneGeometry) or sphere (SphereGeometry)
-        const isCard = object.geometry.type === 'PlaneGeometry';
-        
-        if (isCard) {
+
+        const objectType = object.userData.type;
+
+        if (objectType === 'closeButton') {
+            // Restore close button state
+            if (object.userData.prev_opacity !== undefined) {
+                object.material.opacity = object.userData.prev_opacity;
+            }
+            if (object.userData.prev_scale) {
+                object.scale.copy(object.userData.prev_scale);
+            }
+        } else if (objectType === 'card') {
             // Restore card state
             if (object.userData.prev_opacity !== undefined) {
                 object.material.opacity = object.userData.prev_opacity;
@@ -625,7 +666,7 @@ class ArticleVisualizer {
             } else {
                 object.position.set(0, 0, 0);
             }
-        } else {
+        } else if (objectType === 'sphere') {
             // Restore sphere state
             if (object.userData.prev_opacity !== undefined) {
                 object.material.opacity = object.userData.prev_opacity;
