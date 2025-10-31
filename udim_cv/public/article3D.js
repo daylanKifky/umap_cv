@@ -27,7 +27,7 @@ const SM_CARD_H = 400;
  * - Renders text and thumbnail imagery to a canvas-backed texture
  */
 class ArticleEntity {
-    constructor(article, index, color, image) {
+    constructor(article, index, color, closeImage) {
         this.article = article;
         this.index = index;
         this.id = article.id;
@@ -36,7 +36,7 @@ class ArticleEntity {
         this.thumbnail = article.thumbnail || null;
         this.card = null;
         this.color = color;
-        this.image = image;
+        this.closeImage = closeImage; // Reference to loaded close.png image
         this.thumbnailImage = null; // Will store loaded Image object
         
         this.defCardTitleLength = 100;
@@ -154,7 +154,64 @@ class ArticleEntity {
             image: image
         };
 
+        // Create close button when in active mode
+        if (mode === "active" && this.closeImage) {
+            this.createCloseButton(geometry.boundingBox);
+        }
+
         return this.card;
+    }
+
+    /**
+     * Create a close button plane positioned at the top-right of the card.
+     * Uses close.png as an alpha map with this.color as the material color.
+     * @param {THREE.Box3} cardBoundingBox - The card's bounding box for positioning
+     */
+    createCloseButton(cardBoundingBox) {
+        // Size of the close button relative to card size
+        const closeButtonSize = 0.3;
+        
+        // Create plane geometry for close button
+        const closeGeometry = new THREE.PlaneGeometry(closeButtonSize, closeButtonSize);
+        
+        // Position at top-right corner with small padding
+        const padding = 0.1;
+        const topRight = cardBoundingBox.max;
+        
+        closeGeometry.translate(
+            topRight.x - closeButtonSize * 0.5 - padding,
+            topRight.y - closeButtonSize * 0.5 - padding,
+            topRight.z
+        );
+
+        // Create texture from the loaded close image
+        const closeTexture = new THREE.Texture(this.closeImage);
+        closeTexture.flipY = false;
+        closeTexture.needsUpdate = true;
+        
+        // Create material with close.png as alpha map and this.color as color
+        const closeMaterial = new THREE.MeshBasicMaterial({
+            // map: closeTexture,
+            alphaMap: closeTexture,
+            color: this.color,
+            transparent: true,
+            opacity: 1.0,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            depthTest: true
+        });
+
+        const closeButton = new THREE.Mesh(closeGeometry, closeMaterial);
+        closeButton.castShadow = false;
+        closeButton.receiveShadow = false;
+        
+        // Store reference to close button
+        this.closeButton = closeButton;
+
+        console.log("closeButton", closeButton);
+        
+        // Add close button as child of card
+        this.card.add(closeButton);
     }
 
     /**
@@ -180,6 +237,19 @@ class ArticleEntity {
         
         // Parameters differ or no card exists — dispose old resources then recreate
         if (this.card) {
+            // Dispose close button if it exists
+            if (this.closeButton) {
+                this.closeButton.geometry.dispose();
+                this.closeButton.material.dispose();
+                if (this.closeButton.material.map) {
+                    this.closeButton.material.map.dispose();
+                }
+                if (this.closeButton.material.alphaMap) {
+                    this.closeButton.material.alphaMap.dispose();
+                }
+                this.closeButton = null;
+            }
+            
             // Remove card from sphere
             if (this.sphere) {
                 this.sphere.remove(this.card);
@@ -307,6 +377,19 @@ class ArticleEntity {
      * Note: Callers should remove meshes from the scene before disposing.
      */
     dispose() {
+        // Dispose close button if it exists
+        if (this.closeButton) {
+            this.closeButton.geometry.dispose();
+            this.closeButton.material.dispose();
+            if (this.closeButton.material.map) {
+                this.closeButton.material.map.dispose();
+            }
+            if (this.closeButton.material.alphaMap) {
+                this.closeButton.material.alphaMap.dispose();
+            }
+            this.closeButton = null;
+        }
+        
         if (this.card) {
             this.card.geometry.dispose();
             this.card.material.dispose();
@@ -365,12 +448,6 @@ class ArticleEntity {
         // Keep the full height for drawing, but calculate content height for layout
         const contentHeight = height / (1+CARD_BOTTOM_PADDING);
 
-        // if (DEBUG_CARD_CORNER) {    
-        //     // Add background color
-        //     context.fillStyle = 'rgba(228, 21, 200, 0.1)'; // Semi-transparent white
-        //     context.fillRect(0, 0, width, height);
-        // }
-
         // Convert THREE.Color to a CSS color string used for text fill
         const colorStr = `rgb(${Math.floor(this.color.r * 255)}, ${Math.floor(this.color.g * 255)}, ${Math.floor(this.color.b * 255)})`;
 
@@ -386,12 +463,26 @@ class ArticleEntity {
         context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        const titleLayout = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.defCardTitleLength, this.defCardTitleLines, width * 0.01);
+        const titleLayout = wrapText(context, 
+                                    this.title, 
+                                    padding, 
+                                    titleY, 
+                                    (width - padding * 2) * 0.95, 
+                                    titleFontSize * 1.2, 
+                                    this.defCardTitleLength, 
+                                    this.defCardTitleLines);
 
         // Calculate content layout after title with small inter-line spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
         const contentY = titleLayout.y + contentFontSize * 0.5; // Add half a line of spacing
-        const contentLayout = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
+        const contentLayout = wrapText(context, 
+                                        this.content, 
+                                        padding, 
+                                        contentY, 
+                                        (width - padding * 2) * 0.95, 
+                                        contentFontSize * 1.3, 
+                                        this.defCardContentLength*text_length, 
+                                        this.defCardContentLines*text_length);
 
         // Draw thumbnail image region when enabled; defers until image is fully loaded
         if (image) {
@@ -612,6 +703,18 @@ class ArticleManager {
         const embeddingField = `${this.reductionMethod}_3d`;
         console.log(`Creating objects with field: ${embeddingField}`);
         
+        // Load close.png image
+        const closeImage = await new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+                console.warn('Failed to load close.png');
+                resolve(null);
+            };
+            img.src = 'close.png';
+        });
+        
         // Clear existing entities
         this.dispose();
         
@@ -623,7 +726,7 @@ class ArticleManager {
             const color = coords.color();
 
             // Create entity with its visual components
-            const entity = new ArticleEntity(article, index, color);
+            const entity = new ArticleEntity(article, index, color, closeImage);
             const card = entity.createCard("small"); // Create card at origin
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
             

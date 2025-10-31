@@ -174,7 +174,7 @@ function applyDitherTransparency(context, region, ditherSize = 2, ditherSpacing 
  * @param {number} maxLines - Maximum number of lines
  * @returns {Object} Object with y (final Y position) and lines (array of line objects with text, x, y)
  */
-function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines, strokeWidth = 3) {
+function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines) {
     let line = '';
     let currentY = y;
     let lines = 0;
@@ -516,7 +516,8 @@ if (typeof module !== 'undefined' && module.exports) {
         applyDitherTransparency,
         wrapText,
         degToRad,
-        findOptimalCameraView
+        findOptimalCameraView,
+        drawTextLines
     };
 }
 
