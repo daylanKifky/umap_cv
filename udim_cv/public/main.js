@@ -70,8 +70,8 @@ class ArticleVisualizer {
         this.bloomPass = null;
         this.bloomEnabled = true;
 
-        this.cameraInitialPosition = new THREE.Vector3(20, 10, 20); 
-        this.cameraDistance = 5;
+        this.cameraInitialPosition = new THREE.Vector3(20, 10, 20);
+        this.cameraDistance = this.cameraInitialPosition.length(); 
         this.cameraAnimationDuration = 1000;
         
         // Hover functionality
@@ -179,13 +179,9 @@ class ArticleVisualizer {
 
             await this.articleManager.createArticleObjects();
 
-            // Animate camera to optimal position
-            const points = this.articleManager.entities.map(e => e.position);
+            this.cameraOptimalPosition();
+            
             const centroid = new THREE.Vector3(0, 0, 0);
-            const viewDirection = this.cameraInitialPosition.clone().normalize();
-            const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
-            this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
-
             const startupModal = document.getElementById('startup-modal');
             if (startupModal.style.display === 'none') {
                 this.animateCamera(this.cameraInitialPosition, centroid);
@@ -212,13 +208,33 @@ class ArticleVisualizer {
             
             this.searchManager.addEventListener('clearSearch', () => {
                 this.articleManager.handleClearSearch();
-                this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
+                this.cameraZoomOut();
             });
             
         } catch (error) {
             console.error('Error loading articles:', error);
             document.getElementById('loading').textContent = 'Error loading articles';
         }
+    }
+
+    cameraOptimalPosition(){
+        // Animate camera to optimal position to see all entities
+        const points = this.articleManager.entities.map(e => e.position);
+        const centroid = new THREE.Vector3(0, 0, 0);
+        const viewDirection = this.cameraInitialPosition.clone().normalize();
+        const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
+        this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
+        this.cameraDistance = this.cameraInitialPosition.length();
+    }
+
+    cameraZoomOut() {
+        const cameraPos = this.camera.position ;
+        this.animateCamera(cameraPos.clone()
+                                    .setX(cameraPos.x *3)
+                                    .setY(cameraPos.y *3)
+                                    .normalize()
+                                    .multiplyScalar(this.cameraDistance), 
+                            new THREE.Vector3(0,0,0));
     }
     
     animateCamera(targets, centroid = null) {
@@ -470,7 +486,12 @@ class ArticleVisualizer {
                     const closeButtonIntersects = this.raycaster.intersectObject(entity.closeButton);
                     if (closeButtonIntersects.length > 0) {
                         // Reset view when close button is clicked
-                        this.animateCamera(this.cameraInitialPosition, new THREE.Vector3(0, 0, 0));
+                        this.cameraZoomOut();
+                        
+                        this.articleManager.handleClearSearch()
+                        this.userControls.searchHistory = [];
+                        this.userControls.updateHomeButtonAppearance();
+
                         return;
                     }
                 }

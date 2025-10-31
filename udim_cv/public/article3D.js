@@ -202,7 +202,7 @@ class ArticleEntity {
         closeButton.position.set(
             topRight.x - closeButtonSize * 0.5 - padding,
             topRight.y - closeButtonSize * 0.5 - padding,
-            topRight.z
+            topRight.z + 0.1
         );
         closeButton.receiveShadow = false;
 
