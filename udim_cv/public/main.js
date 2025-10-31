@@ -1,6 +1,7 @@
 // Reduction method constant
 const REDUCTION_METHOD = 'pca';
 const SHOW_AXES = false;
+const FXAA_RESOLUTION = 0.7;  
 
 // Startup Modal Functions
 function setupStartupModal() {
@@ -111,11 +112,11 @@ class ArticleVisualizer {
         this.camera.position.copy(this.cameraInitialPosition);
         
         // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: true });
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Cap at 2 for performance
+        this.renderer = new THREE.WebGLRenderer({ antialias: false }); // Disable built-in antialiasing for FXAA
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4)); // Cap at 2 for performance
         this.renderer.setSize(width, height);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        this.renderer.shadowMap.enabled = false;
+
         container.appendChild(this.renderer.domElement);
         
         // Controls
@@ -305,16 +306,16 @@ class ArticleVisualizer {
     setupBloom() {
         // Create composer for post-processing
         this.composer = new THREE.EffectComposer(this.renderer);
-        
+
         // Render pass - renders the scene
         const renderPass = new THREE.RenderPass(this.scene, this.camera);
         this.composer.addPass(renderPass);
-        
+
         // Get actual container dimensions
         const container = document.getElementById('container');
         const width = container.clientWidth;
         const height = container.clientHeight;
-        
+
         // Bloom pass - adds bloom effect
         this.bloomPass = new THREE.UnrealBloomPass(
             new THREE.Vector2(width, height),
@@ -323,6 +324,13 @@ class ArticleVisualizer {
             0.58   // threshold
         );
         this.composer.addPass(this.bloomPass);
+
+        // FXAA pass - antialiasing
+        if (FXAA_RESOLUTION > 0) {
+            const fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+            fxaaPass.material.uniforms['resolution'].value.set(FXAA_RESOLUTION / width, FXAA_RESOLUTION / height);
+            this.composer.addPass(fxaaPass);
+        }
     }
     
     setupBloomControls() {
@@ -387,14 +395,23 @@ class ArticleVisualizer {
         const container = document.getElementById('container');
         const width = container.clientWidth;
         const height = container.clientHeight;
-        
+
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(width, height);
-        
+
         // Update composer size
         if (this.composer) {
             this.composer.setSize(width, height);
+
+            // Update FXAA resolution
+            if (FXAA_RESOLUTION > 0) {
+                this.composer.passes.forEach(pass => {
+                        if (pass.material && pass.material.uniforms && pass.material.uniforms['resolution']) {
+                            pass.material.uniforms['resolution'].value.set(FXAA_RESOLUTION / width, FXAA_RESOLUTION / height);
+                        }
+                    });
+            }
         }
     }
     
