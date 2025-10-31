@@ -2,6 +2,11 @@
 const FONT_NAME = "Space Grotesk";
 // Cards in "active" mode scale relative to the window size (0-1)
 const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
+const CARD_BOTTOM_PADDING = 0.2;
+
+// Text for the "see more" button in the padded area
+const SEE_MORE_TEXT = "see more";
+
 // Enable to visualize geometry bounds and pivot offsets for debugging
 const DEBUG_CARD_CORNER = false;
 
@@ -66,7 +71,7 @@ class ArticleEntity {
             aspectRatio = width / height;
         } else if (mode === "active") {
             width = Math.floor(window.innerWidth * CARD_WINDOW_SCALE);
-            height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE);
+            height = Math.floor(window.innerHeight * CARD_WINDOW_SCALE) * (1+CARD_BOTTOM_PADDING);
             aspectRatio = width / height;
             if (aspectRatio > 1){
                 offsetX = -0.8;
@@ -218,7 +223,7 @@ class ArticleEntity {
      */
     createSphere(x, y, z) {
         // Create sphere with entity color
-        const sphereGeometry = new THREE.SphereGeometry(0.5, 8, 8);
+        const sphereGeometry = new THREE.SphereGeometry(0.5, 8, 12);
         const sphereMaterial = new THREE.MeshBasicMaterial({
             color: this.color,
             transparent: true,
@@ -353,45 +358,55 @@ class ArticleEntity {
      * @param {number} text_length - Multiplier to allow more lines/length in active mode.
      */
     updateCardTexture(context, width, height, image=null, text_length=1) {
-        
+
         // Clear entire canvas, preserving transparency
         context.clearRect(0, 0, width, height);
 
-        if (DEBUG_CARD_CORNER) {    
-            // Add background color
-            context.fillStyle = 'rgba(228, 21, 200, 0.1)'; // Semi-transparent white
-            context.fillRect(0, 0, width, height);
-        }
+        // Keep the full height for drawing, but calculate content height for layout
+        const contentHeight = height / (1+CARD_BOTTOM_PADDING);
+
+        // if (DEBUG_CARD_CORNER) {    
+        //     // Add background color
+        //     context.fillStyle = 'rgba(228, 21, 200, 0.1)'; // Semi-transparent white
+        //     context.fillRect(0, 0, width, height);
+        // }
+
         // Convert THREE.Color to a CSS color string used for text fill
         const colorStr = `rgb(${Math.floor(this.color.r * 255)}, ${Math.floor(this.color.g * 255)}, ${Math.floor(this.color.b * 255)})`;
 
-        // Calculate font sizes based on canvas size
-        const titleFontSize = Math.max(16, Math.floor(height * 0.06));
-        const contentFontSize = Math.max(12, Math.floor(height * 0.04));
+        // Calculate font sizes based on content area size
+        const titleFontSize = Math.max(16, Math.floor(contentHeight * 0.06));
+        const contentFontSize = Math.max(12, Math.floor(contentHeight * 0.04));
         
         // Set padding
         const padding = Math.floor(width * 0.05);
         
-        // Draw title
+        // Calculate title layout
         context.fillStyle = colorStr;
         context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
         context.textAlign = 'left';
         const titleY = padding + titleFontSize;
-        const titleEndY = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.defCardTitleLength, this.defCardTitleLines, width * 0.01);
+        const titleLayout = wrapText(context, this.title, padding, titleY, width - padding * 2, titleFontSize * 1.2, this.defCardTitleLength, this.defCardTitleLines, width * 0.01);
 
-        // Draw content after title with small inter-line spacing
+        // Calculate content layout after title with small inter-line spacing
         context.font = `${contentFontSize}px "${FONT_NAME}"`;
-        const contentY = titleEndY + contentFontSize * 0.5; // Add half a line of spacing
-        const contentEndY = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
+        const contentY = titleLayout.y + contentFontSize * 0.5; // Add half a line of spacing
+        const contentLayout = wrapText(context, this.content, padding, contentY, width - padding * 2, contentFontSize * 1.3, this.defCardContentLength*text_length, this.defCardContentLines*text_length, width * 0.005);
 
-        // console.log("about to draw thumbnail", image, this.thumbnailImage, this.thumbnailImage.complete);
-        
         // Draw thumbnail image region when enabled; defers until image is fully loaded
         if (image) {
-            const imageY = contentEndY + padding;
-            const availableHeight = height - imageY - padding;
+            // Add background color for content area
+            context.fillStyle = 'rgba(31, 31, 31, 0.5)'; // Semi-transparent white
+            context.beginPath();
+            context.roundRect(0, 0, width, height, Math.min(width, contentHeight) * 0.07);
+            context.fill();
+
+            
+            const imageY = contentLayout.y + padding;
+            const availableHeight = (contentHeight - imageY - padding);
             const availableWidth = width - padding * 2;
             const rectRadius = availableHeight * 0.06;
+
             
             if (this.thumbnailImage !== null) {
                 if (!this.thumbnailImage.complete) {
@@ -426,14 +441,7 @@ class ArticleEntity {
                     context.drawImage(this.thumbnailImage, drawX, drawY, drawWidth, drawHeight);
                     
                     context.restore();
-                    // Apply subtle dither transparency overlay to the entire image region
-                    // Available styles: "checkerboard", "grid", "dots", "lines"
-                    applyDitherTransparency(context, {
-                        x: padding,
-                        y: imageY,
-                        width: availableWidth,
-                        height: availableHeight
-                    }, 2, 4, 0.5, "lines");
+
 
                 }
             } else { // Thumbnail not yet created; draw loading placeholder and kick off loading
@@ -462,8 +470,45 @@ class ArticleEntity {
                 context.textBaseline = 'middle';
                 context.fillText('Loading...', loadingX + loadingWidth/2, loadingY + loadingHeight/2);
             }
+
+            // Apply subtle dither transparency overlay to the entire image region
+            // Available styles: "checkerboard", "grid", "dots", "lines"
+            applyDitherTransparency(context, {
+                x: 0,
+                y: 0,
+                width: width,
+                height: height 
+            }, 2, 4, 0.5, "lines");
             
+            const buttonHeight = height - contentHeight - padding; // Occupy all available space
+            const buttonFontSize = buttonHeight / 2; // Font size is half of button height
+            const buttonY = contentHeight;
+    
+            // Draw button background with article color
+            context.fillStyle = colorStr;
+            context.beginPath();
+            context.roundRect(padding, buttonY, width - padding*2, buttonHeight, rectRadius);
+            context.fill();
+    
+            // Draw button text in black
+            context.fillStyle = '#000000'; // Black text
+            context.font = `bold ${buttonFontSize}px "${FONT_NAME}"`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            const buttonTextX = width / 2;
+            const buttonTextY = buttonY + buttonHeight / 2;
+            context.fillText(SEE_MORE_TEXT, buttonTextX, buttonTextY);
         }
+
+        // Draw text after image
+        context.fillStyle = colorStr;
+        context.textAlign = 'left';
+        context.textBaseline = 'top';
+        context.font = `bold ${titleFontSize}px "${FONT_NAME}"`;
+        drawTextLines(context, titleLayout.lines, width * 0.01);
+
+        context.font = `${contentFontSize}px "${FONT_NAME}"`;
+        drawTextLines(context, contentLayout.lines, width * 0.005);
 
         // Mark texture as dirty so Three.js uploads the new pixels on the next render
         if (this.card && this.card.material.map) {

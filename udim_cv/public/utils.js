@@ -172,20 +172,18 @@ function applyDitherTransparency(context, region, ditherSize = 2, ditherSpacing 
  * @param {number} lineHeight - Height of each line
  * @param {number} maxChars - Maximum characters before truncation
  * @param {number} maxLines - Maximum number of lines
- * @returns {number} The final Y position after all lines
+ * @returns {Object} Object with y (final Y position) and lines (array of line objects with text, x, y)
  */
 function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines, strokeWidth = 3) {
     let line = '';
     let currentY = y;
     let lines = 0;
-    
+    let lineArray = [];
+
     if (text.length > maxChars) {
         text = text.substring(0, maxChars) + '...';
     }
     const words = text.split(' ');
-
-    context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-    context.lineWidth = strokeWidth;
 
     for(let n = 0; n < words.length; n++) {
         const testLine = line + words[n] + ' ';
@@ -193,10 +191,8 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines,
         const testWidth = metrics.width;
 
         if (testWidth > maxWidth && n > 0) {
-            // Draw outline
-            context.strokeText(line, x, currentY);
-            // Draw fill
-            context.fillText(line, x, currentY);
+            // Add the completed line to the array
+            lineArray.push({ text: line.trim(), x: x, y: currentY });
 
             line = words[n] + ' ';
             currentY += lineHeight;
@@ -210,11 +206,23 @@ function wrapText(context, text, x, y, maxWidth, lineHeight, maxChars, maxLines,
         }
     }
 
-    context.strokeText(line, x, currentY);
-    context.fillText(line, x, currentY);
-    
-    // Return the Y position after the last line
-    return currentY + lineHeight;
+    // Add the final line to the array
+    lineArray.push({ text: line.trim(), x: x, y: currentY });
+
+    // Return the Y position after the last line and the lines array
+    return { y: currentY + lineHeight, lines: lineArray };
+}
+
+function drawTextLines(context, lines, strokeWidth = 3) {
+    context.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+    context.lineWidth = strokeWidth;
+
+    for (const line of lines) {
+        // Draw outline
+        context.strokeText(line.text, line.x, line.y);
+        // Draw fill
+        context.fillText(line.text, line.x, line.y);
+    }
 }
 
 /**
