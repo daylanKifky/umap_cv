@@ -207,14 +207,20 @@ class ArticleVisualizer {
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
-                this.articleManager.handleClearSearch();
-                this.cameraZoomOut();
+                this.handleClearSearch();
             });
             
         } catch (error) {
             console.error('Error loading articles:', error);
             document.getElementById('loading').textContent = 'Error loading articles';
         }
+    }
+
+    handleClearSearch() {
+        this.userControls.searchHistory = [];
+        this.userControls.pause();
+        this.articleManager.handleClearSearch();
+        this.cameraZoomOut();
     }
 
     cameraOptimalPosition(){
@@ -228,6 +234,8 @@ class ArticleVisualizer {
     }
 
     cameraZoomOut() {
+        this.articleManager.activeClearWinner = false;
+        this.orbit_controls.enabled = true;
         const cameraPos = this.camera.position ;
         this.animateCamera(cameraPos.clone()
                                     .setX(cameraPos.x *3)
@@ -310,7 +318,8 @@ class ArticleVisualizer {
                 requestAnimationFrame(animation);
             } else {
                 console.log("Animate complete camera position: ", endPos.x, endPos.y, endPos.z);
-                this.orbit_controls.enabled = true; // Re-enable user control
+
+                this.orbit_controls.enabled = !this.articleManager.activeClearWinner;
             }
         }
         requestAnimationFrame(animation);
@@ -473,6 +482,11 @@ class ArticleVisualizer {
     }
     
     handleClick() {
+        if (this.articleManager.activeClearWinner) {
+            this.handleClearSearch();
+            return;
+        }
+
         // Update the raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -486,12 +500,7 @@ class ArticleVisualizer {
                     const closeButtonIntersects = this.raycaster.intersectObject(entity.closeButton);
                     if (closeButtonIntersects.length > 0) {
                         // Reset view when close button is clicked
-                        this.cameraZoomOut();
-                        
-                        this.articleManager.handleClearSearch()
-                        this.userControls.searchHistory = [];
-                        this.userControls.updateHomeButtonAppearance();
-
+                        this.handleClearSearch();
                         return;
                     }
                 }
@@ -555,7 +564,7 @@ class ArticleVisualizer {
                             if (this.hoveredObject) {
                                 this.clearHover(this.hoveredObject);
                             }
-                            this.setCloseButtonHover(entity.closeButton);
+                            this.setHover(entity.closeButton);
                             this.hoveredObject = entity.closeButton;
                         }
                         return; // Exit early, close button has priority
@@ -578,6 +587,7 @@ class ArticleVisualizer {
                 return; // Exit early, card has priority
             }
         }
+
         
         // Then check active spheres for hover (spheres without active cards)
         const activeSpheres = this.articleManager.getActiveSpheres();
@@ -590,6 +600,10 @@ class ArticleVisualizer {
                 if (this.hoveredObject) {
                     this.clearHover(this.hoveredObject);
                 }
+
+                // Disable hover on spheres if clear winner is being seen
+                if (this.articleManager.activeClearWinner) return;
+                
                 this.setHover(hoveredSphere);
                 this.hoveredObject = hoveredSphere;
                 
@@ -621,37 +635,27 @@ class ArticleVisualizer {
         }
     }
     
-    setCloseButtonHover(closeButton) {
-        // Visual feedback: cursor and effects
-        document.body.style.cursor = 'pointer';
-
-        if (!closeButton.material) return;
-
-        // Store previous values
-        closeButton.userData.prev_opacity = closeButton.material.opacity;
-        closeButton.userData.prev_scale = closeButton.scale.clone();
-
-        // Apply hover effects: scale up and set opacity to 1
-        closeButton.material.opacity = 1.0;
-        closeButton.scale.multiplyScalar(1.1);
-    }
-
     setHover(object) {
         // Visual feedback: cursor and effects
         document.body.style.cursor = 'pointer';
 
         if (!object.material) return;
 
-        // Check if it's a card (PlaneGeometry) or sphere (SphereGeometry)
-        const isCard = object.geometry.type === 'PlaneGeometry';
+        const objectType = object.userData.type;
 
-        if (isCard) {
+        if (objectType === 'closeButton') {
+            // Store previous values
+            object.userData.prev_opacity = object.material.opacity;
+            object.userData.prev_scale = object.scale.clone();
+
+            // Apply hover effects: scale up and set opacity to 1
+            object.material.opacity = 1.0;
+            object.scale.multiplyScalar(1.1);
+        } else if (objectType === 'card') {
             // Card hover effects
             object.userData.prev_opacity = object.material.opacity;
-            object.userData.prev_position = object.position.clone();
             object.material.opacity = 1.0;
-            object.position.set(0, 0, 0.1);
-        } else {
+        } else if (objectType === 'sphere') {
             // Sphere hover effects
             object.userData.prev_opacity = object.material.opacity;
             const pScale = object.scale.x;
@@ -682,11 +686,7 @@ class ArticleVisualizer {
             if (object.userData.prev_opacity !== undefined) {
                 object.material.opacity = object.userData.prev_opacity;
             }
-            if (object.userData.prev_position) {
-                object.position.copy(object.userData.prev_position);
-            } else {
-                object.position.set(0, 0, 0);
-            }
+
         } else if (objectType === 'sphere') {
             // Restore sphere state
             if (object.userData.prev_opacity !== undefined) {

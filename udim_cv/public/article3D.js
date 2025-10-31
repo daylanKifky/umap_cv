@@ -829,6 +829,7 @@ class ArticleManager {
             });
             
         } 
+        this.activeClearWinner = searchResults.clearWinner;
         
         if (this.hoverEntityMap) {
             this.entities.forEach(entity => {
@@ -896,6 +897,7 @@ class ArticleManager {
     handleClearSearch() {
         // Reset active cards array
         this.activeCards = [];
+        this.activeClearWinner = false;
         
         // All spheres are hoverable again (no active cards)
         this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);

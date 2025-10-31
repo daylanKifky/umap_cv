@@ -403,6 +403,7 @@ class UserControls {
         const searchInput = this.searchOverlay.querySelector('.search-overlay-input');
         searchInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
+                this._wasPlaying = false;
                 this.performSearch(searchInput.value);
             } else if (e.key === 'Escape') {
                 this.closeSearch();
@@ -412,6 +413,7 @@ class UserControls {
         // Click search overlay icon to perform search
         const searchIcon = this.searchOverlay.querySelector('.search-overlay-icon');
         searchIcon.addEventListener('click', () => {
+            this._wasPlaying = false;
             this.performSearch(searchInput.value);
         });
         
@@ -578,6 +580,7 @@ class UserControls {
 
             // Temporarily disable event listener to avoid re-adding to history
             this.isNavigatingBack = true;
+            this.orbit_controls.enabled = true;
             this.searchManager.performSearch(previousSearch);
             this.isNavigatingBack = false;
 
@@ -611,6 +614,8 @@ class UserControls {
         // Update UI using factory
         this.factory.updatePlayButtonIcon(this.buttons.play, this.factory.getPauseSVG());
         this.factory.setPlayingState(this.buttons.play, true);
+
+        this.updateHomeButtonAppearance();
         
         // Start timer and animation
         this.startTimer();
@@ -638,6 +643,8 @@ class UserControls {
         this.factory.updatePlayButtonIcon(this.buttons.play, this.factory.getPlaySVG());
         this.factory.setPlayingState(this.buttons.play, false);
         this.factory.resetProgressArc();
+
+        this.updateHomeButtonAppearance();
         
         this.emit('pause');
         console.log('Pause mode');
@@ -649,6 +656,7 @@ class UserControls {
      */
     triggerAutoSearch() {
         // Autoplay: select random article and search for it
+        this.orbit_controls.enabled = true;
         const article = this.selectRandomArticle();
         if (article && this.searchManager) {
             console.log('Autoplay: searching for article:', article.title);
@@ -790,6 +798,7 @@ class UserControls {
      */
     performSearch(query) {
         if (!query || !query.trim()) return;
+        this.orbit_controls.enabled = true;
         
         console.log('Performing search:', query);
         
