@@ -734,14 +734,8 @@ class ArticleManager {
             const card = entity.createCard("small"); // Create card at origin
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
             
-            if (DEBUG_CARD_CORNER) {
-                const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
-                const boxMaterial = new THREE.MeshBasicMaterial({color: 0x00ffff});
-                const cornerBox = new THREE.Mesh(boxGeometry, boxMaterial);
-                cornerBox.position.copy(entity.cardCorner);
-                sphere.add(cornerBox);
-            }
             // Make card a child of the sphere
+            sphere.scale.setScalar(0); // prepare for fadeIn
             sphere.add(card);
 
             // Add sphere (with card as child) to scene
@@ -751,6 +745,14 @@ class ArticleManager {
             this.entityMap.set(article.id, entity);
 
             entity.resetAppearance();
+            
+            if (DEBUG_CARD_CORNER) {
+                const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
+                const boxMaterial = new THREE.MeshBasicMaterial({color: 0x00ffff});
+                const cornerBox = new THREE.Mesh(boxGeometry, boxMaterial);
+                cornerBox.position.copy(entity.cardCorner);
+                sphere.add(cornerBox);
+            }
         });
         
         console.log(`Created ${this.entities.length} article entities`);
@@ -760,10 +762,43 @@ class ArticleManager {
         
         // Create link geometry between related entities
         const linksMesh = this.linksManager.createLinks(this.entityMap)
-        if (linksMesh) {
-            this.scene.add(linksMesh);
-            console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
-        }
+        const linksTargetOpacity = linksMesh.material.opacity;
+        linksMesh.material.opacity = 0; // prepare for fadeIn
+        this.scene.add(linksMesh);
+        console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
+
+        
+        // Animate sphere scales from 0 to target scale
+        const duration = 2000; // Animation duration in milliseconds
+        const startTime = performance.now();
+        
+        const animateScale = () => {
+            const currentTime = performance.now();
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1.0);
+            
+            // Easing function (ease-out)
+            // easedProgress animates from 0→1 over the first half (progress 0→0.5), then holds at 1
+            const easedProgress = progress < 0.5
+                ? 1 - Math.pow(1 - (progress * 2), 3)
+                : 1;
+
+            // easedProgress2 stays at 0 for the first half, then animates from 0→1 over second half (progress 0.5→1)
+            const easedProgress2 = progress < 0.5
+                ? 0
+                : 1 - Math.pow(1 - ((progress - 0.5) * 2), 3);
+            
+            this.entities.forEach((entity) => {
+                entity.sphere.scale.setScalar(easedProgress);
+                linksMesh.material.opacity = linksTargetOpacity * Math.max(easedProgress2, 0);
+            });
+            
+            if (progress < 1.0) {
+                requestAnimationFrame(animateScale);
+            }
+        };
+        
+        requestAnimationFrame(animateScale);
         
         return {
             entitiesCount: this.entities.length,

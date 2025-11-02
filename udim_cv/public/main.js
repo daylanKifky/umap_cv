@@ -116,7 +116,7 @@ class ArticleVisualizer {
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4)); // Cap at 2 for performance
         this.renderer.setSize(width, height);
         this.renderer.shadowMap.enabled = false;
-
+        
         container.appendChild(this.renderer.domElement);
         
         // Controls
