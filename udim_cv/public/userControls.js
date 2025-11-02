@@ -1,6 +1,6 @@
 // Configuration constants for autoplay timing
 const INITIAL_DELAY   =  2000;
-const AUTO_PLAY_DELAY = 10000;
+const AUTO_PLAY_DELAY =  8000;
 const UPDATE_INTERVAL = 12000;
 
 const MAX_HISTORY_SIZE = 5;
@@ -100,19 +100,19 @@ class ButtonFactory {
         const overlay = document.createElement('div');
         overlay.className = 'search-overlay';
         
-        // Search icon (magnifying glass)
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'search-overlay-icon';
-        iconDiv.innerHTML = this.getSearchSVG();
-        
         // Search input field
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'search-overlay-input';
         input.placeholder = 'Search articles...';
+
+        // Search icon (magnifying glass)
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'search-overlay-icon';
+        iconDiv.innerHTML = this.getSearchSVG();
         
-        overlay.appendChild(iconDiv);
         overlay.appendChild(input);
+        overlay.appendChild(iconDiv);
         
         return overlay;
     }
@@ -754,6 +754,8 @@ class UserControls {
         this.buttons.history.style.pointerEvents = 'none';
         this.buttons.play.style.opacity = '0';
         this.buttons.play.style.pointerEvents = 'none';
+        this.buttons.search.style.opacity = '0';
+        this.buttons.search.style.pointerEvents = 'none';
         
         // Focus input
         const input = this.searchOverlay.querySelector('.search-overlay-input');
@@ -775,6 +777,8 @@ class UserControls {
         this.buttons.history.style.pointerEvents = 'auto';
         this.buttons.play.style.opacity = '1';
         this.buttons.play.style.pointerEvents = 'auto';
+        this.buttons.search.style.opacity = '1';
+        this.buttons.search.style.pointerEvents = 'auto';
         
         // Clear input
         const input = this.searchOverlay.querySelector('.search-overlay-input');
