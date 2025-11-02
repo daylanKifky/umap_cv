@@ -111,8 +111,8 @@ class ButtonFactory {
         input.className = 'search-overlay-input';
         input.placeholder = 'Search articles...';
         
-        overlay.appendChild(input);
         overlay.appendChild(iconDiv);
+        overlay.appendChild(input);
         
         return overlay;
     }
