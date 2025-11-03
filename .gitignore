@@ -29,7 +29,6 @@ embeddings.json
 Thumbs.db
 
 embeddings.json
-**/public/0*.html
-**/public/images
+public
 X
 _poc
