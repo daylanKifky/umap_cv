@@ -192,7 +192,9 @@ class ArticleVisualizer {
             this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
             this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
 
-            await this.articleManager.createArticleObjects();
+            await this.articleManager.createArticleObjects(() => {
+                this._render_required = true;
+            });
 
             this.cameraOptimalPosition();
             
@@ -436,7 +438,6 @@ class ArticleVisualizer {
         requestAnimationFrame(() => this.animate());
         
         this._render_required = this._render_required || this.articleManager.animation.active;
-        console.log("Scene updated: ", this._render_required);
 
         // Begin stats measurement
         if (this.stats) {

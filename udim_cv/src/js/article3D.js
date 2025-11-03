@@ -702,7 +702,7 @@ class ArticleManager {
      * and build the links mesh. Clears any previous state.
      * @returns {Promise<{entitiesCount:number, linksMesh:THREE.Mesh|null}>}
      */
-    async createArticleObjects() {
+    async createArticleObjects(onChange = null) {
         await this.loadFonts();
         const embeddingField = `${this.reductionMethod}_3d`;
         console.log(`Creating objects with field: ${embeddingField}`);
@@ -794,10 +794,12 @@ class ArticleManager {
             });
             
             if (progress < 1.0) {
+                onChange && onChange();
                 requestAnimationFrame(animateScale);
             }
         };
-        
+
+        onChange && onChange();
         requestAnimationFrame(animateScale);
         
         return {
