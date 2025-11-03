@@ -184,7 +184,7 @@ class ArticleEmbeddingGenerator:
         return reduced_embeddings, reducer
 
 
-def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False):
+def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False, base_url: str = ""):
     # Define weights for each field
     weights = {
         'title': 1,
@@ -203,7 +203,7 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         os.makedirs(html_output_folder)
 
     # Load project data from markdown files
-    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation)
+    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation, base_url)
 
     data_values = list(data.values())
     

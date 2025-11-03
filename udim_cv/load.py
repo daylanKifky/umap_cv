@@ -7,7 +7,31 @@ import os
 from typing import Dict
 from .utils import handle_image
 
-def load_markdown_files(input_folder: str, output_folder: str = None, skip_confirmation: bool = False) -> Dict[str, Dict]:
+
+def apply_base_url(path: str, base_url: str) -> str:
+    """
+    Apply base_url to a path if base_url is set and path is not already a full URL.
+    
+    Args:
+        path: Path to apply base_url to
+        base_url: Base URL (normalized, ends with / or empty)
+        
+    Returns:
+        Path with base_url prepended if applicable
+    """
+    if not base_url or not path:
+        return path
+    
+    # Don't modify full URLs (http/https)
+    if path.startswith(('http://', 'https://')):
+        return path
+    
+    # Remove leading slash from path if it exists (base_url already ends with /)
+    path = path.lstrip('/')
+    return base_url + path
+
+
+def load_markdown_files(input_folder: str, output_folder: str = None, skip_confirmation: bool = False, base_url: str = "") -> Dict[str, Dict]:
     """
     Load markdown files from a folder, convert to HTML, extract metadata and content.
 
@@ -57,6 +81,18 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
             # Convert markdown to HTML
             html_content = markdown.markdown(markdown_content)
+
+            # Apply base_url to image src attributes in HTML
+            if base_url:
+                # Use regex to find and replace img src attributes
+                def replace_img_src(match):
+                    src_value = match.group(1)
+                    # Don't modify full URLs
+                    if not src_value.startswith(('http://', 'https://')):
+                        src_value = apply_base_url(src_value, base_url)
+                    return f'src="{src_value}"'
+                
+                html_content = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
 
             # Parse HTML to extract structured data
             try:
@@ -109,7 +145,11 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
                     print(f"Processed image for {filename}: {image_path if image_path else 'NOT FOUND'}")
                     
-                    data[key]['thumbnail'] = image_path
+                    # Apply base_url to thumbnail path
+                    if image_path:
+                        data[key]['thumbnail'] = apply_base_url(image_path, base_url)
+                    else:
+                        data[key]['thumbnail'] = image_path
 
                 # Save HTML file if output folder specified
                 if output_folder:
@@ -117,8 +157,8 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     html_filepath = os.path.join(output_folder, html_filename)
                     with open(html_filepath, 'w', encoding='utf-8') as f:
                         f.write(html_content)
-                    # Store relative path (just the filename)
-                    data[key]['html_filepath'] = html_filename
+                    # Store relative path (just the filename) and apply base_url
+                    data[key]['html_filepath'] = apply_base_url(html_filename, base_url)
                     print(f"Saved HTML: {html_filepath}")
 
             except ET.ParseError as e:

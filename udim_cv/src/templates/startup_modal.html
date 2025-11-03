@@ -1,0 +1,29 @@
+{% if config.startup_modal.enabled %}
+<!-- Startup Modal -->
+<div id="startup-modal">
+    <div class="startup-modal-content">
+        <div class="startup-header">
+            <div class="startup-hero">
+                <img src="{{ config.startup_modal.image | url }}" alt="Avatar" class="avatar-photo">
+                <div class="startup-hero-text">
+                    <h1 class="startup-title">{{ config.startup_modal.title }}</h1>
+                    <p class="startup-subtitle">{{ config.startup_modal.subtitle }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="startup-body">
+            <div class="startup-description">
+                {% for paragraph in config.startup_modal.description %}
+                {% if loop.first %}
+                <p><strong>{{ paragraph }}</strong></p>
+                {% else %}
+                <p>{{ paragraph }}</p>
+                {% endif %}
+                {% endfor %}
+            </div>
+            <button class="startup-button" id="startup-explore">{{ config.startup_modal.button_text }}</button>
+        </div>
+    </div>
+</div>
+{% endif %}
+

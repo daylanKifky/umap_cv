@@ -9,23 +9,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="{{ 'style.css' | url }}">
 
     <meta property="og:title" content="Latent Space Visualization">
     <meta property="og:description" content="Interactive 3D portfolio - Latent Space Visualization">
-    <meta property="og:image" content="https://daylankifky.github.io/umap_cv/udim_cv_prev.jpg">
+    <meta property="og:image" content="{{ 'udim_cv_prev.jpg' | url }}">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="">
+    <meta property="og:url" content="{{ config.site.base_url }}">
 </head>
 <body>
     <div id="loading" style="display: none;">Loading articles...</div>
 
-    <div id="header">
-        <h1>John Doe</h1>
-        <p>Latent Space Visualization</p>
-    </div>
+    {% include 'header.html' %}
     <div id="container"></div>
     
+    {% if config.bloom.enabled %}
     <!-- Bloom Controls -->
     <div id="bloom-controls" style="display: none;">
         <h3>Bloom Effects</h3>
@@ -37,45 +35,26 @@
         </div>
         <div class="bloom-control">
             <label>
-                Strength <span class="bloom-value" id="bloom-strength-value">0.8</span>
+                Strength <span class="bloom-value" id="bloom-strength-value">{{ config.bloom.strength }}</span>
             </label>
-            <input type="range" id="bloom-strength" min="0" max="3" step="0.1" value="0.8">
+            <input type="range" id="bloom-strength" min="0" max="3" step="0.1" value="{{ config.bloom.strength }}">
         </div>
         <div class="bloom-control">
             <label>
-                Radius <span class="bloom-value" id="bloom-radius-value">0.4</span>
+                Radius <span class="bloom-value" id="bloom-radius-value">{{ config.bloom.radius }}</span>
             </label>
-            <input type="range" id="bloom-radius" min="0" max="1" step="0.01" value="0.4">
+            <input type="range" id="bloom-radius" min="0" max="1" step="0.01" value="{{ config.bloom.radius }}">
         </div>
         <div class="bloom-control">
             <label>
-                Threshold <span class="bloom-value" id="bloom-threshold-value">0.5</span>
+                Threshold <span class="bloom-value" id="bloom-threshold-value">{{ config.bloom.threshold }}</span>
             </label>
-            <input type="range" id="bloom-threshold" min="0" max="1" step="0.01" value="0.5">
+            <input type="range" id="bloom-threshold" min="0" max="1" step="0.01" value="{{ config.bloom.threshold }}">
         </div>
     </div>
+    {% endif %}
 
-    <!-- Startup Modal -->
-    <div id="startup-modal">
-        <div class="startup-modal-content">
-            <div class="startup-header">
-                <div class="startup-hero">
-                    <img src="girl.jpeg" alt="Avatar" class="avatar-photo">
-                    <div class="startup-hero-text">
-                        <h1 class="startup-title">Hi! I'm John Doe</h1>
-                        <p class="startup-subtitle">Welcome to my 3D Portfolio</p>
-                    </div>
-                </div>
-            </div>
-            <div class="startup-body">
-                <div class="startup-description">
-                    <p><strong>I'm using this neat latent space visualization tool, check it out!</strong></p>
-                    <p>lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                </div>
-                <button class="startup-button" id="startup-explore">Start Exploring</button>
-            </div>
-        </div>
-    </div>
+    {% include 'startup_modal.html' %}
 
 
     <!-- THREE.js -->
@@ -94,11 +73,11 @@
     <script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.min.js"></script>
     
     <!-- Application Scripts -->
-    <script src="utils.js"></script>
-    <script src="links.js"></script>
-    <script src="article3D.js"></script>
-    <script src="search.js"></script>
-    <script src="userControls.js"></script>
-    <script src="main.js"></script>
+    <script src="{{ 'utils.js' | url }}"></script>
+    <script src="{{ 'links.js' | url }}"></script>
+    <script src="{{ 'article3D.js' | url }}"></script>
+    <script src="{{ 'search.js' | url }}"></script>
+    <script src="{{ 'userControls.js' | url }}"></script>
+    <script src="{{ 'main.js' | url }}"></script>
 </body>
 </html>
