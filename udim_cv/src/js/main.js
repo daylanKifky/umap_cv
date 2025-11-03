@@ -537,11 +537,6 @@ class ArticleVisualizer {
     }
     
     handleClick() {
-        if (this.articleManager.activeClearWinner) {
-            this.handleClearSearch();
-            return;
-        }
-
         // Update the raycaster
         this.raycaster.setFromCamera(this.mouse, this.camera);
 
@@ -572,6 +567,11 @@ class ArticleVisualizer {
                     return;
                 }
             }
+        }
+
+        if (this.articleManager.activeClearWinner) {
+            this.handleClearSearch();
+            return;
         }
         
         // Then check for sphere intersections
