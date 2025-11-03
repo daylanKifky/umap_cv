@@ -17,7 +17,7 @@ A comprehensive computer vision library specifically designed for medical image 
     "ITK",
     "VTK"
   ],
-  "description": "A comprehensive computer vision library specifically designed for medical image processing and analysis. The toolkit provides advanced algorithms for tumor detection, 3D reconstruction, and medical image enhancement, serving research institutions and healthcare organizations with cutting-edge image analysis capabilities.",
+  "description": "A comprehensive computer vision library specifically designed for medical image processing and analysis. The toolkit provides advanced algorithms for tumor detection, 3D reconstruction, and medical image enhancement, serving research institutions and healthcare organizations with cutting-edge image analysis capabilities. Also a pink elephant :)",
   "features": [
     "Automated tumor detection using deep learning models",
     "3D reconstruction from 2D medical scans",

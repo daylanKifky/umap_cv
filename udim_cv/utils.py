@@ -1,9 +1,11 @@
 import shutil
 import urllib.parse
 import os
+import json
+import hashlib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from typing import List, Union
+from typing import List, Union, Dict
 
 def standardize_embeddings(embeddings: np.ndarray) -> np.ndarray:
     """
@@ -239,3 +241,96 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
 
     # Return relative path from output folder
     return os.path.relpath(dest_path, output_folder)
+
+
+def calculate_article_checksum(article: dict, weights: dict) -> str:
+    """
+    Calculate checksum for an article based on fields that affect embeddings.
+    
+    Args:
+        article: Article dictionary
+        weights: Field weights dictionary
+        
+    Returns:
+        SHA256 checksum as hex string
+    """
+    # Only include fields with non-zero weights for checksum
+    relevant_fields = {k: article.get(k, '') for k, v in weights.items() if v > 0}
+    
+    # Sort fields for consistent checksum calculation
+    sorted_fields = sorted(relevant_fields.items())
+    
+    # Create a string representation of the relevant data
+    checksum_data = json.dumps(sorted_fields, sort_keys=True, ensure_ascii=False)
+    
+    # Calculate SHA256 hash
+    return hashlib.sha256(checksum_data.encode('utf-8')).hexdigest()
+
+
+def should_skip_regeneration(output_file: str, data_values: List[Dict], article_checksums: List[str], 
+                             methods: List[str], dimensions: List[int]) -> bool:
+    """
+    Check if output file exists and if checksums, methods, and dimensions match.
+    If everything matches, regeneration can be skipped.
+    
+    Args:
+        output_file: Path to output JSON file
+        data_values: List of article dictionaries
+        article_checksums: List of checksums for each article
+        methods: List of requested reduction methods
+        dimensions: List of requested dimensions
+        
+    Returns:
+        True if regeneration should be skipped, False otherwise
+    """
+    if not os.path.exists(output_file):
+        return False
+    
+    try:
+        with open(output_file, 'r') as f:
+            existing_data = json.load(f)
+        
+        # Check if we have the same number of articles
+        if 'articles' not in existing_data or len(existing_data['articles']) != len(data_values):
+            return False
+        
+        # Check if checksums match
+        checksums_match = True
+        for i, article in enumerate(existing_data['articles']):
+            existing_checksum = article.get('checksum', '')
+            if existing_checksum != article_checksums[i]:
+                checksums_match = False
+                break
+        
+        # Check if methods and dimensions match
+        existing_methods = set(existing_data.get('reduction_method', []))
+        requested_methods = set(methods)
+        methods_match = existing_methods == requested_methods
+        
+        # Check if all requested dimensions exist in existing data
+        dimensions_match = True
+        if len(existing_data['articles']) > 0:
+            for method in methods:
+                for dim in dimensions:
+                    key = f"{method}_{dim}d"
+                    if key not in existing_data['articles'][0]:
+                        dimensions_match = False
+                        break
+                if not dimensions_match:
+                    break
+        
+        if checksums_match and methods_match and dimensions_match:
+            print(f"Output file exists and checksums/methods/dimensions match. Skipping regeneration.")
+            return True
+        else:
+            if not checksums_match:
+                print(f"Output file exists but checksums differ. Regenerating...")
+            elif not methods_match:
+                print(f"Output file exists but methods differ. Regenerating...")
+            elif not dimensions_match:
+                print(f"Output file exists but dimensions differ. Regenerating...")
+            return False
+            
+    except (json.JSONDecodeError, KeyError) as e:
+        print(f"Error reading existing output file: {e}. Regenerating...")
+        return False

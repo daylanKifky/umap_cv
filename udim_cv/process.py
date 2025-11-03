@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
-from .utils import standardize_embeddings, relax_clusters
+from .utils import standardize_embeddings, relax_clusters, calculate_article_checksum, should_skip_regeneration
 from .load import load_markdown_files
 
 try:
@@ -185,23 +185,6 @@ class ArticleEmbeddingGenerator:
 
 
 def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False):
-    # Initialize the embedding generator
-    generator = ArticleEmbeddingGenerator()
-
-    html_output_folder = os.path.dirname(output_file)
-    if not os.path.exists(html_output_folder):
-        os.makedirs(html_output_folder)
-
-    # Load project data from markdown files
-    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation)
-
-    data_values = list(data.values())
-    ids = [i['id'] for i in data_values]
-    thumbnails = [i['thumbnail'] for i in data_values]
-    html_filepaths = [i.get('html_filepath', '') for i in data_values]
-
-    all_values = {}
-
     # Define weights for each field
     weights = {
         'title': 1,
@@ -214,6 +197,31 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         'difficulty': 0,
         'tags': 0
     }
+
+    html_output_folder = os.path.dirname(output_file)
+    if not os.path.exists(html_output_folder):
+        os.makedirs(html_output_folder)
+
+    # Load project data from markdown files
+    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation)
+
+    data_values = list(data.values())
+    
+    # Calculate checksums for all articles
+    article_checksums = [calculate_article_checksum(article, weights) for article in data_values]
+    
+    # Check if output file exists and if checksums match
+    if should_skip_regeneration(output_file, data_values, article_checksums, methods, dimensions):
+        return
+
+    # Initialize the embedding generator
+    generator = ArticleEmbeddingGenerator()
+
+    ids = [i['id'] for i in data_values]
+    thumbnails = [i['thumbnail'] for i in data_values]
+    html_filepaths = [i.get('html_filepath', '') for i in data_values]
+
+    all_values = {}
 
     # Generate embeddings only for fields with non-zero weights
     # Save all_values for later use
@@ -273,7 +281,8 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         article_entry = {
             "id": ids[i],
             "thumbnail": thumbnails[i],
-            "html_filepath": html_filepaths[i]
+            "html_filepath": html_filepaths[i],
+            "checksum": article_checksums[i]
         }
 
         for field, value in all_values.items():

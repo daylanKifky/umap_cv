@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import json
 import numpy as np
+import hashlib
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 class EmbeddingModel(str, Enum):
@@ -131,17 +132,57 @@ class QueryEmbedder:
 
 cross_encoder = None
 cache = {}
+
+def calculate_field_checksum(data: Dict, i: int, j: int, fields: List) -> str:
+    """
+    Calculate checksum for cross similarity calculation based on field values.
+    
+    Args:
+        data: Data dictionary
+        i: First article index
+        j: Second article index
+        fields: List of fields to include in checksum
+        
+    Returns:
+        SHA256 checksum as hex string
+    """
+    # Collect field values for both articles
+    field_values = []
+    for field in fields:
+        field_i = data[i].get(field, '')
+        field_j = data[j].get(field, '')
+        
+        # Normalize lists to strings for consistent checksum
+        if isinstance(field_i, list):
+            field_i = ' '.join(sorted(field_i)) if field_i else ''
+        if isinstance(field_j, list):
+            field_j = ' '.join(sorted(field_j)) if field_j else ''
+        
+        # Include field name and both values
+        field_values.append((field, str(field_i), str(field_j)))
+    
+    # Sort fields for consistent checksum
+    field_values.sort()
+    
+    # Create a string representation
+    checksum_data = json.dumps(field_values, sort_keys=True, ensure_ascii=False)
+    
+    # Calculate SHA256 hash
+    return hashlib.sha256(checksum_data.encode('utf-8')).hexdigest()
+
 def calculate_cross_similarity(data: Dict, i: int, j: int, fields: List) -> Dict:
     global cross_encoder
     if cross_encoder is None:
         cross_encoder = CrossEncoder(CROSS_ENCODER_MODEL)
 
-    cache_key = f"{i}_{j}"
-    if cache_key in cache:
-        return cache[cache_key]
+    # Calculate checksum based on field values
+    checksum = calculate_field_checksum(data, i, j, fields)
+    
+    if checksum in cache:
+        return cache[checksum]
     else:
-        cache[cache_key] = calculate_cross_similarity_internal(data, i, j, fields)
-        return cache[cache_key]
+        cache[checksum] = calculate_cross_similarity_internal(data, i, j, fields)
+        return cache[checksum]
 
 def calculate_cross_similarity_internal(data: Dict, i: int, j: int, fields: List) -> Dict:
     field_similarities = {}
