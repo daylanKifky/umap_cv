@@ -178,7 +178,7 @@ class ArticleVisualizer {
     
     async loadArticles() {
         try {
-            const response = await fetch('embeddings.json');
+            const response = await fetch(EMBEDDINGS_FILE);
             const data = await response.json();
 
             if (!data.reduction_method.includes(REDUCTION_METHOD)) {

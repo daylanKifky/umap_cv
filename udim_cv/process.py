@@ -12,7 +12,7 @@ from typing import List, Tuple
 
 from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
-from .utils import standardize_embeddings, relax_clusters, calculate_article_checksum, should_skip_regeneration
+from .utils import standardize_embeddings, relax_clusters, calculate_article_checksum, calculate_combined_checksum, should_skip_regeneration
 from .load import load_markdown_files
 
 try:
@@ -184,7 +184,7 @@ class ArticleEmbeddingGenerator:
         return reduced_embeddings, reducer
 
 
-def main(input_folder: str, output_file: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False, base_url: str = ""):
+def main(input_folder: str, output_folder: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False, base_url: str = "") -> str:
     # Define weights for each field
     weights = {
         'title': 1,
@@ -198,21 +198,24 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
         'tags': 0
     }
 
-    html_output_folder = os.path.dirname(output_file)
-    if not os.path.exists(html_output_folder):
-        os.makedirs(html_output_folder)
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
 
     # Load project data from markdown files
-    data = load_markdown_files(input_folder, html_output_folder, skip_confirmation, base_url)
+    data = load_markdown_files(input_folder, output_folder, skip_confirmation, base_url)
 
     data_values = list(data.values())
     
     # Calculate checksums for all articles
     article_checksums = [calculate_article_checksum(article, weights) for article in data_values]
     
+    # Calculate combined checksum for filename
+    combined_checksum = calculate_combined_checksum(article_checksums)
+    embeddings_filename = f"embeddings_{combined_checksum}.json"
+    
     # Check if output file exists and if checksums match
-    if should_skip_regeneration(output_file, data_values, article_checksums, methods, dimensions):
-        return
+    if should_skip_regeneration(output_folder, embeddings_filename, data_values, article_checksums, methods, dimensions):
+        return embeddings_filename
 
     # Initialize the embedding generator
     generator = ArticleEmbeddingGenerator()
@@ -356,8 +359,12 @@ def main(input_folder: str, output_file: str, methods: List[str], dimensions: Li
             embedding_data[f"{method}_links"] = links
 
     # Save embeddings in the structured format
+    output_file = os.path.join(output_folder, embeddings_filename)
     with open(output_file, 'w') as f:
         json.dump(embedding_data, f, indent=2)
+    
+    print(f"Saved embeddings to: {output_file}")
+    return embeddings_filename
 
 
 def _run():
@@ -366,7 +373,7 @@ def _run():
 
     parser = argparse.ArgumentParser(description='Generate embeddings and dimensionality reductions for project data')
     parser.add_argument('--input', '-i', type=str, required=True, help='Input folder containing markdown files with project data')
-    parser.add_argument('--output', '-o', type=str, required=True, help='Output file path for embeddings')
+    parser.add_argument('--output', '-o', type=str, required=True, help='Output folder path for embeddings')
     parser.add_argument('--model', '-m', type=str, default=DEFAULT_EMBEDDING_MODEL, help='Name of the embedding model')
     parser.add_argument('--methods', type=str, nargs='+', choices=['pca', 'tsne', 'umap'], default=['pca'], 
                        help='Dimensionality reduction methods to use')

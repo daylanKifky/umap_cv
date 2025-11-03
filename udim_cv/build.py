@@ -8,8 +8,9 @@ import shutil
 import argparse
 import re
 import os
+import hashlib
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 try:
     import tomllib
@@ -46,6 +47,61 @@ def load_config(config_path: Path) -> Dict[str, Any]:
         return tomllib.load(f)
 
 
+def calculate_assets_version_hash(src_dir: Path, public_dir: Path, 
+                                   config: Dict[str, Any], 
+                                   embeddings_file: Optional[str] = None) -> str:
+    """
+    Calculate a version hash from all JS and CSS files.
+    This hash will be used as a query parameter for cache-busting.
+    
+    Args:
+        src_dir: Source directory (udim_cv/src)
+        public_dir: Output directory (udim_cv/public) where files are copied
+        config: Configuration dictionary
+        embeddings_file: Optional embeddings filename
+        
+    Returns:
+        Version hash string (first 8 characters)
+    """
+    # Collect all file contents that affect the build
+    file_contents = []
+    
+    # Collect JS files
+    js_src = src_dir / 'js'
+    if js_src.exists():
+        js_files = sorted(js_src.glob('*.js'))
+        for js_file in js_files:
+            if js_file.name == 'conf.js':
+                # For conf.js, use the processed content
+                js_conf = config.get('js-conf', {})
+                style_config = config.get('style', {})
+                font_cards = style_config.get('font-cards', 'Space Grotesk')
+                content = process_conf_js(js_file, js_conf, font_cards, embeddings_file)
+                file_contents.append(f"{js_file.name}:{content}")
+            else:
+                content = js_file.read_bytes()
+                file_contents.append(f"{js_file.name}:{content}")
+    
+    # Collect CSS files
+    css_src = src_dir / 'css'
+    if css_src.exists():
+        css_files = sorted(css_src.glob('*.css'))
+        style_config = config.get('style', {})
+        font_general = style_config.get('font-general', 'Noto Sans')
+        font_cards = style_config.get('font-cards', 'Space Grotesk')
+        for css_file in css_files:
+            # Use processed CSS content
+            content = process_css_file(css_file, font_general, font_cards)
+            file_contents.append(f"{css_file.name}:{content}")
+    
+    # Combine all contents and calculate hash
+    combined = '\n'.join(file_contents)
+    full_hash = hashlib.sha256(combined.encode('utf-8')).hexdigest()
+    
+    # Return first 8 characters for shorter query string
+    return full_hash[:8]
+
+
 def normalize_base_url(base_url: str) -> str:
     """
     Normalize base_url to ensure consistent format.
@@ -72,7 +128,8 @@ def normalize_base_url(base_url: str) -> str:
     return base_url
 
 
-def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
+def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any], 
+                    assets_version: Optional[str] = None):
     """
     Render Jinja2 templates from src/templates/ to public/.
     
@@ -80,6 +137,7 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
         src_dir: Source directory (udim_cv/src)
         public_dir: Output directory (udim_cv/public)
         config: Configuration dictionary
+        assets_version: Optional version hash for cache-busting JS/CSS files
         
     Returns:
         Jinja2 environment for reuse
@@ -103,9 +161,20 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
         autoescape=jinja2.select_autoescape(['html', 'xml'])
     )
     
-    # Add filter to prepend base_url to paths
+    # Add filter to prepend base_url and append version hash to JS/CSS files
     def url_filter(path: str) -> str:
-        """Prepend base_url to a path if base_url is set."""
+        """Prepend base_url to a path and append version hash for JS/CSS files."""
+        # Check if this is a JS or CSS file that should get cache-busting
+        is_js_or_css = path.endswith('.js') or path.endswith('.css')
+        
+        # Append version hash as query parameter for JS/CSS files
+        if is_js_or_css and assets_version:
+            # Check if path already has a query string
+            if '?' in path:
+                path = f"{path}&v={assets_version}"
+            else:
+                path = f"{path}?v={assets_version}"
+        
         if not base_url:
             return path
         # Remove leading slash from path if it exists (we'll add base_url which ends with /)
@@ -177,7 +246,7 @@ def process_css_file(css_path: Path, font_general: str, font_cards: str) -> str:
     return content
 
 
-def process_conf_js(conf_js_path: Path, js_conf: Dict[str, Any], font_cards: str = None) -> str:
+def process_conf_js(conf_js_path: Path, js_conf: Dict[str, Any], font_cards: str = None, embeddings_file: str = None) -> str:
     """
     Process conf.js file and replace constants with values from js_conf.
     
@@ -200,6 +269,14 @@ def process_conf_js(conf_js_path: Path, js_conf: Dict[str, Any], font_cards: str
         if re.search(pattern, content):
             content = re.sub(pattern, replacement, content)
             print(f"  ↻ Override FONT_NAME = \"{font_cards}\"")
+    
+    # Apply embeddings_file to EMBEDDINGS_FILE if provided
+    if embeddings_file:
+        pattern = r'const\s+EMBEDDINGS_FILE\s*=\s*[^;]+;'
+        replacement = f'const EMBEDDINGS_FILE = "{embeddings_file}";'
+        if re.search(pattern, content):
+            content = re.sub(pattern, replacement, content)
+            print(f"  ↻ Override EMBEDDINGS_FILE = \"{embeddings_file}\"")
     
     if not js_conf:
         return content
@@ -256,22 +333,23 @@ def process_conf_js(conf_js_path: Path, js_conf: Dict[str, Any], font_cards: str
     return content
 
 
-def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
+def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any], embeddings_file: str = None) -> Optional[str]:
     """
-    Copy all source files from src/ to public/ and render templates.
+    Copy all source files from src/ to public/.
     
     Args:
         src_dir: Source directory (udim_cv/src)
         public_dir: Output directory (udim_cv/public)
         config: Configuration dictionary
+        embeddings_file: Optional embeddings filename
+        
+    Returns:
+        Version hash string for cache-busting, or None
     """
     print("🏗️  Building static site...")
     
     # Ensure public directory exists
     public_dir.mkdir(exist_ok=True)
-    
-    # 1. Render HTML templates
-    render_templates(src_dir, public_dir, config)
     
     # 2. Copy JavaScript files
     print("📜 Copying JavaScript files...")
@@ -291,9 +369,9 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
                 
                 # Special handling for conf.js - apply overrides
                 if js_file.name == 'conf.js':
-                    if js_conf or font_cards:
+                    if js_conf or font_cards or embeddings_file:
                         print(f"  🔧 Processing {js_file.name} with config overrides...")
-                        processed_content = process_conf_js(js_file, js_conf, font_cards)
+                        processed_content = process_conf_js(js_file, js_conf, font_cards, embeddings_file)
                         output_path.write_text(processed_content, encoding='utf-8')
                         print(f"  ✓ {js_file.name}")
                     else:
@@ -343,7 +421,13 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     else:
         print(f"  ⚠ Warning: {assets_src} not found")
     
+    # Calculate version hash after copying all files
+    print("🔢 Calculating assets version hash...")
+    assets_version = calculate_assets_version_hash(src_dir, public_dir, config, embeddings_file)
+    print(f"  ✓ Assets version: {assets_version}")
+    
     print("✅ Source files copied\n")
+    return assets_version
 
 
 def apply_base_url(path: str, base_url: str) -> str:
@@ -369,7 +453,7 @@ def apply_base_url(path: str, base_url: str) -> str:
     return base_url + path
 
 
-def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any], input_folder: str, base_url: str):
+def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any], input_folder: str, base_url: str, assets_version: Optional[str] = None):
     """
     Render article HTML pages using the single.html template.
     
@@ -379,6 +463,7 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         config: Configuration dictionary
         input_folder: Path to folder containing markdown files
         base_url: Base URL for paths
+        assets_version: Optional version hash for cache-busting JS/CSS files
     """
     print("📝 Rendering article pages...")
     
@@ -399,9 +484,20 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         autoescape=jinja2.select_autoescape(['html', 'xml'])
     )
     
-    # Add filter to prepend base_url to paths
+    # Add filter to prepend base_url and append version hash to JS/CSS files
     def url_filter(path: str) -> str:
-        """Prepend base_url to a path if base_url is set."""
+        """Prepend base_url to a path and append version hash for JS/CSS files."""
+        # Check if this is a JS or CSS file that should get cache-busting
+        is_js_or_css = path.endswith('.js') or path.endswith('.css')
+        
+        # Append version hash as query parameter for JS/CSS files
+        if is_js_or_css and assets_version:
+            # Check if path already has a query string
+            if '?' in path:
+                path = f"{path}&v={assets_version}"
+            else:
+                path = f"{path}?v={assets_version}"
+        
         if not base_url:
             return path
         path = path.lstrip('/')
@@ -536,38 +632,61 @@ def build(
     font_cards = config['style'].get('font-cards', 'Space Grotesk')
     config['style']['google_fonts_url'] = build_google_fonts_url(font_general, font_cards)
     
-    # Step 1: Copy source files and render templates
-    copy_source_files(src_dir, output_path, config)
+    # Step 1: Copy source files (without embeddings_file initially)
+    assets_version = copy_source_files(src_dir, output_path, config, embeddings_file=None)
     
     # Step 2: Run processing pipeline (if not copy_only)
+    embeddings_filename = None
     if not copy_only:
         print("🔄 Running processing pipeline...")
-        embeddings_file = str(output_path / 'embeddings.json')
         
         try:
-            process_main(
+            embeddings_filename = process_main(
                 input_folder=input_folder,
-                output_file=embeddings_file,
+                output_folder=str(output_path),
                 methods=methods,
                 dimensions=dimensions,
                 skip_confirmation=skip_confirmation,
                 base_url=base_url
             )
             
-            # Step 3: Render article pages using single.html template
-            render_article_pages(src_dir, output_path, config, input_folder, base_url)
+            # Update conf.js with the embeddings filename
+            if embeddings_filename:
+                js_src = src_dir / 'js'
+                conf_js_path = js_src / 'conf.js'
+                if conf_js_path.exists():
+                    print("📝 Updating conf.js with embeddings filename...")
+                    js_conf = config.get('js-conf', {})
+                    style_config = config.get('style', {})
+                    font_cards = style_config.get('font-cards', 'Space Grotesk')
+                    processed_content = process_conf_js(conf_js_path, js_conf, font_cards, embeddings_filename)
+                    (output_path / 'conf.js').write_text(processed_content, encoding='utf-8')
+                    print(f"  ✓ Updated conf.js with EMBEDDINGS_FILE = \"{embeddings_filename}\"")
+                    
+                    # Recalculate assets version since conf.js changed
+                    assets_version = calculate_assets_version_hash(src_dir, output_path, config, embeddings_filename)
+                    print(f"  ↻ Recalculated assets version: {assets_version}")
+            
+            # Step 3: Render HTML templates with assets version
+            render_templates(src_dir, output_path, config, assets_version)
+            
+            # Step 4: Render article pages using single.html template
+            render_article_pages(src_dir, output_path, config, input_folder, base_url, assets_version)
             
             print("\n✅ Build complete!")
             print(f"📦 Output directory: {output_path}")
-            print(f"📊 Embeddings file: {embeddings_file}")
+            if embeddings_filename:
+                print(f"📊 Embeddings file: {embeddings_filename}")
         except Exception as e:
             print(f"\n❌ Error during processing: {e}")
             raise
     else:
+        # Render templates even in copy-only mode (for assets version)
+        render_templates(src_dir, output_path, config, assets_version)
         print("✅ Build complete (source files only)")
         print(f"📦 Output directory: {output_path}")
         print("\n💡 To generate embeddings, run:")
-        print(f"   python -m udim_cv.process -i {input_folder} -o {output_path}/embeddings.json --methods {' '.join(methods)} --dimensions {' '.join(map(str, dimensions))} -s")
+        print(f"   python -m udim_cv.process -i {input_folder} -o {output_path} --methods {' '.join(methods)} --dimensions {' '.join(map(str, dimensions))} -s")
 
 
 def _run():

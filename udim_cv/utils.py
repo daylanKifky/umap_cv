@@ -267,14 +267,39 @@ def calculate_article_checksum(article: dict, weights: dict) -> str:
     return hashlib.sha256(checksum_data.encode('utf-8')).hexdigest()
 
 
-def should_skip_regeneration(output_file: str, data_values: List[Dict], article_checksums: List[str], 
+def calculate_combined_checksum(article_checksums: List[str]) -> str:
+    """
+    Calculate a combined checksum from all article checksums.
+    This is used to generate a unique filename for the embeddings file.
+    
+    Args:
+        article_checksums: List of checksums for each article
+        
+    Returns:
+        SHA256 checksum as hex string (first 16 characters for filename)
+    """
+    # Sort checksums for consistent ordering
+    sorted_checksums = sorted(article_checksums)
+    
+    # Combine all checksums into a single string
+    combined = json.dumps(sorted_checksums, sort_keys=True)
+    
+    # Calculate SHA256 hash
+    full_hash = hashlib.sha256(combined.encode('utf-8')).hexdigest()
+    
+    # Return first 16 characters for shorter filename
+    return full_hash[:16]
+
+
+def should_skip_regeneration(output_folder: str, embeddings_filename: str, data_values: List[Dict], article_checksums: List[str], 
                              methods: List[str], dimensions: List[int]) -> bool:
     """
     Check if output file exists and if checksums, methods, and dimensions match.
     If everything matches, regeneration can be skipped.
     
     Args:
-        output_file: Path to output JSON file
+        output_folder: Path to output folder
+        embeddings_filename: Name of the embeddings JSON file
         data_values: List of article dictionaries
         article_checksums: List of checksums for each article
         methods: List of requested reduction methods
@@ -283,6 +308,7 @@ def should_skip_regeneration(output_file: str, data_values: List[Dict], article_
     Returns:
         True if regeneration should be skipped, False otherwise
     """
+    output_file = os.path.join(output_folder, embeddings_filename)
     if not os.path.exists(output_file):
         return False
     
