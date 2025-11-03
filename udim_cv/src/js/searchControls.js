@@ -12,6 +12,7 @@ class SearchControls {
         this.navbar = null;
         this.searchOverlay = null;
         this.articleOverlay = null;
+        this.navbarOverlay = null;
         this.searchInput = null;
         this.searchIcon = null;
         this.suggestionsContainer = null;
@@ -19,6 +20,9 @@ class SearchControls {
         this.searchManager = null;
         this.converter = null;
         this.searchTimeout = null;
+        this.searchButton = null;
+        this.originalIconHTML = null;
+        this.navbarOverlayCloseButton = null;
         
         this.init();
     }
@@ -38,6 +42,7 @@ class SearchControls {
         
         this.createSearchOverlay();
         this.createArticleOverlay();
+        this.createNavbarOverlay();
         this.createSuggestionsContainer();
         this.attachEventListeners();
     }
@@ -93,7 +98,7 @@ class SearchControls {
     }
     
     /**
-     * Create the search overlay element that will expand to cover the navbar-glass.
+     * Create the search overlay element that will position below the navbar.
      */
     createSearchOverlay() {
         const overlay = document.createElement('div');
@@ -116,9 +121,41 @@ class SearchControls {
         overlay.appendChild(input);
         overlay.appendChild(iconDiv);
         
-        // Insert the overlay into the navbar
-        this.navbar.appendChild(overlay);
+        // Insert after the navbar (not inside it)
+        if (this.navbar && this.navbar.parentNode) {
+            this.navbar.parentNode.insertBefore(overlay, this.navbar.nextSibling);
+        }
+        
         this.searchOverlay = overlay;
+    }
+    
+    /**
+     * Create a navbar overlay to dim navbar elements when search is open.
+     */
+    createNavbarOverlay() {
+        const overlay = document.createElement('div');
+        overlay.className = 'navbar-overlay';
+        
+        // Create close button and position it where search icon was
+        const closeButton = document.createElement('button');
+        closeButton.className = 'navbar-overlay-close';
+        closeButton.innerHTML = this.getCloseSVG();
+        closeButton.setAttribute('aria-label', 'Close search');
+        
+        closeButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.closeSearch();
+        });
+        
+        overlay.appendChild(closeButton);
+        
+        // Insert into navbar
+        if (this.navbar) {
+            this.navbar.appendChild(overlay);
+        }
+        
+        this.navbarOverlay = overlay;
+        this.navbarOverlayCloseButton = closeButton;
     }
     
     /**
@@ -129,15 +166,19 @@ class SearchControls {
         container.className = 'search-suggestions';
         container.style.display = 'none';
         
-        // Calculate navbar height and set CSS variable
+        // Calculate navbar height and search overlay height, set CSS variables
         if (this.navbar) {
             const navbarHeight = this.navbar.offsetHeight;
             document.documentElement.style.setProperty('--navbar-height', `${navbarHeight}px`);
+            
+            // Calculate search overlay height (approximate)
+            const searchOverlayHeight = 60; // Approximate height when open
+            document.documentElement.style.setProperty('--search-overlay-height', `${searchOverlayHeight}px`);
         }
         
-        // Append to navbar so it positions relative to it
-        if (this.navbar) {
-            this.navbar.appendChild(container);
+        // Insert after the navbar (not inside it)
+        if (this.navbar && this.navbar.parentNode) {
+            this.navbar.parentNode.insertBefore(container, this.navbar.nextSibling);
         }
         
         this.suggestionsContainer = container;
@@ -165,6 +206,16 @@ class SearchControls {
     attachEventListeners() {
         // Search button click handler
         const searchBtn = document.getElementById('navbar-search');
+        this.searchButton = searchBtn;
+        
+        // Store original icon HTML
+        if (searchBtn) {
+            const icon = searchBtn.querySelector('.navbar-search-icon');
+            if (icon) {
+                this.originalIconHTML = icon.innerHTML;
+            }
+        }
+        
         if (searchBtn) {
             searchBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -199,7 +250,8 @@ class SearchControls {
         document.addEventListener('click', (e) => {
             if (this.searchOpen && 
                 !this.searchOverlay.contains(e.target) && 
-                !document.getElementById('navbar-search')?.contains(e.target)) {
+                !this.searchButton?.contains(e.target) &&
+                !this.suggestionsContainer?.contains(e.target)) {
                 this.closeSearch();
             }
         });
@@ -217,7 +269,7 @@ class SearchControls {
     }
     
     /**
-     * Open the search overlay, hide navbar content, and show article overlay.
+     * Open the search overlay, show navbar overlay, and update button icon.
      */
     openSearch() {
         this.searchOpen = true;
@@ -225,20 +277,37 @@ class SearchControls {
         // Add open class to search overlay
         if (this.searchOverlay) {
             this.searchOverlay.classList.add('open');
+            
+            // Calculate actual height after opening
+            setTimeout(() => {
+                if (this.searchOverlay) {
+                    const actualHeight = this.searchOverlay.offsetHeight;
+                    document.documentElement.style.setProperty('--search-overlay-height', `${actualHeight}px`);
+                }
+            }, 300); // Wait for transition to complete
         }
         
-        // Hide navbar content (title and social links)
+        // Show navbar overlay to dim navbar elements
+        if (this.navbarOverlay) {
+            this.navbarOverlay.classList.add('active');
+        }
+        
+        // Disable pointer events on navbar elements
         const navbarTitle = this.navbar.querySelector('.navbar-title');
         const navbarSocial = this.navbar.querySelector('.navbar-social');
         
         if (navbarTitle) {
-            navbarTitle.style.opacity = '0';
             navbarTitle.style.pointerEvents = 'none';
         }
         
         if (navbarSocial) {
-            navbarSocial.style.opacity = '0';
             navbarSocial.style.pointerEvents = 'none';
+        }
+        
+        // Hide search button (close button in overlay will be visible)
+        if (this.searchButton) {
+            this.searchButton.style.opacity = '0';
+            this.searchButton.style.pointerEvents = 'none';
         }
         
         // Show article overlay
@@ -295,7 +364,7 @@ class SearchControls {
         // Show top 5 results
         const topResults = results.slice(0, 5);
         this.renderSuggestions(topResults);
-        this.suggestionsContainer.style.display = 'block';
+        this.suggestionsContainer.style.display = 'flex';
     }
     
     /**
@@ -392,7 +461,7 @@ class SearchControls {
     }
     
     /**
-     * Close the search overlay, restore navbar content, and hide article overlay.
+     * Close the search overlay, hide navbar overlay, and restore button icon.
      */
     closeSearch() {
         this.searchOpen = false;
@@ -402,18 +471,27 @@ class SearchControls {
             this.searchOverlay.classList.remove('open');
         }
         
-        // Restore navbar content
+        // Hide navbar overlay
+        if (this.navbarOverlay) {
+            this.navbarOverlay.classList.remove('active');
+        }
+        
+        // Re-enable pointer events on navbar elements
         const navbarTitle = this.navbar.querySelector('.navbar-title');
         const navbarSocial = this.navbar.querySelector('.navbar-social');
         
         if (navbarTitle) {
-            navbarTitle.style.opacity = '1';
             navbarTitle.style.pointerEvents = 'auto';
         }
         
         if (navbarSocial) {
-            navbarSocial.style.opacity = '1';
             navbarSocial.style.pointerEvents = 'auto';
+        }
+        
+        // Restore search button visibility
+        if (this.searchButton) {
+            this.searchButton.style.opacity = '1';
+            this.searchButton.style.pointerEvents = 'auto';
         }
         
         // Hide article overlay
@@ -464,9 +542,21 @@ class SearchControls {
      */
     getSearchSVG() {
         return `
-            <svg viewBox="120 223 10 10" class="fab-icon">
+            <svg viewBox="120 223 10 10" class="navbar-search-icon">
                 <circle class="fab-icon-stroke" cx="126.08" cy="227.03" r="2.83" />
                 <path class="fab-icon-stroke" d="m 123.96732,229.32748 -3.06064,3.06064" />
+            </svg>
+        `;
+    }
+    
+    /**
+     * Get the close SVG icon markup.
+     */
+    getCloseSVG() {
+        return `
+            <svg viewBox="120 223 10 10" class="navbar-overlay-close-icon">
+                <path class="fab-icon-stroke" d="m 122.5,225 5,5" />
+                <path class="fab-icon-stroke" d="m 127.5,225 -5,5" />
             </svg>
         `;
     }
