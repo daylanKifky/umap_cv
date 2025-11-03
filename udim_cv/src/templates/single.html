@@ -57,9 +57,18 @@
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
     
+    <!-- MiniSearch -->
+    <script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.min.js"></script>
+    
     <!-- Application Scripts -->
     <script src="{{ 'conf.js' | url }}"></script>
     <script src="{{ 'utils.js' | url }}"></script>
+    <script src="{{ 'search.js' | url }}"></script>
+    <script src="{{ 'searchControls.js' | url }}"></script>
     <script src="{{ 'single.js' | url }}"></script>
+    <script>
+        // Initialize SearchControls
+        window.searchControls = new SearchControls();
+    </script>
 </body>
 </html>
