@@ -1,7 +1,8 @@
 // Reduction method constant
 const REDUCTION_METHOD = 'pca';
 const SHOW_AXES = false;
-const FXAA_RESOLUTION = 0.7;  
+const FXAA_RESOLUTION = 0.7;
+const SHOW_THREE_STATS = false;  
 
 // Startup Modal Functions
 function setupStartupModal() {
@@ -84,6 +85,13 @@ class ArticleVisualizer {
         this.touchStartY = 0;
         this.touchMoved = false;
         
+        // On-demand rendering flag
+        this._render_required = false;
+        this._cameraAnimationActive = false;
+        
+        // Stats for performance monitoring
+        this.stats = null;
+        
         this.init();
         this.setupBloom();
         this.setupBloomControls();
@@ -128,6 +136,11 @@ class ArticleVisualizer {
         this.orbit_controls.maxDistance = 200;
         this.orbit_controls.minPolarAngle = degToRad(30);
         this.orbit_controls.maxPolarAngle = degToRad(180-30);
+        
+        // Subscribe to orbit controls change event for on-demand rendering
+        this.orbit_controls.addEventListener('change', () => {
+            this._render_required = true;
+        });
 
         window.getTHREE = () => { return {
             camera: this.camera, 
@@ -140,6 +153,13 @@ class ArticleVisualizer {
         if (SHOW_AXES) {
             const axesHelper = new THREE.AxesHelper(10);
             this.scene.add(axesHelper);
+        }
+
+        // Initialize Stats
+        if (SHOW_THREE_STATS && typeof Stats !== 'undefined') {
+            this.stats = new Stats();
+            this.stats.showPanel(0); // 0: fps, 1: ms, 2: mb
+            document.body.appendChild(this.stats.dom);
         }
 
         // Handle window resize
@@ -156,11 +176,6 @@ class ArticleVisualizer {
         // Handle mouse move for hover effects
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
        
-        // Initialize Article manager (will receive links later)
-        this.articleManager = null;
-        
-        // Start render loop
-        this.animate();
     }
     
     async loadArticles() {
@@ -180,6 +195,9 @@ class ArticleVisualizer {
             await this.articleManager.createArticleObjects();
 
             this.cameraOptimalPosition();
+            
+            // Mark scene as updated after creating objects (initial render needed)
+            this._render_required = true;
             
             const centroid = new THREE.Vector3(0, 0, 0);
             const startupModal = document.getElementById('startup-modal');
@@ -202,6 +220,8 @@ class ArticleVisualizer {
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
                 this.articleManager.handleSearch(event.detail.results);
+                // Mark scene as updated after search (object appearances change)
+                this._render_required = true;
                 
                 this.animateCamera(event.detail.results);
             });
@@ -214,12 +234,17 @@ class ArticleVisualizer {
             console.error('Error loading articles:', error);
             document.getElementById('loading').textContent = 'Error loading articles';
         }
+
+        // Start render loop
+        this.animate();
     }
 
     handleClearSearch() {
         this.userControls.searchHistory = [];
         this.userControls.pause();
         this.articleManager.handleClearSearch();
+        // Mark scene as updated after clearing search (object appearances change)
+        this._render_required = true;
         this.cameraZoomOut();
     }
 
@@ -290,7 +315,9 @@ class ArticleVisualizer {
         const radialEndXZ = new THREE.Spherical().setFromVector3(endXZ);
                 
         let startTime = null;
-
+        
+        // Mark camera animation as active
+        this._cameraAnimationActive = true;
 
         const animation = (time) => {
             if (!startTime) startTime = time;
@@ -314,12 +341,18 @@ class ArticleVisualizer {
                         
             this.orbit_controls.update();
             
+            // Mark scene as updated during animation
+            this._render_required = true;
+            
             if (t < 1) {
                 requestAnimationFrame(animation);
             } else {
                 console.log("Animate complete camera position: ", endPos.x, endPos.y, endPos.z);
 
                 this.orbit_controls.enabled = !this.articleManager.activeClearWinner;
+                this._cameraAnimationActive = false;
+                // Mark scene as updated one final time
+                this._render_required = true;
             }
         }
         requestAnimationFrame(animation);
@@ -371,6 +404,7 @@ class ArticleVisualizer {
         // Enable/disable bloom
         enabledCheckbox.addEventListener('change', (e) => {
             this.bloomEnabled = e.target.checked;
+            this._render_required = true;
         });
         
         // Strength control
@@ -378,6 +412,7 @@ class ArticleVisualizer {
             const value = parseFloat(e.target.value);
             this.bloomPass.strength = value;
             strengthValue.textContent = value.toFixed(1);
+            this._render_required = true;
         });
         
         // Radius control
@@ -385,6 +420,7 @@ class ArticleVisualizer {
             const value = parseFloat(e.target.value);
             this.bloomPass.radius = value;
             radiusValue.textContent = value.toFixed(2);
+            this._render_required = true;
         });
         
         // Threshold control
@@ -392,11 +428,20 @@ class ArticleVisualizer {
             const value = parseFloat(e.target.value);
             this.bloomPass.threshold = value;
             thresholdValue.textContent = value.toFixed(2);
+            this._render_required = true;
         });
     }
     
     animate() {
         requestAnimationFrame(() => this.animate());
+        
+        this._render_required = this._render_required || this.articleManager.animation.active;
+        console.log("Scene updated: ", this._render_required);
+
+        // Begin stats measurement
+        if (this.stats) {
+            this.stats.begin();
+        }
         
         // Update controls
         if (this.orbit_controls.enabled) {
@@ -404,15 +449,23 @@ class ArticleVisualizer {
         }
         
         // Update article manager (labels face camera)
-        if (this.articleManager) {
-            this.articleManager.update();
+        this.articleManager.update();
+        
+        // Render only if scene was updated
+        if (this._render_required) {
+            // Render with or without bloom
+            if (this.bloomEnabled && this.composer) {
+                this.composer.render();
+            } else {
+                this.renderer.render(this.scene, this.camera);
+            }
+            // Reset flag after rendering
+            this._render_required = false;
         }
         
-        // Render with or without bloom
-        if (this.bloomEnabled && this.composer) {
-            this.composer.render();
-        } else {
-            this.renderer.render(this.scene, this.camera);
+        // End stats measurement
+        if (this.stats) {
+            this.stats.end();
         }
     }
     
@@ -438,6 +491,9 @@ class ArticleVisualizer {
                     });
             }
         }
+        
+        // Mark scene as updated after resize
+        this._render_required = true;
     }
     
     onMouseClick(event) {
@@ -623,6 +679,8 @@ class ArticleVisualizer {
                 // Update links with ad-hoc map to highlight hovered entity's connections
                 this.articleManager.hoverEntityMap = hoverEntityMap;
                 this.articleManager.updateLinks(hoverEntityMap);
+                // Mark scene as updated after link changes
+                this._render_required = true;
             }
         } else {
             if (this.hoveredObject) {
@@ -631,6 +689,8 @@ class ArticleVisualizer {
                 this.articleManager.hoverEntityMap = null;
                 // Restore original links when hover is cleared
                 this.articleManager.updateLinks();
+                // Mark scene as updated after link changes
+                this._render_required = true;
             }
         }
     }
@@ -663,6 +723,9 @@ class ArticleVisualizer {
             object.material.opacity = 1.0;
             object.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
         }
+        
+        // Mark scene as updated after hover state change
+        this._render_required = true;
     }
     
     clearHover(object) {
@@ -696,6 +759,9 @@ class ArticleVisualizer {
                 object.scale.setScalar(object.userData.prev_scale);
             }
         }
+        
+        // Mark scene as updated after hover state change
+        this._render_required = true;
     }
 }
 
