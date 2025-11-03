@@ -8,7 +8,7 @@
     <title>Latent Space Visualization</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+    <link href="{{ config.style.google_fonts_url }}" rel="stylesheet">
     <link rel="stylesheet" href="{{ 'style.css' | url }}">
 
     <meta property="og:title" content="Latent Space Visualization">
@@ -73,6 +73,7 @@
     <script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.min.js"></script>
     
     <!-- Application Scripts -->
+    <script src="{{ 'conf.js' | url }}"></script>
     <script src="{{ 'utils.js' | url }}"></script>
     <script src="{{ 'links.js' | url }}"></script>
     <script src="{{ 'article3D.js' | url }}"></script>

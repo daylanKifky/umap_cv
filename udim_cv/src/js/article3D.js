@@ -1,23 +1,3 @@
-// Typeface used when drawing text on card canvas textures
-const FONT_NAME = "Space Grotesk";
-// Cards in "active" mode scale relative to the window size (0-1)
-const CARD_WINDOW_SCALE = 0.5 // Cards are scaled to this factor of the window size
-const CARD_BOTTOM_PADDING = 0.2;
-
-// Text for the "see more" button in the padded area
-const SEE_MORE_TEXT = "see more";
-
-// Enable to visualize geometry bounds and pivot offsets for debugging
-const DEBUG_CARD_CORNER = false;
-
-// Configure a virtual pivot so card geometry behaves as if its origin is the upper-left corner
-// These offsets are applied after creating the plane so UI math can assume top-left origin
-const SM_CARD_offsetX = -0.4; // negative value moves the card to the left
-const SM_CARD_offsetY = -0.25; // negative value moves the card up
-const SM_CARD_offsetZ = 0;
-
-const SM_CARD_W = 300;
-const SM_CARD_H = 400;
 /**
  * Represents a single article's visual state in the 3D scene.
  *
@@ -39,10 +19,10 @@ class ArticleEntity {
         this.closeImage = closeImage; // Reference to loaded close.png image
         this.thumbnailImage = null; // Will store loaded Image object
         
-        this.defCardTitleLength = 100;
-        this.defCardTitleLines = 2;
-        this.defCardContentLines = 3;
-        this.defCardContentLength = 300;
+        this.defCardTitleLength = CARD_TITLE_LENGTH;
+        this.defCardTitleLines = CARD_TITLE_LINES;
+        this.defCardContentLines = CARD_CONTENT_LINES;
+        this.defCardContentLength = CARD_CONTENT_LENGTH;
         
         this.score = 0.5;
         this.scale = 1.0;
@@ -62,9 +42,9 @@ class ArticleEntity {
         let offsetX, offsetY, offsetZ, width, height, text_length, aspectRatio;
 
         if (mode === "small") {
-            offsetX = SM_CARD_offsetX;
-            offsetY = SM_CARD_offsetY;
-            offsetZ = SM_CARD_offsetZ;
+            offsetX = SM_CARD_OFFSET_X;
+            offsetY = SM_CARD_OFFSET_Y;
+            offsetZ = SM_CARD_OFFSET_Z;
             width = SM_CARD_W;
             height = SM_CARD_H;
             text_length = 1;
@@ -75,7 +55,7 @@ class ArticleEntity {
             aspectRatio = width / height;
             if (aspectRatio > 1){
                 offsetX = -0.8;
-                offsetY = SM_CARD_offsetY * 2;
+                offsetY = SM_CARD_OFFSET_Y * 2;
             } else {
                 offsetX = 0.1;
                 offsetY = 0.5;

@@ -6,6 +6,7 @@ Copies source files from src/ to public/ and runs the processing pipeline.
 
 import shutil
 import argparse
+import re
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -117,6 +118,137 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     print(f"  ✓ index.html rendered")
 
 
+def build_google_fonts_url(font_general: str, font_cards: str) -> str:
+    """
+    Build Google Fonts URL from font names.
+    
+    Args:
+        font_general: General font name
+        font_cards: Card font name
+        
+    Returns:
+        Google Fonts URL string
+    """
+    # Convert font names to URL format (replace spaces with +)
+    font_general_encoded = font_general.replace(' ', '+')
+    font_cards_encoded = font_cards.replace(' ', '+')
+    
+    # Build URL with optimized weights/styles
+    # font-general: Full range for general UI (italics and weights 100-900)
+    # font-cards: Only weights 400 (regular) and 700 (bold) are used in card rendering
+    url = f"https://fonts.googleapis.com/css2?family={font_general_encoded}:ital,wght@0,100..900;1,100..900&family={font_cards_encoded}:wght@400;700&display=swap"
+    return url
+
+
+def process_css_file(css_path: Path, font_general: str, font_cards: str) -> str:
+    """
+    Process CSS file and update font variables.
+    
+    Args:
+        css_path: Path to CSS source file
+        font_general: General font name
+        font_cards: Card font name
+        
+    Returns:
+        Modified CSS content as string
+    """
+    if not css_path.exists():
+        raise FileNotFoundError(f"CSS file not found: {css_path}")
+    
+    content = css_path.read_text(encoding='utf-8')
+    
+    # Replace font-family variable
+    pattern = r'--font-family:\s*"[^"]+",\s*sans-serif;'
+    replacement = f'--font-family: "{font_general}", sans-serif;'
+    content = re.sub(pattern, replacement, content)
+    
+    # Replace font-mono variable (used for cards)
+    pattern = r'--font-mono:\s*"[^"]+",\s*monospace;'
+    replacement = f'--font-mono: "{font_cards}", monospace;'
+    content = re.sub(pattern, replacement, content)
+    
+    return content
+
+
+def process_conf_js(conf_js_path: Path, js_conf: Dict[str, Any], font_cards: str = None) -> str:
+    """
+    Process conf.js file and replace constants with values from js_conf.
+    
+    Args:
+        conf_js_path: Path to conf.js source file
+        js_conf: Dictionary of JavaScript configuration overrides
+        
+    Returns:
+        Modified conf.js content as string
+    """
+    if not conf_js_path.exists():
+        raise FileNotFoundError(f"conf.js not found: {conf_js_path}")
+    
+    content = conf_js_path.read_text(encoding='utf-8')
+    
+    # Apply font_cards to FONT_NAME if provided
+    if font_cards:
+        pattern = r'const\s+FONT_NAME\s*=\s*[^;]+;'
+        replacement = f'const FONT_NAME = "{font_cards}";'
+        if re.search(pattern, content):
+            content = re.sub(pattern, replacement, content)
+            print(f"  ↻ Override FONT_NAME = \"{font_cards}\"")
+    
+    if not js_conf:
+        return content
+    
+    # Process each configuration override
+    for key, value in js_conf.items():
+        # Skip comments
+        if key.startswith('#'):
+            continue
+        
+        # Convert value to JavaScript representation
+        if isinstance(value, bool):
+            js_value = 'true' if value else 'false'
+        elif isinstance(value, str):
+            # Escape quotes and wrap in quotes
+            escaped = value.replace('\\', '\\\\').replace('"', '\\"')
+            js_value = f'"{escaped}"'
+        elif isinstance(value, (int, float)):
+            js_value = str(value)
+        elif isinstance(value, dict):
+            # Handle objects like CAMERA_INITIAL_POSITION
+            if key == 'CAMERA_INITIAL_POSITION':
+                js_value = f'{{ x: {value.get("x", 20)}, y: {value.get("y", 10)}, z: {value.get("z", 20)} }}'
+            else:
+                # Generic object handling - convert each value appropriately
+                items = []
+                for k, v in value.items():
+                    if isinstance(v, str):
+                        items.append(f'{k}: "{v}"')
+                    elif isinstance(v, bool):
+                        items.append(f'{k}: {"true" if v else "false"}')
+                    else:
+                        items.append(f'{k}: {v}')
+                js_value = f'{{ {", ".join(items)} }}'
+        elif isinstance(value, list):
+            # Handle arrays
+            items = ', '.join(f'"{item}"' if isinstance(item, str) else str(item) for item in value)
+            js_value = f'[{items}]'
+        else:
+            # Fallback: convert to string
+            js_value = f'"{str(value)}"'
+        
+        # Replace constant definition using regex
+        # Match: const NAME = value;
+        pattern = rf'const\s+{re.escape(key)}\s*=\s*[^;]+;'
+        replacement = f'const {key} = {js_value};'
+        
+        if re.search(pattern, content):
+            content = re.sub(pattern, replacement, content)
+            print(f"  ↻ Override {key} = {js_value}")
+        else:
+            print(f"  ⚠ Warning: Constant {key} not found in conf.js")
+    
+    return content
+
+
 def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     """
     Copy all source files from src/ to public/ and render templates.
@@ -140,9 +272,29 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     if js_src.exists():
         js_files = list(js_src.glob('*.js'))
         if js_files:
+            # Get js-conf overrides if present
+            js_conf = config.get('js-conf', {})
+            
+            # Get style config for font-cards
+            style_config = config.get('style', {})
+            font_cards = style_config.get('font-cards', 'Space Grotesk')
+            
             for js_file in js_files:
-                shutil.copy(js_file, public_dir / js_file.name)
-                print(f"  ✓ {js_file.name}")
+                output_path = public_dir / js_file.name
+                
+                # Special handling for conf.js - apply overrides
+                if js_file.name == 'conf.js':
+                    if js_conf or font_cards:
+                        print(f"  🔧 Processing {js_file.name} with config overrides...")
+                        processed_content = process_conf_js(js_file, js_conf, font_cards)
+                        output_path.write_text(processed_content, encoding='utf-8')
+                        print(f"  ✓ {js_file.name}")
+                    else:
+                        shutil.copy(js_file, output_path)
+                        print(f"  ✓ {js_file.name}")
+                else:
+                    shutil.copy(js_file, output_path)
+                    print(f"  ✓ {js_file.name}")
         else:
             print("  ⚠ No JavaScript files found")
     else:
@@ -154,8 +306,16 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     if css_src.exists():
         css_files = list(css_src.glob('*.css'))
         if css_files:
+            # Get style config if present
+            style_config = config.get('style', {})
+            font_general = style_config.get('font-general', 'Noto Sans')
+            font_cards = style_config.get('font-cards', 'Space Grotesk')
+            
             for css_file in css_files:
-                shutil.copy(css_file, public_dir / css_file.name)
+                output_path = public_dir / css_file.name
+                # Process CSS to update font variables
+                processed_css = process_css_file(css_file, font_general, font_cards)
+                output_path.write_text(processed_css, encoding='utf-8')
                 print(f"  ✓ {css_file.name}")
         else:
             print("  ⚠ No CSS files found")
@@ -235,6 +395,13 @@ def build(
         # Use config file value
         base_url = normalize_base_url(config['site'].get('base_url', ''))
     config['site']['base_url'] = base_url
+    
+    # Process style configuration
+    if 'style' not in config:
+        config['style'] = {}
+    font_general = config['style'].get('font-general', 'Noto Sans')
+    font_cards = config['style'].get('font-cards', 'Space Grotesk')
+    config['style']['google_fonts_url'] = build_google_fonts_url(font_general, font_cards)
     
     # Step 1: Copy source files and render templates
     copy_source_files(src_dir, output_path, config)

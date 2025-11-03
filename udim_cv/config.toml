@@ -1,6 +1,10 @@
 [site]
 base_url = ""
 
+[style]
+font-general = "Noto Sans"
+font-cards = "Space Grotesk"
+
 [header]
 title = "John Doe"
 subtitle = "Latent Space Visualization"
@@ -21,4 +25,39 @@ description = [
     "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 ]
 button_text = "Start Exploring"
+
+[js-conf]
+# JavaScript configuration overrides
+# Uncomment and modify values as needed
+# REDUCTION_METHOD = "pca"
+# SHOW_AXES = false
+# FXAA_RESOLUTION = 0.7
+# SHOW_THREE_STATS = false
+# CAMERA_ANIMATION_DURATION = 1000
+# HOVER_CHECK_INTERVAL = 100
+# BLOOM_ENABLED = true
+# FONT_NAME = "Space Grotesk"
+# CARD_WINDOW_SCALE = 0.5
+# CARD_BOTTOM_PADDING = 0.2
+# SM_CARD_OFFSET_X = -0.4
+# SM_CARD_OFFSET_Y = -0.25
+# SM_CARD_OFFSET_Z = 0
+# SM_CARD_W = 300
+# SM_CARD_H = 400
+# CARD_TITLE_LENGTH = 100
+# CARD_TITLE_LINES = 2
+# CARD_CONTENT_LINES = 3
+# CARD_CONTENT_LENGTH = 300
+# SEE_MORE_TEXT = "see more"
+# INITIAL_DELAY = 2000
+# AUTO_PLAY_DELAY = 8000
+# UPDATE_INTERVAL = 12000
+# MAX_HISTORY_SIZE = 5
+# SIM_TO_SCALE_POW = 0.3
+# SIM_TO_SCALE_MIN = 0.5
+# SIM_TO_SCALE_MAX = 1.5
+# SINGLE_TARGET_MULTIPLIER = 1.5
+# MULTI_TARGET_MULTIPLIER = 1.1
+# DEBUG_VIEW_DIRECTION = false
+# DEBUG_CARD_CORNER = false
 

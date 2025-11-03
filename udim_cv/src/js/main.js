@@ -1,9 +1,3 @@
-// Reduction method constant
-const REDUCTION_METHOD = 'pca';
-const SHOW_AXES = false;
-const FXAA_RESOLUTION = 0.7;
-const SHOW_THREE_STATS = false;  
-
 // Startup Modal Functions
 function setupStartupModal() {
     const startupModal = document.getElementById('startup-modal');
@@ -69,15 +63,19 @@ class ArticleVisualizer {
         // Bloom post-processing
         this.composer = null;
         this.bloomPass = null;
-        this.bloomEnabled = true;
+        this.bloomEnabled = BLOOM_ENABLED;
 
-        this.cameraInitialPosition = new THREE.Vector3(20, 10, 20);
+        this.cameraInitialPosition = new THREE.Vector3(
+            CAMERA_INITIAL_POSITION.x,
+            CAMERA_INITIAL_POSITION.y,
+            CAMERA_INITIAL_POSITION.z
+        );
         this.cameraDistance = this.cameraInitialPosition.length(); 
-        this.cameraAnimationDuration = 1000;
+        this.cameraAnimationDuration = CAMERA_ANIMATION_DURATION;
         
         // Hover functionality
         this.lastHoverCheck = 0;
-        this.hoverCheckInterval = 100; // Check every 150ms max
+        this.hoverCheckInterval = HOVER_CHECK_INTERVAL;
         this.hoveredObject = null;
         
         // Touch tracking for mobile

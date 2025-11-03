@@ -1,15 +1,6 @@
 /**
  * Utility functions and classes for the 3D Article Visualization
  */
-const DEBUG_VIEW_DIRECTION = false;
-
-const SIM_TO_SCALE_POW = 0.3
-const SIM_TO_SCALE_MIN = 0.5
-const SIM_TO_SCALE_MAX = 1.5
-
-// Camera distance multiplier for correct framing
-const SINGLE_TARGET_MULTIPLIER = 1.5;
-const MULTI_TARGET_MULTIPLIER = 1.1;
 
 
 /**

@@ -1,10 +1,3 @@
-// Configuration constants for autoplay timing
-const INITIAL_DELAY   =  2000;
-const AUTO_PLAY_DELAY =  8000;
-const UPDATE_INTERVAL = 12000;
-
-const MAX_HISTORY_SIZE = 5;
-
 /**
  * ButtonFactory
  *
