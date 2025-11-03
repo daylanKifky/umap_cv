@@ -82,19 +82,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
             # Convert markdown to HTML
             html_content = markdown.markdown(markdown_content)
 
-            # Apply base_url to image src attributes in HTML
-            if base_url:
-                # Use regex to find and replace img src attributes
-                def replace_img_src(match):
-                    src_value = match.group(1)
-                    # Don't modify full URLs
-                    if not src_value.startswith(('http://', 'https://')):
-                        src_value = apply_base_url(src_value, base_url)
-                    return f'src="{src_value}"'
-                
-                html_content = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
-
-            # Parse HTML to extract structured data
+            # Parse HTML to extract structured data FIRST (before applying base_url)
             try:
                 # Parse HTML with XML parser
                 root = ET.fromstring(f'<root>{html_content}</root>')
@@ -135,29 +123,46 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
                 # Handle image copying if output folder is specified
                 if output_folder:
-                    image_path = ''
+                    image_path = None
 
                     # Check precedence: thumbnail field in JSON first, then first image tag
-                    if 'thumbnail' in json_data and json_data['thumbnail']:
-                        image_path = handle_image(json_data['thumbnail'], output_folder, input_folder)
+                    # Skip if thumbnail is False, None, or empty string
+                    if 'thumbnail' in json_data and json_data['thumbnail'] and json_data['thumbnail'] is not False:
+                        image_source = json_data['thumbnail']
+                        image_path = handle_image(image_source, output_folder, input_folder)
                     elif first_image_src:
                         image_path = handle_image(first_image_src, output_folder, input_folder)
 
                     print(f"Processed image for {filename}: {image_path if image_path else 'NOT FOUND'}")
                     
-                    # Apply base_url to thumbnail path
-                    if image_path:
+                    # Apply base_url to thumbnail path only if image_path is a valid string
+                    if image_path and isinstance(image_path, str):
                         data[key]['thumbnail'] = apply_base_url(image_path, base_url)
                     else:
-                        data[key]['thumbnail'] = image_path
+                        # Store False as-is when image not found
+                        data[key]['thumbnail'] = False
 
                 # Save HTML file if output folder specified
                 if output_folder:
                     html_filename = filename.replace('.md', '.html')
                     html_filepath = os.path.join(output_folder, html_filename)
+                    
+                    # Apply base_url to image src attributes in HTML before saving
+                    html_content_to_save = html_content
+                    if base_url:
+                        # Use regex to find and replace img src attributes
+                        def replace_img_src(match):
+                            src_value = match.group(1)
+                            # Don't modify full URLs
+                            if not src_value.startswith(('http://', 'https://')):
+                                src_value = apply_base_url(src_value, base_url)
+                            return f'src="{src_value}"'
+                        
+                        html_content_to_save = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
+                    
+                    # Write the HTML file with base_url applied
                     with open(html_filepath, 'w', encoding='utf-8') as f:
-                        f.write(html_content)
-                    # Store relative path (just the filename) and apply base_url
+                        f.write(html_content_to_save)
                     data[key]['html_filepath'] = apply_base_url(html_filename, base_url)
                     print(f"Saved HTML: {html_filepath}")
 
