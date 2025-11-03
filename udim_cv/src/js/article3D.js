@@ -715,16 +715,18 @@ class ArticleManager {
             const sphere = entity.createSphere(coords.x, coords.y, coords.z); // Create sphere at coordinates
             
             // Make card a child of the sphere
-            sphere.scale.setScalar(0); // prepare for fadeIn
             sphere.add(card);
-
+            
             // Add sphere (with card as child) to scene
             this.scene.add(sphere);
-
+            
             this.entities.push(entity);
             this.entityMap.set(article.id, entity);
-
+            
             entity.resetAppearance();
+
+            sphere.userData.initialScale = sphere.scale.x;
+            sphere.scale.setScalar(0); // prepare for fadeIn
             
             if (DEBUG_CARD_CORNER) {
                 const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -769,7 +771,7 @@ class ArticleManager {
                 : 1 - Math.pow(1 - ((progress - 0.5) * 2), 3);
             
             this.entities.forEach((entity) => {
-                entity.sphere.scale.setScalar(easedProgress);
+                entity.sphere.scale.setScalar(easedProgress * entity.sphere.userData.initialScale);
                 linksMesh.material.opacity = linksTargetOpacity * Math.max(easedProgress2, 0);
             });
             
