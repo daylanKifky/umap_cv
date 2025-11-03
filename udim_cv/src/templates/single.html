@@ -43,5 +43,12 @@
         {{ article_content | safe }}
         {% endif %}
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="{{ 'conf.js' | url }}"></script>
+    <script src="{{ 'utils.js' | url }}"></script>
+    <script src="{{ 'single.js' | url }}"></script>
 </body>
 </html>
