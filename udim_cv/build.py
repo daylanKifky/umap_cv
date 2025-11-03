@@ -7,6 +7,7 @@ Copies source files from src/ to public/ and runs the processing pipeline.
 import shutil
 import argparse
 import re
+import os
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -25,6 +26,7 @@ except ImportError:
 
 # Import process module
 from .process import main as process_main
+from .load import load_markdown_files
 
 
 def load_config(config_path: Path) -> Dict[str, Any]:
@@ -78,13 +80,16 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
         src_dir: Source directory (udim_cv/src)
         public_dir: Output directory (udim_cv/public)
         config: Configuration dictionary
+        
+    Returns:
+        Jinja2 environment for reuse
     """
     print("📄 Rendering HTML templates...")
     
     templates_dir = src_dir / 'templates'
     if not templates_dir.exists():
         print(f"  ⚠ Warning: {templates_dir} not found")
-        return
+        return None
     
     # Normalize base_url
     if 'site' not in config:
@@ -116,6 +121,8 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     output_file = public_dir / 'index.html'
     output_file.write_text(output, encoding='utf-8')
     print(f"  ✓ index.html rendered")
+    
+    return env  # Return environment for reuse
 
 
 def build_google_fonts_url(font_general: str, font_cards: str) -> str:
@@ -339,6 +346,132 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any]):
     print("✅ Source files copied\n")
 
 
+def apply_base_url(path: str, base_url: str) -> str:
+    """
+    Apply base_url to a path if base_url is set and path is not already a full URL.
+    
+    Args:
+        path: Path to apply base_url to
+        base_url: Base URL (normalized, ends with / or empty)
+        
+    Returns:
+        Path with base_url prepended if applicable
+    """
+    if not base_url or not path:
+        return path
+    
+    # Don't modify full URLs (http/https)
+    if path.startswith(('http://', 'https://')):
+        return path
+    
+    # Remove leading slash from path if it exists (base_url already ends with /)
+    path = path.lstrip('/')
+    return base_url + path
+
+
+def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any], input_folder: str, base_url: str):
+    """
+    Render article HTML pages using the single.html template.
+    
+    Args:
+        src_dir: Source directory (udim_cv/src)
+        public_dir: Output directory (udim_cv/public)
+        config: Configuration dictionary
+        input_folder: Path to folder containing markdown files
+        base_url: Base URL for paths
+    """
+    print("📝 Rendering article pages...")
+    
+    templates_dir = src_dir / 'templates'
+    if not templates_dir.exists():
+        print(f"  ⚠ Warning: {templates_dir} not found")
+        return
+    
+    # Normalize base_url
+    if 'site' not in config:
+        config['site'] = {}
+    base_url = normalize_base_url(base_url)
+    config['site']['base_url'] = base_url
+    
+    # Set up Jinja2 environment
+    env = jinja2.Environment(
+        loader=jinja2.FileSystemLoader(str(templates_dir)),
+        autoescape=jinja2.select_autoescape(['html', 'xml'])
+    )
+    
+    # Add filter to prepend base_url to paths
+    def url_filter(path: str) -> str:
+        """Prepend base_url to a path if base_url is set."""
+        if not base_url:
+            return path
+        path = path.lstrip('/')
+        return base_url + path
+    
+    env.filters['url'] = url_filter
+    
+    # Load article data (without saving HTML files - we'll do that with template)
+    # We need to modify load_markdown_files to optionally skip HTML saving, but for now
+    # we'll just reload the data - the HTML files will be overwritten
+    articles_data = load_markdown_files(input_folder, None, skip_confirmation=True, base_url=base_url)
+    
+    # Get single.html template
+    template = env.get_template('single.html')
+    
+    # Render each article
+    for key, article in articles_data.items():
+        # Get HTML content from article (already converted from markdown)
+        html_content = article.get('html_content', '')
+        
+        # Update image paths to point to images folder
+        def replace_img_src(match):
+            src_value = match.group(1)
+            
+            # Don't modify full URLs (http/https)
+            if src_value.startswith(('http://', 'https://')):
+                return f'src="{src_value}"'
+            
+            # If already pointing to images folder, just apply base_url
+            if src_value.startswith('images/'):
+                new_path = src_value
+            else:
+                # Extract filename from path
+                filename = os.path.basename(src_value)
+                
+                # Check if image exists in images folder
+                images_folder = public_dir / 'images'
+                image_path = images_folder / filename
+                
+                # If image exists in images folder, update path
+                if image_path.exists():
+                    new_path = f'images/{filename}'
+                else:
+                    # Keep original path if image not found
+                    new_path = src_value
+            
+            # Apply base_url if provided
+            if base_url:
+                new_path = apply_base_url(new_path, base_url)
+            
+            return f'src="{new_path}"'
+        
+        html_content = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
+        
+        # Render template with article content
+        output = template.render(
+            config=config,
+            article_content=html_content,
+            article_title=article.get('title', '')
+        )
+        
+        # Save rendered HTML file
+        html_filename = f"{key}.html"
+        output_file = public_dir / html_filename
+        output_file.write_text(output, encoding='utf-8')
+        print(f"  ✓ {html_filename}")
+    
+    print(f"  ✅ Rendered {len(articles_data)} article pages")
+
+
 def build(
     input_folder: str = None,
     output_dir: str = None,
@@ -420,6 +553,10 @@ def build(
                 skip_confirmation=skip_confirmation,
                 base_url=base_url
             )
+            
+            # Step 3: Render article pages using single.html template
+            render_article_pages(src_dir, output_path, config, input_folder, base_url)
+            
             print("\n✅ Build complete!")
             print(f"📦 Output directory: {output_path}")
             print(f"📊 Embeddings file: {embeddings_file}")
