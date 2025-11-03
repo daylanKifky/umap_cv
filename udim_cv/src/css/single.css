@@ -6,7 +6,11 @@ body {
     line-height: 1.6;
     margin: 0;
     padding: 0 1rem;
-    /* position: relative; */
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
 }
 
 /* Diagonal overlay */
@@ -28,9 +32,14 @@ body::before {
 
 /* Content wrapper - controls max-width on big screens */
 .content-wrapper {
-    max-width: 72%;
+    width: 72%;
+    max-width: 1024px;
     margin: 0 auto;
     width: 100%;
+    flex: 1 0 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 /* Glass navbar - reusing fab-button glass effect */
@@ -141,6 +150,23 @@ body::before {
     z-index: 1;
     margin-top: 0;
     opacity: 0.9;
+    flex: 1 0 auto;
+}
+
+/* Article footer */
+.article-footer {
+    width: 100%;
+    padding: 1.5rem;
+    text-align: center;
+    color: #d0d0d0;
+    background-color: #2a2a2a;
+    font-size: 0.875rem;
+    flex-shrink: 0;
+    z-index: 10;
+}
+
+.article-footer p {
+    margin: 0;
 }
 
 /* Typography */
@@ -160,17 +186,33 @@ body::before {
 
 .article-container img {
     max-width: 100%;
+    max-height: 600px;
     height: auto;
     border-radius: 4px;
     margin-top: 1rem;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Responsive adjustments */
+
+@media (max-width: 1024px) {
+    .content-wrapper {
+        width: 100%;
+        max-width: 80%;
+    }
+}
+
 @media (max-width: 600px) {
     body {
         padding: 0 0.5rem;
     }
     
+    .content-wrapper {
+        max-width: 96%;
+    }
+
     .navbar-glass {
         width: 100%;
         padding: 0.75rem 1rem;
@@ -214,3 +256,14 @@ body::before {
     }
 }
 
+
+/* Responsive adjustments */
+@media (max-width: 320px) {
+    body {
+        padding: 0 0.5rem;
+    }
+    
+    .content-wrapper {
+        max-width: 96%;
+    }
+}

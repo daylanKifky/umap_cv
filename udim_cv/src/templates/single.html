@@ -50,6 +50,9 @@
             {{ article_content | safe }}
             {% endif %}
         </div>
+        <footer class="article-footer">
+            <p>&copy; {{ config.header.title }} - All rights reserved</p>
+        </footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
@@ -57,7 +60,6 @@
     <!-- Application Scripts -->
     <script src="{{ 'conf.js' | url }}"></script>
     <script src="{{ 'utils.js' | url }}"></script>
-    <script src="{{ 'userControls.js' | url }}"></script>
     <script src="{{ 'single.js' | url }}"></script>
 </body>
 </html>
