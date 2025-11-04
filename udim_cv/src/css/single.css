@@ -330,6 +330,66 @@ body::before {
     opacity: 0.85;
 }
 
+/* No suggestions message */
+.search-no-suggestions {
+    width: 100%;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.no-suggestions-header {
+    color: rgba(242, 242, 242, 0.7);
+    font-size: 0.95rem;
+    font-weight: 400;
+    opacity: 0.8;
+}
+
+.no-suggestions-section {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.no-suggestions-item {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: rgba(242, 242, 242, 0.8);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0.7;
+}
+
+.no-suggestions-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: rgba(242, 242, 242, 0.95);
+    opacity: 1;
+    transform: translateY(-1px);
+}
+
+/* No results error message */
+.search-no-results {
+    width: 100%;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+}
+
+.no-results-error {
+    color: rgba(255, 100, 100, 0.9);
+    font-size: 1rem;
+    font-weight: 500;
+    padding: 1rem;
+    background: rgba(255, 100, 100, 0.1);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    border-radius: 6px;
+}
+
 .navbar-glass:hover {
     background: rgba(255, 255, 255, 0.12);
     border-color: rgba(255, 255, 255, 0.3);

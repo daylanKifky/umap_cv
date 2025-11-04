@@ -26,6 +26,11 @@ class SearchControls {
         this.currentSuggestions = [];
         this.selectedIndex = -1;
         this.suggestionCards = [];
+        this.availableArticles = [];
+        this.availableTechnologies = [];
+        this.availableTags = [];
+        this.noSuggestionsMessage = null;
+        this.noResultsMessage = null;
         
         this.init();
     }
@@ -79,10 +84,52 @@ class SearchControls {
             // Initialize SearchManager
             this.searchManager = new SearchManager(this.articles);
             
+            // Build weighted list and extract unique items for suggestions
+            this.buildAvailableSuggestions();
+            
             console.log(`Loaded ${this.articles.length} articles for search`);
         } catch (error) {
             console.error('Error loading articles:', error);
         }
+    }
+    
+    /**
+     * Build lists of available articles, technologies, and tags from weighted list.
+     */
+    buildAvailableSuggestions() {
+        if (!this.articles || this.articles.length === 0) return;
+        
+        const weightedList = buildWeightedArticleList(this.articles);
+        
+        // Extract unique articles (by id)
+        const articleMap = new Map();
+        const technologiesSet = new Set();
+        const tagsSet = new Set();
+        
+        weightedList.forEach(item => {
+            if (item.type === 'article' && item.id) {
+                if (!articleMap.has(item.id)) {
+                    articleMap.set(item.id, item);
+                }
+            } else if (item.type === 'technology' && item.title) {
+                technologiesSet.add(item.title);
+            } else if (item.type === 'tag' && item.title) {
+                tagsSet.add(item.title);
+            }
+        });
+        
+        this.availableArticles = Array.from(articleMap.values());
+        this.availableTechnologies = Array.from(technologiesSet);
+        this.availableTags = Array.from(tagsSet);
+    }
+    
+    /**
+     * Get random items from an array.
+     */
+    getRandomItems(array, count) {
+        if (!array || array.length === 0) return [];
+        const shuffled = [...array].sort(() => 0.5 - Math.random());
+        return shuffled.slice(0, Math.min(count, shuffled.length));
     }
     
     /**
@@ -329,6 +376,10 @@ class SearchControls {
         if (this.searchInput) {
             setTimeout(() => {
                 this.searchInput.focus();
+                // Show no suggestions message if input is empty
+                if (!this.searchInput.value || this.searchInput.value.trim().length < 2) {
+                    this.showNoSuggestionsMessage();
+                }
             }, 100);
         }
         
@@ -359,10 +410,15 @@ class SearchControls {
         const trimmedQuery = query.trim();
         
         if (!trimmedQuery || trimmedQuery.length < 2) {
-            this.suggestionsContainer.style.display = 'none';
-            this.currentSuggestions = [];
-            this.selectedIndex = -1;
-            this.suggestionCards = [];
+            // Show no suggestions message when search is open but no query
+            if (this.searchOpen) {
+                this.showNoSuggestionsMessage();
+            } else {
+                this.suggestionsContainer.style.display = 'none';
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+                this.suggestionCards = [];
+            }
             return;
         }
         
@@ -370,12 +426,21 @@ class SearchControls {
         const results = this.searchManager.performSearch(trimmedQuery);
         
         if (!results || results.length === 0) {
-            this.suggestionsContainer.style.display = 'none';
-            this.currentSuggestions = [];
-            this.selectedIndex = -1;
-            this.suggestionCards = [];
+            // Show red error message when query exists but no results found
+            if (this.searchOpen) {
+                this.showNoResultsMessage(trimmedQuery);
+            } else {
+                this.suggestionsContainer.style.display = 'none';
+                this.currentSuggestions = [];
+                this.selectedIndex = -1;
+                this.suggestionCards = [];
+            }
             return;
         }
+        
+        // Hide no suggestions/no results messages and show results
+        this.hideNoSuggestionsMessage();
+        this.hideNoResultsMessage();
         
         // Show top 5 results
         const topResults = results.slice(0, 5);
@@ -391,10 +456,145 @@ class SearchControls {
     }
     
     /**
+     * Show the no suggestions message with random picks.
+     * @param {boolean} append - If true, append to container instead of clearing it first.
+     */
+    showNoSuggestionsMessage(append = false) {
+        if (!this.suggestionsContainer) return;
+        
+        // Clear existing suggestions unless we're appending
+        if (!append) {
+            this.suggestionsContainer.innerHTML = '';
+            this.suggestionCards = [];
+        }
+        
+        // Create or update no suggestions message
+        if (!this.noSuggestionsMessage) {
+            this.noSuggestionsMessage = document.createElement('div');
+            this.noSuggestionsMessage.className = 'search-no-suggestions';
+        }
+        
+        // Get random picks
+        const randomArticles = this.getRandomItems(this.availableArticles, 3);
+        const randomTechnologies = this.getRandomItems(this.availableTechnologies, 4);
+        const randomTags = this.getRandomItems(this.availableTags, 5);
+        
+        // Build HTML content
+        let html = '<div class="no-suggestions-header">Not sure what to search? try one of these queries:</div>';
+        
+        // Articles section
+        if (randomArticles.length > 0) {
+            html += '<div class="no-suggestions-section">';
+            randomArticles.forEach(article => {
+                html += `<div class="no-suggestions-item" data-type="article" data-query="${this.escapeHtml(article.title || '')}">${this.escapeHtml(article.title || 'Untitled')}</div>`;
+            });
+            html += '</div>';
+        }
+        
+        // Technologies section
+        if (randomTechnologies.length > 0) {
+            html += '<div class="no-suggestions-header">or search for a specific technology:</div>';
+            html += '<div class="no-suggestions-section">';
+            randomTechnologies.forEach(tech => {
+                html += `<div class="no-suggestions-item" data-type="technology" data-query="${this.escapeHtml(tech)}">${this.escapeHtml(tech)}</div>`;
+            });
+            html += '</div>';
+        }
+        
+        // Tags section
+        if (randomTags.length > 0) {
+            html += '<div class="no-suggestions-header">or tag</div>';
+            html += '<div class="no-suggestions-section">';
+            randomTags.forEach(tag => {
+                html += `<div class="no-suggestions-item" data-type="tag" data-query="${this.escapeHtml(tag)}">${this.escapeHtml(tag)}</div>`;
+            });
+            html += '</div>';
+        }
+        
+        this.noSuggestionsMessage.innerHTML = html;
+        
+        // Add click handlers to items
+        const items = this.noSuggestionsMessage.querySelectorAll('.no-suggestions-item');
+        items.forEach(item => {
+            item.addEventListener('click', () => {
+                const query = item.getAttribute('data-query');
+                if (query && this.searchInput) {
+                    this.searchInput.value = query;
+                    this.onSearchInput(query);
+                }
+            });
+        });
+        
+        // Show the message (only append if not already in container)
+        if (!this.noSuggestionsMessage.parentNode) {
+            this.suggestionsContainer.appendChild(this.noSuggestionsMessage);
+        }
+        this.suggestionsContainer.style.display = 'flex';
+    }
+    
+    /**
+     * Hide the no suggestions message.
+     */
+    hideNoSuggestionsMessage() {
+        if (this.noSuggestionsMessage && this.noSuggestionsMessage.parentNode) {
+            this.noSuggestionsMessage.parentNode.removeChild(this.noSuggestionsMessage);
+        }
+    }
+    
+    /**
+     * Show the no results error message in red, with suggestions below.
+     */
+    showNoResultsMessage(query) {
+        if (!this.suggestionsContainer) return;
+        
+        // Clear existing suggestions
+        this.suggestionsContainer.innerHTML = '';
+        this.suggestionCards = [];
+        
+        // Create or update no results message
+        if (!this.noResultsMessage) {
+            this.noResultsMessage = document.createElement('div');
+            this.noResultsMessage.className = 'search-no-results';
+        }
+        
+        this.noResultsMessage.innerHTML = `<div class="no-results-error">No results found for "${this.escapeHtml(query)}"</div>`;
+        
+        // Add the error message first
+        this.suggestionsContainer.appendChild(this.noResultsMessage);
+        
+        // Also show the suggestions below
+        this.showNoSuggestionsMessage(true); // Pass true to indicate we're appending, not replacing
+        
+        this.suggestionsContainer.style.display = 'flex';
+    }
+    
+    /**
+     * Hide the no results message.
+     */
+    hideNoResultsMessage() {
+        if (this.noResultsMessage && this.noResultsMessage.parentNode) {
+            this.noResultsMessage.parentNode.removeChild(this.noResultsMessage);
+        }
+    }
+    
+    /**
+     * Escape HTML to prevent XSS.
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    /**
      * Render suggestion cards.
      */
     renderSuggestions(results) {
         if (!this.suggestionsContainer) return;
+        
+        // Hide no suggestions and no results messages
+        this.hideNoSuggestionsMessage();
+        this.hideNoResultsMessage();
         
         // Clear existing suggestions
         this.suggestionsContainer.innerHTML = '';
@@ -532,6 +732,10 @@ class SearchControls {
         if (this.suggestionsContainer) {
             this.suggestionsContainer.style.display = 'none';
         }
+        
+        // Hide no suggestions and no results messages
+        this.hideNoSuggestionsMessage();
+        this.hideNoResultsMessage();
         
         // Clear current suggestions
         this.currentSuggestions = [];

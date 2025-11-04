@@ -496,6 +496,70 @@ function findOptimalCameraView(entities, camera) {
     // Add 10% margin
     return maxDist * multiplier;
   }
+
+
+/**
+     * Build a weighted list used by autoplay to pick items and popular facets.
+     * Articles without `boost` default to 1. Popular technologies and tags are
+     * also appended to diversify autoplay queries.
+     * @param {Array<Object>} articles - Article objects.
+     * @returns {Array<Object>} Flattened list where items can repeat based on weight.
+     */
+function buildWeightedArticleList(articles, technologiesRatio = 0.3, tagsRatio = 0.3) {
+    const weightedList = [];
+
+    // Initialize counters for technologies and tags
+    const technologyCount = {};
+    const tagCount = {};
+
+    articles.forEach(article => {
+        // Count technologies
+        if (article.technologies && Array.isArray(article.technologies)) {
+            article.technologies.forEach(tech => {
+                technologyCount[tech] = (technologyCount[tech] || 0) + 1;
+            });
+        }
+
+        // Count tags
+        if (article.tags && Array.isArray(article.tags)) {
+            article.tags.forEach(tag => {
+                tagCount[tag] = (tagCount[tag] || 0) + 1;
+            });
+        }
+
+        // Get boost value, default to 1 if not present
+        const boost = article.boost || 1;
+
+        // Add article multiple times based on boost value
+        for (let i = 0; i < boost; i++) {
+            article.type = 'article';
+            weightedList.push(article);
+        }
+    });
+
+    // Sort technologies by count (most popular first) and add top ones
+    const sortedTechnologies = Object.entries(technologyCount)
+        .filter(([tech, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1]) // Sort by count descending
+        .slice(0, technologiesRatio * weightedList.length);
+
+    sortedTechnologies.forEach(([tech, count]) => {
+            weightedList.push({ title: tech, type: 'technology' });
+    });
+
+    // Sort tags by count (most popular first) and add top ones
+    const sortedTags = Object.entries(tagCount)
+        .filter(([tag, count]) => count > 1)
+        .sort((a, b) => b[1] - a[1]) // Sort by count descending
+        .slice(0, tagsRatio * weightedList.length);
+
+    sortedTags.forEach(([tag, count]) => {
+            weightedList.push({ title: tag, type: 'tag' });
+    });
+
+    console.log(`Built weighted article list: ${weightedList.length} entries from ${articles.length} articles and ${sortedTechnologies.length} technologies and ${sortedTags.length} tags`);
+    return weightedList;
+}
   
 
 // Export for use in other modules (if using modules)
@@ -508,7 +572,8 @@ if (typeof module !== 'undefined' && module.exports) {
         wrapText,
         degToRad,
         findOptimalCameraView,
-        drawTextLines
+        drawTextLines, 
+        buildWeightedArticleList
     };
 }
 
