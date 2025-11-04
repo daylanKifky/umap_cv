@@ -23,6 +23,9 @@ class SearchControls {
         this.searchButton = null;
         this.originalIconHTML = null;
         this.navbarOverlayCloseButton = null;
+        this.currentSuggestions = [];
+        this.selectedIndex = -1;
+        this.suggestionCards = [];
         
         this.init();
     }
@@ -232,9 +235,16 @@ class SearchControls {
             
             this.searchInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
+                    e.preventDefault();
                     this.performSearch();
                 } else if (e.key === 'Escape') {
                     this.closeSearch();
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    this.navigateSuggestions(1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    this.navigateSuggestions(-1);
                 }
             });
         }
@@ -350,6 +360,9 @@ class SearchControls {
         
         if (!trimmedQuery || trimmedQuery.length < 2) {
             this.suggestionsContainer.style.display = 'none';
+            this.currentSuggestions = [];
+            this.selectedIndex = -1;
+            this.suggestionCards = [];
             return;
         }
         
@@ -358,11 +371,21 @@ class SearchControls {
         
         if (!results || results.length === 0) {
             this.suggestionsContainer.style.display = 'none';
+            this.currentSuggestions = [];
+            this.selectedIndex = -1;
+            this.suggestionCards = [];
             return;
         }
         
         // Show top 5 results
         const topResults = results.slice(0, 5);
+        this.currentSuggestions = topResults.map(result => {
+            return this.articles.find(a => a.id === result.id);
+        }).filter(article => article !== undefined);
+        
+        // Reset selection when new suggestions are shown
+        this.selectedIndex = -1;
+        
         this.renderSuggestions(topResults);
         this.suggestionsContainer.style.display = 'flex';
     }
@@ -375,14 +398,19 @@ class SearchControls {
         
         // Clear existing suggestions
         this.suggestionsContainer.innerHTML = '';
+        this.suggestionCards = [];
         
-        results.forEach((result) => {
+        results.forEach((result, index) => {
             const article = this.articles.find(a => a.id === result.id);
             if (!article) return;
             
-            const card = this.createSuggestionCard(article);
+            const card = this.createSuggestionCard(article, index);
             this.suggestionsContainer.appendChild(card);
+            this.suggestionCards.push(card);
         });
+        
+        // Update highlights after rendering
+        this.updateSelectionHighlight();
     }
     
     /**
@@ -398,9 +426,10 @@ class SearchControls {
     /**
      * Create a suggestion card element for an article.
      */
-    createSuggestionCard(article) {
+    createSuggestionCard(article, index) {
         const card = document.createElement('div');
         card.className = 'search-suggestion-card';
+        card.setAttribute('data-index', index);
         
         // Get article color
         const articleColor = this.getArticleColor(article);
@@ -504,6 +533,11 @@ class SearchControls {
             this.suggestionsContainer.style.display = 'none';
         }
         
+        // Clear current suggestions
+        this.currentSuggestions = [];
+        this.selectedIndex = -1;
+        this.suggestionCards = [];
+        
         // Clear input and blur
         if (this.searchInput) {
             this.searchInput.value = '';
@@ -520,7 +554,54 @@ class SearchControls {
     }
     
     /**
+     * Navigate through suggestions using arrow keys.
+     */
+    navigateSuggestions(direction) {
+        if (!this.suggestionsContainer || 
+            this.suggestionsContainer.style.display === 'none' ||
+            this.currentSuggestions.length === 0) {
+            return;
+        }
+        
+        // Update selected index
+        if (direction === 1) {
+            // Arrow down - move to next
+            this.selectedIndex = (this.selectedIndex + 1) % this.currentSuggestions.length;
+        } else {
+            // Arrow up - move to previous
+            this.selectedIndex = this.selectedIndex <= 0 
+                ? this.currentSuggestions.length - 1 
+                : this.selectedIndex - 1;
+        }
+        
+        this.updateSelectionHighlight();
+        
+        // Scroll selected card into view if needed
+        if (this.suggestionCards[this.selectedIndex]) {
+            this.suggestionCards[this.selectedIndex].scrollIntoView({
+                behavior: 'smooth',
+                block: 'nearest'
+            });
+        }
+    }
+    
+    /**
+     * Update visual highlight for selected suggestion.
+     */
+    updateSelectionHighlight() {
+        this.suggestionCards.forEach((card, index) => {
+            if (index === this.selectedIndex) {
+                card.classList.add('selected');
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+    
+    /**
      * Perform search with the current input value.
+     * If suggestions are displayed and one is selected, opens that one.
+     * Otherwise, randomly selects one and navigates to it.
      */
     performSearch() {
         if (!this.searchInput) return;
@@ -528,12 +609,31 @@ class SearchControls {
         const query = this.searchInput.value.trim();
         if (!query) return;
         
-        console.log('Performing search:', query);
+        // Check if there are currently displayed suggestions
+        const hasVisibleSuggestions = this.suggestionsContainer && 
+                                     this.suggestionsContainer.style.display !== 'none' &&
+                                     this.currentSuggestions.length > 0;
         
-        // TODO: Implement actual search functionality
-        // This will be added in a later step
+        if (hasVisibleSuggestions) {
+            let articleToOpen = null;
+            
+            // If a suggestion is selected, use that one
+            if (this.selectedIndex >= 0 && this.selectedIndex < this.currentSuggestions.length) {
+                articleToOpen = this.currentSuggestions[this.selectedIndex];
+            } else {
+                // Otherwise, pick a random suggestion
+                const randomIndex = Math.floor(Math.random() * this.currentSuggestions.length);
+                articleToOpen = this.currentSuggestions[randomIndex];
+            }
+            
+            if (articleToOpen && articleToOpen.html_filepath) {
+                // Navigate to the selected/random article
+                window.location.href = articleToOpen.html_filepath;
+                return;
+            }
+        }
         
-        // Close search after performing
+        // If no suggestions are visible, just close the search
         this.closeSearch();
     }
     

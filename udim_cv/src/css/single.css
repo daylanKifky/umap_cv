@@ -265,7 +265,8 @@ body::before {
     margin-bottom: 0;
 }
 
-.search-suggestion-card:hover {
+.search-suggestion-card:hover,
+.search-suggestion-card.selected {
     background: rgba(52, 52, 52, 0.9);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -306,7 +307,8 @@ body::before {
     opacity: 0.85;
 }
 
-.search-suggestion-card:hover .suggestion-title {
+.search-suggestion-card:hover .suggestion-title,
+.search-suggestion-card.selected .suggestion-title {
     opacity: 1;
 }
 
@@ -323,7 +325,8 @@ body::before {
     transition: opacity 0.2s ease;
 }
 
-.search-suggestion-card:hover .suggestion-description {
+.search-suggestion-card:hover .suggestion-description,
+.search-suggestion-card.selected .suggestion-description {
     opacity: 0.85;
 }
 
