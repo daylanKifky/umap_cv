@@ -195,7 +195,7 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
         'use_cases': 0,
         'technical_details': 0,
         'difficulty': 0,
-        'tags': 0
+        'tags': 0.1
     }
 
     if not os.path.exists(output_folder):
@@ -237,6 +237,58 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
         
         all_values[field] = field_data
 
+    # Process unique field values for embeddings and 3D reduction
+    fields_embeddings_data = {}
+    for field, weight in weights.items():
+        if weight > 0 and field != 'title':
+            field_data = all_values[field]
+            
+            if not field_data:
+                continue
+            
+            # Extract unique values
+            unique_values = set()
+            # Check if first non-empty item is a list
+            first_item = None
+            for item in field_data:
+                if item:
+                    first_item = item
+                    break
+            
+            if first_item is None:
+                continue
+            
+            if isinstance(first_item, list):
+                # If field is a list, extract unique items from all articles
+                for item in field_data:
+                    if isinstance(item, list):
+                        unique_values.update(item)
+                    elif item:
+                        unique_values.add(item)
+            else:
+                # If field is a single string, collect unique strings
+                unique_values = set(item for item in field_data if item)
+            
+            if not unique_values:
+                continue
+            
+            # Convert to sorted list for consistent ordering
+            unique_values_list = sorted(list(unique_values))
+            
+            # Generate embeddings for each unique value
+            unique_embeddings = generator.generate_embeddings(unique_values_list)
+            
+            # Calculate 3D PCA reduction for each unique value
+            if unique_embeddings.size > 0:
+                pca_3d, _ = generator.reduce_pca(unique_embeddings, n_components=3)
+                
+                # Store in the fields structure
+                fields_embeddings_data[field] = {}
+                for value, coords in zip(unique_values_list, pca_3d):
+                    fields_embeddings_data[field][value] = {
+                        "pca_3d": coords.tolist()
+                    }
+
     # Calculate weighted average
     total_weight = sum(weights.values())
     embeddings = np.zeros((len(data_values), generator.embedding_dim))
@@ -249,6 +301,7 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
         "model": DEFAULT_EMBEDDING_MODEL,
         "embedding_dim": generator.embedding_dim,
         "reduction_method": methods,
+        "fields": fields_embeddings_data,
         "articles": []
     }
 
