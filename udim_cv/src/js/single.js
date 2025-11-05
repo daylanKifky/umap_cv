@@ -96,7 +96,7 @@
         const container = document.getElementById('container-3d');
         if (container) {
             const visualizer = new StaticArticleVisualizer(container);
-            await visualizer.initialize(data);
+            await visualizer.initialize(data, articleId );
         }
     } catch (error) {
         console.error('Error loading embeddings or applying color:', error);
@@ -109,12 +109,12 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
         super(container);
     }
     
-    async initialize(data) {
+    async initialize(data, articleId) {
+        if (!data) {
+            console.error('No data provided to visualizer');
+            return;
+        }
         try {
-            if (!data) {
-                console.error('No data provided to visualizer');
-                return;
-            }
             
             // Initialize ArticleManager with provided data
             this.initArticleManager(data);
@@ -124,11 +124,67 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
             await this.articleManager.createArticleObjects();
             console.log("created article objects", this.articleManager.entities);
             
-            // Calculate optimal camera position
-            this.cameraOptimalPosition();
+            // Find the entity that corresponds to the current article
+            const currentEntity = this.articleManager.entities.find(entity => 
+                entity.article.id === articleId
+            );
             
-            // Set camera to look at centroid
-            this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+            if (currentEntity) {
+                console.log("Found current article entity:", currentEntity);
+                // You can now use currentEntity for highlighting, positioning camera, etc.
+            } else {
+                console.warn("Could not find entity for current article ID:", articleId);
+            }
+            const visibility_multiplier = 1.5;
+            const hoverEntityMap = new Map();
+            // Populate ad-hoc map: all entities with min scale except hovered one
+            this.articleManager.entityMap.forEach((entity) => {
+                hoverEntityMap.set(entity.id, {scale: SIM_TO_SCALE_MIN*visibility_multiplier});
+                if (entity.id !== currentEntity.id) {
+                    entity.sphere.scale.setScalar(SIM_TO_SCALE_MIN*visibility_multiplier);
+                } else {
+                    entity.sphere.scale.setScalar(entity.sphere.scale.x*visibility_multiplier)
+                }
+
+            });
+
+            hoverEntityMap.set(currentEntity.id, {scale: currentEntity.scale*visibility_multiplier});
+            this.articleManager.updateLinks(hoverEntityMap);
+
+            // Get links with high technology cross similarity
+            const linksField = `${REDUCTION_METHOD}_links`;
+            const links = data[linksField] || [];
+
+            const TECH_SIMILARITY_THRESHOLD = 0.8;
+            
+            // Filter links where current article is involved and technology similarity > 0.5
+            const relevantLinks = links.filter(link => {
+                const isRelevant = (link.origin_id === articleId || link.end_id === articleId);
+                const hasTechSimilarity = link.cross_similarity?.technologies > TECH_SIMILARITY_THRESHOLD;
+                return isRelevant && hasTechSimilarity;
+            });
+            
+            // Collect entities from filtered links
+            const relevantEntityIds = new Set([currentEntity.id]);
+            relevantLinks.forEach(link => {
+                if (link.origin_id === articleId) {
+                    relevantEntityIds.add(link.end_id);
+                } else {
+                    relevantEntityIds.add(link.origin_id);
+                }
+            });
+            
+            // Get actual entities
+            const relevantEntities = Array.from(relevantEntityIds)
+                .map(id => this.articleManager.entities.find(e => e.article.id === id))
+                .filter(e => e !== undefined);
+
+            console.log("relevantEntities", relevantEntities);
+            
+            const view = findOptimalCameraView(relevantEntities, this.camera);
+            this.camera.position.copy(view.position);
+            this.camera.lookAt(view.target);
+
             
             // Render once
             this.render();
