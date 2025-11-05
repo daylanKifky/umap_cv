@@ -27,13 +27,9 @@
     }
     
     try {
-        // Load embeddings JSON
-        const response = await fetch(EMBEDDINGS_FILE);
-        const data = await response.json();
-        
-        // Check if reduction method is available
-        if (!data.reduction_method || !data.reduction_method.includes(REDUCTION_METHOD)) {
-            console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
+        // Load embeddings data once
+        const data = await loadEmbeddingsData();
+        if (!data) {
             return;
         }
         
@@ -96,8 +92,12 @@
         // Initialize SearchControls with article data
         window.searchControls = new SearchControls(articleId);
         
-        // Initialize static 3D visualizer
-        new StaticArticleVisualizer();
+        // Initialize static 3D visualizer with already loaded data
+        const container = document.getElementById('container-3d');
+        if (container) {
+            const visualizer = new StaticArticleVisualizer(container);
+            await visualizer.initialize(data);
+        }
     } catch (error) {
         console.error('Error loading embeddings or applying color:', error);
     }
@@ -105,19 +105,19 @@
 
 // Static Article Visualizer Class - extends BaseArticleVisualizer for static rendering
 class StaticArticleVisualizer extends BaseArticleVisualizer {
-    constructor() {
-        const container = document.getElementById('container-3d');
+    constructor(container) {
         super(container);
-        
-        this.loadArticles();
     }
     
-    async loadArticles() {
+    async initialize(data) {
         try {
-            // Call parent's loadArticles to initialize ArticleManager
-            const data = await super.loadArticles();
-            if (!data) return;
+            if (!data) {
+                console.error('No data provided to visualizer');
+                return;
+            }
             
+            // Initialize ArticleManager with provided data
+            this.initArticleManager(data);
             console.log("created article manager", this.articleManager);
             
             // Create article objects without animation callback
@@ -134,7 +134,7 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
             this.render();
             
         } catch (error) {
-            console.error('Error loading articles:', error);
+            console.error('Error initializing visualizer:', error);
         }
     }
     

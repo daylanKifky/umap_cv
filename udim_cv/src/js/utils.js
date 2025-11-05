@@ -563,6 +563,28 @@ function buildWeightedArticleList(articles, technologiesRatio = 0.3, tagsRatio =
 
 
 /**
+ * Load embeddings JSON data
+ * @returns {Promise<Object|null>} The embeddings data or null if error/invalid
+ */
+async function loadEmbeddingsData() {
+    try {
+        const response = await fetch(EMBEDDINGS_FILE);
+        const data = await response.json();
+
+        if (!data.reduction_method.includes(REDUCTION_METHOD)) {
+            console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
+            return null;
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Error loading embeddings:', error);
+        return null;
+    }
+}
+
+
+/**
  * BaseArticleVisualizer - Base class for 3D article visualization
  * Handles initialization of THREE.js scene, camera, renderer, and bloom effects
  */
@@ -655,29 +677,14 @@ class BaseArticleVisualizer {
         }
     }
     
-    async loadArticles() {
-        try {
-            const response = await fetch(EMBEDDINGS_FILE);
-            const data = await response.json();
-
-            if (!data.reduction_method.includes(REDUCTION_METHOD)) {
-                console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
-                return null;
-            }
-
-            // Initialize ArticleManager
-            this.articleManager = new ArticleManager(
-                this.scene, 
-                this.camera, 
-                data, 
-                REDUCTION_METHOD
-            );
-            
-            return data;
-        } catch (error) {
-            console.error('Error loading articles:', error);
-            return null;
-        }
+    initArticleManager(data) {
+        // Initialize ArticleManager with provided data
+        this.articleManager = new ArticleManager(
+            this.scene, 
+            this.camera, 
+            data, 
+            REDUCTION_METHOD
+        );
     }
     
     cameraOptimalPosition() {
@@ -735,6 +742,7 @@ if (typeof module !== 'undefined' && module.exports) {
         findOptimalCameraView,
         drawTextLines, 
         buildWeightedArticleList,
+        loadEmbeddingsData,
         BaseArticleVisualizer
     };
 }

@@ -83,7 +83,6 @@ class ArticleVisualizer extends BaseArticleVisualizer {
         
         this.initInteractivity();
         this.setupBloomControls();
-        this.loadArticles();
     }
     
     initInteractivity() {
@@ -131,12 +130,10 @@ class ArticleVisualizer extends BaseArticleVisualizer {
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
     }
     
-    async loadArticles() {
+    async initialize(data) {
         try {
-            // Call parent's loadArticles to initialize ArticleManager
-            const data = await super.loadArticles();
-            if (!data) return;
-
+            // Initialize ArticleManager with provided data
+            this.initArticleManager(data);
             this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
 
             await this.articleManager.createArticleObjects(() => {
@@ -180,7 +177,7 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             });
             
         } catch (error) {
-            console.error('Error loading articles:', error);
+            console.error('Error initializing visualizer:', error);
             document.getElementById('loading').textContent = 'Error loading articles';
         }
 
@@ -654,8 +651,14 @@ class ArticleVisualizer extends BaseArticleVisualizer {
 }
 
 // Initialize when page loads
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     setupStartupModal();
-    new ArticleVisualizer();
+    
+    // Load embeddings data
+    const data = await loadEmbeddingsData();
+    
+    // Create visualizer with loaded data
+    const visualizer = new ArticleVisualizer();
+    await visualizer.initialize(data);
 });
 
