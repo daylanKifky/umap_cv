@@ -161,6 +161,7 @@ function addArticlePills(articleContainer, article, data) {
         const techLabel = document.createElement('span');
         techLabel.className = 'article-pills-label';
         techLabel.textContent = 'technologies:';
+        techLabel.style.color = articleContainer.style.color;
         techSection.appendChild(techLabel);
         
         const techPills = document.createElement('div');
@@ -177,10 +178,11 @@ function addArticlePills(articleContainer, article, data) {
                     const [x, y, z] = techData.pca_3d;
                     const coords = fieldConverter.process(x, y, z);
                     const color = coords.color();
-                    const colorHex = '#' + color.getHexString();
-                    const rgba = `rgba(${Math.floor(color.r * 255)}, ${Math.floor(color.g * 255)}, ${Math.floor(color.b * 255)}, 0.3)`;
-                    pill.style.backgroundColor = rgba;
-                    pill.style.borderColor = colorHex;
+                    color.r = Math.floor(color.r * 255);
+                    color.g = Math.floor(color.g * 255);
+                    color.b = Math.floor(color.b * 255);
+                    pill.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.7)`;
+                    pill.style.borderColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.3)`;
                 }
             }
             
@@ -198,6 +200,7 @@ function addArticlePills(articleContainer, article, data) {
         const tagsLabel = document.createElement('span');
         tagsLabel.className = 'article-pills-label';
         tagsLabel.textContent = 'tags:';
+        tagsLabel.style.color = articleContainer.style.color;
         tagsSection.appendChild(tagsLabel);
         
         const tagPills = document.createElement('div');
@@ -214,10 +217,12 @@ function addArticlePills(articleContainer, article, data) {
                     const [x, y, z] = tagData.pca_3d;
                     const coords = fieldConverter.process(x, y, z);
                     const color = coords.color();
-                    const colorHex = '#' + color.getHexString();
-                    const rgba = `rgba(${Math.floor(color.r * 255)}, ${Math.floor(color.g * 255)}, ${Math.floor(color.b * 255)}, 0.3)`;
-                    pill.style.backgroundColor = rgba;
-                    pill.style.borderColor = colorHex;
+                    color.r = Math.floor(color.r * 255);
+                    color.g = Math.floor(color.g * 255);
+                    color.b = Math.floor(color.b * 255);
+                    pill.style.backgroundColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.1)`;
+                    pill.style.borderColor = `rgba(${color.r}, ${color.g}, ${color.b}, 0.9)`;
+                    pill.style.color = pill.style.borderColor;
                 }
             }
             

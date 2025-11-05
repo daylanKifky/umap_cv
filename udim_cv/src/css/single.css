@@ -1,7 +1,13 @@
+:root {
+    --single-bg-color: #1a1a1a;
+    --single-text-color: #e0e0e0;
+}
+
 /* Dark theme base */
 body {
-    background-color: #1a1a1a;
-    color: #e0e0e0;
+    /* CSS custom properties for single page theming */
+    background-color: var(--single-bg-color);
+    color: var(--single-text-color);
     font-family: var(--font-family);
     line-height: 1.6;
     margin: 0;
@@ -545,7 +551,7 @@ body::before {
 }
 
 .article-pills-label {
-    color: rgba(242, 242, 242, 0.7);
+    color: var(--single-text-color);
     font-size: 0.9rem;
     font-weight: 500;
     white-space: nowrap;
@@ -559,12 +565,11 @@ body::before {
 }
 
 .article-pill {
-    padding: 0.375rem 0.75rem;
-    border-radius: 16px;
-    font-size: 0.85rem;
-    font-weight: 400;
-    color: rgba(242, 242, 242, 0.9);
-    background: rgba(255, 255, 255, 0.08);
+    padding: 0.2rem 0.6rem;
+    border-radius: 11px;
+    font-size: 0.75rem;
+    color: var(--single-bg-color);
+    background:  var(--single-bg-color);
     border: 1px solid rgba(255, 255, 255, 0.15);
     transition: all 0.2s ease;
     display: inline-block;
@@ -577,11 +582,11 @@ body::before {
 }
 
 .article-pill-technology {
-    /* Technologies can have a slightly different style if needed */
+    font-weight: 700;
 }
 
 .article-pill-tag {
-    /* Tags can have a slightly different style if needed */
+    font-weight: 400;
 }
 
 /* Responsive adjustments */
@@ -699,6 +704,12 @@ body::before {
     .suggestion-description {
         font-size: 0.85rem;
     }
+
+    .article-pill {
+        padding: 0.15rem 0.4rem;
+        border-radius: 8px;
+        font-size: 0.65rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -722,6 +733,14 @@ body::before {
     }
     
     .suggestion-description {
+        font-size: 0.8rem;
+    }
+    .article-pill {
+        padding: 0.1rem 0.3rem;
+        border-radius: 6px;
+        font-size: 0.6rem;
+    }
+    .article-pills-label {
         font-size: 0.8rem;
     }
 }
