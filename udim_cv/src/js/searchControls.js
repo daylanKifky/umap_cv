@@ -7,7 +7,7 @@
  * Shows search suggestions as cards while typing.
  */
 class SearchControls {
-    constructor() {
+    constructor(articleId) {
         this.searchOpen = false;
         this.navbar = null;
         this.searchOverlay = null;
@@ -19,6 +19,7 @@ class SearchControls {
         this.articles = [];
         this.searchManager = null;
         this.converter = null;
+        this.fieldConverter = null; // Cached field coordinate converter
         this.searchTimeout = null;
         this.searchButton = null;
         this.originalIconHTML = null;
@@ -31,6 +32,8 @@ class SearchControls {
         this.availableTags = [];
         this.noSuggestionsMessage = null;
         this.noResultsMessage = null;
+        this.articleId = articleId;
+        this.data = null;
         
         this.init();
     }
@@ -48,11 +51,19 @@ class SearchControls {
         // Load articles data
         await this.loadArticles();
         
+        // Initialize field converter after data is loaded
+        this.initializeFieldConverter();
+        
         this.createSearchOverlay();
         this.createArticleOverlay();
         this.createNavbarOverlay();
         this.createSuggestionsContainer();
         this.attachEventListeners();
+        
+        // Add pills to the current article
+        this.addArticlePills();
+        
+        console.log('SearchControls initialized');
     }
     
     /**
@@ -61,14 +72,14 @@ class SearchControls {
     async loadArticles() {
         try {
             const response = await fetch(EMBEDDINGS_FILE);
-            const data = await response.json();
+            this.data = await response.json();
             
-            if (!data.articles || !Array.isArray(data.articles)) {
+            if (!this.data.articles || !Array.isArray(this.data.articles)) {
                 console.error('Invalid embeddings data format');
                 return;
             }
             
-            this.articles = data.articles;
+            this.articles = this.data.articles;
             
             // Initialize coordinate converter for color calculation
             this.converter = new coordinateConverter();
@@ -124,6 +135,36 @@ class SearchControls {
     }
     
     /**
+     * Initialize field coordinate converter (called once after data loads)
+     */
+    initializeFieldConverter() {
+        if (this.fieldConverter || !this.data?.fields) return;
+        
+        this.fieldConverter = new coordinateConverter();
+        const embeddingField = `${REDUCTION_METHOD}_3d`;
+        
+        // Add technologies coordinates
+        if (this.data.fields.technologies) {
+            Object.values(this.data.fields.technologies).forEach(techData => {
+                if (techData[embeddingField]) {
+                    const [x, y, z] = techData[embeddingField];
+                    this.fieldConverter.add(x, y, z);
+                }
+            });
+        }
+        
+        // Add tags coordinates
+        if (this.data.fields.tags) {
+            Object.values(this.data.fields.tags).forEach(tagData => {
+                if (tagData[embeddingField]) {
+                    const [x, y, z] = tagData[embeddingField];
+                    this.fieldConverter.add(x, y, z);
+                }
+            });
+        }
+    }
+    
+    /**
      * Get random items from an array.
      */
     getRandomItems(array, count) {
@@ -145,6 +186,27 @@ class SearchControls {
         const coords = this.converter.process(x, y, z);
         const color = coords.color();
         return '#' + color.getHexString();
+    }
+    
+    /**
+     * Get color for a field value (technology or tag)
+     */
+    getFieldColor(fieldType, fieldValue) {
+        const embeddingField = `${REDUCTION_METHOD}_3d`;
+        
+        if (!this.data?.fields?.[fieldType]?.[fieldValue]?.[embeddingField] || !this.fieldConverter) {
+            return null;
+        }
+        
+        const [x, y, z] = this.data.fields[fieldType][fieldValue][embeddingField];
+        const coords = this.fieldConverter.process(x, y, z);
+        const color = coords.color();
+        
+        return {
+            r: Math.floor(color.r * 255),
+            g: Math.floor(color.g * 255),
+            b: Math.floor(color.b * 255)
+        };
     }
     
     /**
@@ -815,11 +877,12 @@ class SearchControls {
         
         // Check if there are currently displayed suggestions
         const hasVisibleSuggestions = this.suggestionsContainer && 
-                                     this.suggestionsContainer.style.display !== 'none' &&
-                                     this.currentSuggestions.length > 0;
+        this.suggestionsContainer.style.display !== 'none' &&
+        this.currentSuggestions.length > 0;
         
         if (hasVisibleSuggestions) {
             let articleToOpen = null;
+            // TODO: when clearwinner navigate to that
             
             // If a suggestion is selected, use that one
             if (this.selectedIndex >= 0 && this.selectedIndex < this.currentSuggestions.length) {
@@ -871,6 +934,114 @@ class SearchControls {
     emit(eventName, data) {
         const event = new CustomEvent(`searchControls:${eventName}`, { detail: data });
         window.dispatchEvent(event);
+    }
+    
+    /**
+     * Create a single pill element
+     */
+    createPill(text, type, prefix, colorRgb) {
+        const pill = document.createElement('span');
+        pill.className = `article-pill article-pill-${type}`;
+        pill.textContent = text;
+        pill.style.cursor = 'pointer';
+        
+        // Apply color if available
+        if (colorRgb) {
+            const { r, g, b } = colorRgb;
+            if (type === 'technology') {
+                pill.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.7)`;
+                pill.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.3)`;
+            } else if (type === 'tag') {
+                pill.style.backgroundColor = `rgba(${r}, ${g}, ${b}, 0.1)`;
+                pill.style.borderColor = `rgba(${r}, ${g}, ${b}, 0.9)`;
+                pill.style.color = pill.style.borderColor;
+            }
+        }
+        
+        // Add click handler
+        pill.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const searchQuery = `${prefix}: ${text}`;
+            this.openSearch();
+            this.searchInput.value = searchQuery;
+            setTimeout(() => {
+                this.onSearchInput(searchQuery);
+            }, 150);
+        });
+        
+        return pill;
+    }
+    
+    /**
+     * Create a pills section (technologies or tags)
+     */
+    createPillsSection(items, type, label, prefix, articleContainerColor) {
+        if (!items || items.length === 0) return null;
+        
+        const section = document.createElement('div');
+        section.className = 'article-pills-section';
+        
+        const labelElement = document.createElement('span');
+        labelElement.className = 'article-pills-label';
+        labelElement.textContent = `${label}:`;
+        labelElement.style.color = articleContainerColor;
+        section.appendChild(labelElement);
+        
+        const pillsList = document.createElement('div');
+        pillsList.className = 'article-pills-list';
+        
+        items.forEach(item => {
+            const colorRgb = this.getFieldColor(type === 'technology' ? 'technologies' : 'tags', item);
+            const pill = this.createPill(item, type, prefix, colorRgb);
+            pillsList.appendChild(pill);
+        });
+        
+        section.appendChild(pillsList);
+        return section;
+    }
+    
+    /**
+     * Add technology and tag pills after the first header in the article container.
+     */
+    addArticlePills() {
+        const articleContainer = document.querySelector('.article-container');
+        if (!articleContainer || !this.articleId || !this.data) return;
+        
+        const article = this.articles.find(a => a.id === this.articleId);
+        if (!article) return;
+        
+        const firstHeader = articleContainer.querySelector('h1, h2, h3, h4, h5, h6');
+        if (!firstHeader || articleContainer.querySelector('.article-pills')) return;
+        
+        const technologies = article.technologies || [];
+        const tags = article.tags || [];
+        
+        if (technologies.length === 0 && tags.length === 0) return;
+        
+        const pillsContainer = document.createElement('div');
+        pillsContainer.className = 'article-pills';
+        
+        // Add technologies section
+        const techSection = this.createPillsSection(
+            technologies,
+            'technology',
+            'technologies',
+            'tech',
+            articleContainer.style.color
+        );
+        if (techSection) pillsContainer.appendChild(techSection);
+        
+        // Add tags section
+        const tagsSection = this.createPillsSection(
+            tags,
+            'tag',
+            'tags',
+            'tag',
+            articleContainer.style.color
+        );
+        if (tagsSection) pillsContainer.appendChild(tagsSection);
+        
+        firstHeader.insertAdjacentElement('afterend', pillsContainer);
     }
     
     /**

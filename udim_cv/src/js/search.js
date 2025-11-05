@@ -107,14 +107,30 @@ class SearchManager extends EventTarget {
         if (!query || !query.trim()) return [];
         
         try {
-            const results = this.miniSearch.search(query.trim(), {
+            let searchQuery = query.trim();
+            let searchOptions = {
                 boost: { 
                     title: 3,
                     technologies: 2 
                 },
                 fuzzy: 0.2,
                 prefix: true
-            });
+            };
+
+            // Check for field-specific search prefixes
+            if (searchQuery.startsWith('title:')) {
+                searchQuery = searchQuery.substring(6).trim();
+                searchOptions.fields = ['title'];
+            } else if (searchQuery.startsWith('tag:')) {
+                searchQuery = searchQuery.substring(4).trim();
+                searchOptions.fields = ['tags'];
+            } else if (searchQuery.startsWith('tech:') || searchQuery.startsWith('technology:')) {
+                const prefixLength = searchQuery.startsWith('tech:') ? 5 : 11;
+                searchQuery = searchQuery.substring(prefixLength).trim();
+                searchOptions.fields = ['technologies'];
+            }
+
+            const results = this.miniSearch.search(searchQuery, searchOptions);
 
             const { clearWinner, ratio, zTop } = detectClearWinner(results);
             console.log(`Search: "${query}" - Clear winner: ${clearWinner}, Ratio: ${ratio.toFixed(2)}, Z-score: ${zTop.toFixed(2)}`);
