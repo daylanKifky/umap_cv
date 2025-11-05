@@ -560,7 +560,168 @@ function buildWeightedArticleList(articles, technologiesRatio = 0.3, tagsRatio =
     console.log(`Built weighted article list: ${weightedList.length} entries from ${articles.length} articles and ${sortedTechnologies.length} technologies and ${sortedTags.length} tags`);
     return weightedList;
 }
-  
+
+
+/**
+ * BaseArticleVisualizer - Base class for 3D article visualization
+ * Handles initialization of THREE.js scene, camera, renderer, and bloom effects
+ */
+class BaseArticleVisualizer {
+    constructor(container) {
+        if (!container) {
+            throw new Error('Container element is required');
+        }
+        
+        this.container = container;
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.articleManager = null;
+        this.composer = null;
+        this.bloomPass = null;
+        
+        this.cameraInitialPosition = new THREE.Vector3(
+            CAMERA_INITIAL_POSITION.x,
+            CAMERA_INITIAL_POSITION.y,
+            CAMERA_INITIAL_POSITION.z
+        );
+        this.cameraDistance = this.cameraInitialPosition.length();
+        
+        this.init();
+        this.setupBloom();
+    }
+    
+    init() {
+        // Scene
+        this.scene = new THREE.Scene();
+        this.scene.background = new THREE.Color(0x0a0a0a);
+        
+        // Get container dimensions
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+        
+        // Camera
+        this.camera = new THREE.PerspectiveCamera(
+            35, 
+            width / height, 
+            0.1, 
+            1000
+        );
+        this.camera.position.copy(this.cameraInitialPosition);
+        
+        // Renderer
+        this.renderer = new THREE.WebGLRenderer({ antialias: false });
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4));
+        this.renderer.setSize(width, height);
+        this.renderer.shadowMap.enabled = false;
+        
+        this.container.appendChild(this.renderer.domElement);
+        
+        // Axis Helper (optional)
+        if (SHOW_AXES) {
+            const axesHelper = new THREE.AxesHelper(10);
+            this.scene.add(axesHelper);
+        }
+    }
+    
+    setupBloom() {
+        // Create composer for post-processing
+        this.composer = new THREE.EffectComposer(this.renderer);
+
+        // Render pass
+        const renderPass = new THREE.RenderPass(this.scene, this.camera);
+        this.composer.addPass(renderPass);
+
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        // Bloom pass
+        this.bloomPass = new THREE.UnrealBloomPass(
+            new THREE.Vector2(width, height),
+            0.3,  // strength
+            0.09,  // radius
+            0.58   // threshold
+        );
+        this.composer.addPass(this.bloomPass);
+
+        // FXAA pass - antialiasing
+        if (FXAA_RESOLUTION > 0) {
+            const fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
+            fxaaPass.material.uniforms['resolution'].value.set(
+                FXAA_RESOLUTION / width, 
+                FXAA_RESOLUTION / height
+            );
+            this.composer.addPass(fxaaPass);
+        }
+    }
+    
+    async loadArticles() {
+        try {
+            const response = await fetch(EMBEDDINGS_FILE);
+            const data = await response.json();
+
+            if (!data.reduction_method.includes(REDUCTION_METHOD)) {
+                console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
+                return null;
+            }
+
+            // Initialize ArticleManager
+            this.articleManager = new ArticleManager(
+                this.scene, 
+                this.camera, 
+                data, 
+                REDUCTION_METHOD
+            );
+            
+            return data;
+        } catch (error) {
+            console.error('Error loading articles:', error);
+            return null;
+        }
+    }
+    
+    cameraOptimalPosition() {
+        if (!this.articleManager || !this.articleManager.entities) {
+            return;
+        }
+        
+        // Calculate optimal position to see all entities
+        const points = this.articleManager.entities.map(e => e.position);
+        const centroid = new THREE.Vector3(0, 0, 0);
+        const viewDirection = this.cameraInitialPosition.clone().normalize();
+        const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
+        
+        this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
+        this.cameraDistance = this.cameraInitialPosition.length();
+    }
+    
+    onWindowResize() {
+        const width = this.container.clientWidth;
+        const height = this.container.clientHeight;
+
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+
+        // Update composer size
+        if (this.composer) {
+            this.composer.setSize(width, height);
+
+            // Update FXAA resolution
+            if (FXAA_RESOLUTION > 0) {
+                this.composer.passes.forEach(pass => {
+                    if (pass.material && pass.material.uniforms && pass.material.uniforms['resolution']) {
+                        pass.material.uniforms['resolution'].value.set(
+                            FXAA_RESOLUTION / width, 
+                            FXAA_RESOLUTION / height
+                        );
+                    }
+                });
+            }
+        }
+    }
+}
+
 
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
@@ -573,7 +734,8 @@ if (typeof module !== 'undefined' && module.exports) {
         degToRad,
         findOptimalCameraView,
         drawTextLines, 
-        buildWeightedArticleList
+        buildWeightedArticleList,
+        BaseArticleVisualizer
     };
 }
 

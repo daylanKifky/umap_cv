@@ -726,7 +726,7 @@ class ArticleManager {
             entity.resetAppearance();
 
             sphere.userData.initialScale = sphere.scale.x;
-            sphere.scale.setScalar(0); // prepare for fadeIn
+            // sphere.scale.setScalar(0); // prepare for fadeIn
             
             if (DEBUG_CARD_CORNER) {
                 const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -745,7 +745,7 @@ class ArticleManager {
         // Create link geometry between related entities
         const linksMesh = this.linksManager.createLinks(this.entityMap)
         const linksTargetOpacity = linksMesh.material.opacity;
-        linksMesh.material.opacity = 0; // prepare for fadeIn
+        // linksMesh.material.opacity = 0; // prepare for fadeIn
         this.scene.add(linksMesh);
         console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
 

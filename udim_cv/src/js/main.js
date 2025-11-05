@@ -47,30 +47,21 @@ function closeStartupModal() {
     }
 }
 
-// Article Visualizer Class
-class ArticleVisualizer {
+// Article Visualizer Class - extends BaseArticleVisualizer for interactivity
+class ArticleVisualizer extends BaseArticleVisualizer {
     constructor() {
-        this.scene = null;
-        this.camera = null;
-        this.renderer = null;
+        const container = document.getElementById('container');
+        super(container);
+        
         this.orbit_controls = null;
         this.articles = [];
-        this.articleManager = null;
         this.searchManager = null;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         
-        // Bloom post-processing
-        this.composer = null;
-        this.bloomPass = null;
+        // Bloom control
         this.bloomEnabled = BLOOM_ENABLED;
-
-        this.cameraInitialPosition = new THREE.Vector3(
-            CAMERA_INITIAL_POSITION.x,
-            CAMERA_INITIAL_POSITION.y,
-            CAMERA_INITIAL_POSITION.z
-        );
-        this.cameraDistance = this.cameraInitialPosition.length(); 
+        
         this.cameraAnimationDuration = CAMERA_ANIMATION_DURATION;
         
         // Hover functionality
@@ -90,41 +81,12 @@ class ArticleVisualizer {
         // Stats for performance monitoring
         this.stats = null;
         
-        this.init();
-        this.setupBloom();
+        this.initInteractivity();
         this.setupBloomControls();
         this.loadArticles();
-
     }
     
-    init() {
-        const container = document.getElementById('container');
-        
-        // Scene
-        this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x0a0a0a);
-        
-        // Get actual container dimensions
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-        
-        // Camera
-        this.camera = new THREE.PerspectiveCamera(
-            35, 
-            width / height, 
-            0.1, 
-            1000
-        );
-        this.camera.position.copy(this.cameraInitialPosition);
-        
-        // Renderer
-        this.renderer = new THREE.WebGLRenderer({ antialias: false }); // Disable built-in antialiasing for FXAA
-        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4)); // Cap at 2 for performance
-        this.renderer.setSize(width, height);
-        this.renderer.shadowMap.enabled = false;
-        
-        container.appendChild(this.renderer.domElement);
-        
+    initInteractivity() {
         // Controls
         this.orbit_controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
         this.orbit_controls.enableDamping = true;
@@ -146,12 +108,6 @@ class ArticleVisualizer {
             scene: this.scene, 
             renderer: this.renderer 
         }}
-        
-        // Axis Helper
-        if (SHOW_AXES) {
-            const axesHelper = new THREE.AxesHelper(10);
-            this.scene.add(axesHelper);
-        }
 
         // Initialize Stats
         if (SHOW_THREE_STATS && typeof Stats !== 'undefined') {
@@ -173,21 +129,14 @@ class ArticleVisualizer {
         
         // Handle mouse move for hover effects
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
-       
     }
     
     async loadArticles() {
         try {
-            const response = await fetch(EMBEDDINGS_FILE);
-            const data = await response.json();
+            // Call parent's loadArticles to initialize ArticleManager
+            const data = await super.loadArticles();
+            if (!data) return;
 
-            if (!data.reduction_method.includes(REDUCTION_METHOD)) {
-                console.error(`Reduction method '${REDUCTION_METHOD}' not found in embeddings.json`);
-                return;
-            }
-
-            // Initialize ArticleManager with full data and reduction method
-            this.articleManager = new ArticleManager(this.scene, this.camera, data, REDUCTION_METHOD);
             this.articleManager.animation.duration = this.cameraAnimationDuration * 0.5;
 
             await this.articleManager.createArticleObjects(() => {
@@ -246,16 +195,6 @@ class ArticleVisualizer {
         // Mark scene as updated after clearing search (object appearances change)
         this._render_required = true;
         this.cameraZoomOut();
-    }
-
-    cameraOptimalPosition(){
-        // Animate camera to optimal position to see all entities
-        const points = this.articleManager.entities.map(e => e.position);
-        const centroid = new THREE.Vector3(0, 0, 0);
-        const viewDirection = this.cameraInitialPosition.clone().normalize();
-        const distance = calculateOptimalDistance(points, centroid, viewDirection, this.camera);
-        this.cameraInitialPosition = viewDirection.clone().multiplyScalar(distance);
-        this.cameraDistance = this.cameraInitialPosition.length();
     }
 
     cameraZoomOut() {
@@ -360,37 +299,6 @@ class ArticleVisualizer {
 
     }
     
-    
-    setupBloom() {
-        // Create composer for post-processing
-        this.composer = new THREE.EffectComposer(this.renderer);
-
-        // Render pass - renders the scene
-        const renderPass = new THREE.RenderPass(this.scene, this.camera);
-        this.composer.addPass(renderPass);
-
-        // Get actual container dimensions
-        const container = document.getElementById('container');
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        // Bloom pass - adds bloom effect
-        this.bloomPass = new THREE.UnrealBloomPass(
-            new THREE.Vector2(width, height),
-            0.3,  // strength
-            0.09,  // radius
-            0.58   // threshold
-        );
-        this.composer.addPass(this.bloomPass);
-
-        // FXAA pass - antialiasing
-        if (FXAA_RESOLUTION > 0) {
-            const fxaaPass = new THREE.ShaderPass(THREE.FXAAShader);
-            fxaaPass.material.uniforms['resolution'].value.set(FXAA_RESOLUTION / width, FXAA_RESOLUTION / height);
-            this.composer.addPass(fxaaPass);
-        }
-    }
-    
     setupBloomControls() {
         const enabledCheckbox = document.getElementById('bloom-enabled');
         const strengthSlider = document.getElementById('bloom-strength');
@@ -469,27 +377,8 @@ class ArticleVisualizer {
     }
     
     onWindowResize() {
-        const container = document.getElementById('container');
-        const width = container.clientWidth;
-        const height = container.clientHeight;
-
-        this.camera.aspect = width / height;
-        this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
-
-        // Update composer size
-        if (this.composer) {
-            this.composer.setSize(width, height);
-
-            // Update FXAA resolution
-            if (FXAA_RESOLUTION > 0) {
-                this.composer.passes.forEach(pass => {
-                        if (pass.material && pass.material.uniforms && pass.material.uniforms['resolution']) {
-                            pass.material.uniforms['resolution'].value.set(FXAA_RESOLUTION / width, FXAA_RESOLUTION / height);
-                        }
-                    });
-            }
-        }
+        // Call parent's resize handler
+        super.onWindowResize();
         
         // Mark scene as updated after resize
         this._render_required = true;

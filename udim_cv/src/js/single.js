@@ -95,7 +95,60 @@
         
         // Initialize SearchControls with article data
         window.searchControls = new SearchControls(articleId);
+        
+        // Initialize static 3D visualizer
+        new StaticArticleVisualizer();
     } catch (error) {
         console.error('Error loading embeddings or applying color:', error);
     }
 })();
+
+// Static Article Visualizer Class - extends BaseArticleVisualizer for static rendering
+class StaticArticleVisualizer extends BaseArticleVisualizer {
+    constructor() {
+        const container = document.getElementById('container-3d');
+        super(container);
+        
+        this.loadArticles();
+    }
+    
+    async loadArticles() {
+        try {
+            // Call parent's loadArticles to initialize ArticleManager
+            const data = await super.loadArticles();
+            if (!data) return;
+            
+            console.log("created article manager", this.articleManager);
+            
+            // Create article objects without animation callback
+            await this.articleManager.createArticleObjects();
+            console.log("created article objects", this.articleManager.entities);
+            
+            // Calculate optimal camera position
+            this.cameraOptimalPosition();
+            
+            // Set camera to look at centroid
+            this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+            
+            // Render once
+            this.render();
+            
+        } catch (error) {
+            console.error('Error loading articles:', error);
+        }
+    }
+    
+    render() {
+        // Update article manager (labels face camera)
+        if (this.articleManager) {
+            this.articleManager.update();
+        }
+        
+        // Render once with bloom if enabled
+        if (BLOOM_ENABLED && this.composer) {
+            this.composer.render();
+        } else {
+            this.renderer.render(this.scene, this.camera);
+        }
+    }
+}
