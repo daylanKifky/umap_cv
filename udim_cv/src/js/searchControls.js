@@ -486,6 +486,7 @@ class SearchControls {
         
         // Perform search
         const results = this.searchManager.performSearch(trimmedQuery);
+
         
         if (!results || results.length === 0) {
             // Show red error message when query exists but no results found
@@ -504,8 +505,8 @@ class SearchControls {
         this.hideNoSuggestionsMessage();
         this.hideNoResultsMessage();
         
-        // Show top 5 results
-        const topResults = results.slice(0, 5);
+        // Show top 5 results or top 1 if clear winner
+        const topResults = results.clearWinner ? results.slice(0, 1) : results.slice(0, 5);
         this.currentSuggestions = topResults.map(result => {
             return this.articles.find(a => a.id === result.id);
         }).filter(article => article !== undefined);
