@@ -130,7 +130,7 @@ class ArticleVisualizer extends BaseArticleVisualizer {
         this.renderer.domElement.addEventListener('mousemove', (event) => this.onMouseMove(event));
     }
     
-    async initialize(data) {
+    async initialize(data, articleId = null) {
         try {
             // Initialize ArticleManager with provided data
             this.initArticleManager(data);
@@ -138,24 +138,47 @@ class ArticleVisualizer extends BaseArticleVisualizer {
 
             await this.articleManager.createArticleObjects(() => {
                 this._render_required = true;
-            });
+            }, articleId === null);
 
-            this.cameraOptimalPosition();
+            // If articleId is provided, highlight that article
+            if (articleId !== null) {
+                const linksField = `${REDUCTION_METHOD}_links`;
+                const links = data[linksField] || [];
+                const TECH_SIMILARITY_THRESHOLD = 0.9;
+                const relevantEntityIds = getRelevantEntityIds(links, articleId, TECH_SIMILARITY_THRESHOLD);
+                
+                const { currentEntity, relevantEntities } = highlightArticleEntity(
+                    this.articleManager, 
+                    articleId, 
+                    relevantEntityIds, 
+                    1
+                );
+                
+                if (currentEntity && relevantEntities.length > 0) {
+                    const view = findOptimalCameraView(relevantEntities, this.camera);
+                    this.camera.position.copy(view.position);
+                    this.orbit_controls.target.copy(view.target);
+                    this.orbit_controls.update();
+
+                }
+            } else {
+                const centroid = new THREE.Vector3(0, 0, 0);
+                const startupModal = document.getElementById('startup-modal');
+                if (startupModal.style.display === 'none') {
+                    this.animateCamera(this.cameraInitialPosition, centroid);
+                } else {
+                    const animateCamera = () => {   
+                        this.animateCamera(this.cameraInitialPosition, centroid);
+                        window.removeEventListener('modalClosed', animateCamera);   
+                    };
+                    window.addEventListener('modalClosed', animateCamera);
+                }
+            }
+            
+            this.calculateCameraOptimalPosition();
             
             // Mark scene as updated after creating objects (initial render needed)
             this._render_required = true;
-            
-            const centroid = new THREE.Vector3(0, 0, 0);
-            const startupModal = document.getElementById('startup-modal');
-            if (startupModal.style.display === 'none') {
-                this.animateCamera(this.cameraInitialPosition, centroid);
-            } else {
-                const animateCamera = () => {   
-                    this.animateCamera(this.cameraInitialPosition, centroid);
-                    window.removeEventListener('modalClosed', animateCamera);   
-                };
-                window.addEventListener('modalClosed', animateCamera);
-            }
             
             // Initialize search manager after articles are loaded
             this.searchManager = new SearchManager(data.articles);
@@ -652,13 +675,23 @@ class ArticleVisualizer extends BaseArticleVisualizer {
 
 // Initialize when page loads
 window.addEventListener('DOMContentLoaded', async () => {
-    setupStartupModal();
+    // Extract highlight query parameter from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightParam = urlParams.get('highlight');
+    const highlightId = highlightParam ? parseInt(highlightParam, 10) : null;
+    if (highlightId !== null) {
+        const startupModal = document.getElementById('startup-modal');
+        startupModal.style.display = 'none';
+    } else {
+        setupStartupModal();
+    }
     
     // Load embeddings data
     const data = await loadEmbeddingsData();
     
+    
     // Create visualizer with loaded data
     const visualizer = new ArticleVisualizer();
-    await visualizer.initialize(data);
+    await visualizer.initialize(data, highlightId);
 });
 

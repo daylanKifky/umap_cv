@@ -682,7 +682,7 @@ class ArticleManager {
      * and build the links mesh. Clears any previous state.
      * @returns {Promise<{entitiesCount:number, linksMesh:THREE.Mesh|null}>}
      */
-    async createArticleObjects(onChange = null) {
+    async createArticleObjects(onChange = null, animate = true) {
         await this.loadFonts();
         const embeddingField = `${this.reductionMethod}_3d`;
         console.log(`Creating objects with field: ${embeddingField}`);
@@ -726,7 +726,9 @@ class ArticleManager {
             entity.resetAppearance();
 
             sphere.userData.initialScale = sphere.scale.x;
-            // sphere.scale.setScalar(0); // prepare for fadeIn
+            if (animate) {  
+                sphere.scale.setScalar(0); // prepare for fadeIn
+            }
             
             if (DEBUG_CARD_CORNER) {
                 const boxGeometry = new THREE.BoxGeometry(0.2, 0.2, 0.2);
@@ -737,7 +739,7 @@ class ArticleManager {
             }
         });
         
-        console.log(`Created ${this.entities.length} article entities`);
+        console.log(`Created ${this.entities.length} article entities, animation: ${animate}`);
         
         // Initially, all spheres are interactable (no active cards yet)
         this.activeSpheres = this.entities.map(entity => entity.sphere).filter(sphere => sphere !== null);
@@ -745,7 +747,9 @@ class ArticleManager {
         // Create link geometry between related entities
         const linksMesh = this.linksManager.createLinks(this.entityMap)
         const linksTargetOpacity = linksMesh.material.opacity;
-        // linksMesh.material.opacity = 0; // prepare for fadeIn
+        if (animate) {
+            linksMesh.material.opacity = 0; // prepare for fadeIn
+        }
         this.scene.add(linksMesh);
         console.log(`Created link mesh with ${this.linksManager.vertcount} vertices`);
 
@@ -782,7 +786,10 @@ class ArticleManager {
         };
 
         onChange && onChange();
-        requestAnimationFrame(animateScale);
+        
+        if (animate) {
+            requestAnimationFrame(animateScale);
+        }
         
         return {
             entitiesCount: this.entities.length,

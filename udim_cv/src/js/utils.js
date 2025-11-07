@@ -563,6 +563,86 @@ function buildWeightedArticleList(articles, technologiesRatio = 0.3, tagsRatio =
 
 
 /**
+ * Get relevant entity IDs based on links with high technology similarity
+ * @param {Array} links - Array of link objects with origin_id, end_id, and cross_similarity
+ * @param {number} articleId - The current article ID
+ * @param {number} threshold - Technology similarity threshold (default: 0.8)
+ * @returns {Set} Set of relevant entity IDs
+ */
+function getRelevantEntityIds(links, articleId, threshold = 0.8) {
+    // Filter links where current article is involved and technology similarity > threshold
+    const relevantLinks = links.filter(link => {
+        const isRelevant = (link.origin_id === articleId || link.end_id === articleId);
+        const hasTechSimilarity = link.cross_similarity?.technologies > threshold;
+        return isRelevant && hasTechSimilarity;
+    });
+    
+    // Collect entities from filtered links
+    const relevantEntityIds = new Set([articleId]);
+    relevantLinks.forEach(link => {
+        if (link.origin_id === articleId) {
+            relevantEntityIds.add(link.end_id);
+        } else {
+            relevantEntityIds.add(link.origin_id);
+        }
+    });
+    
+    return relevantEntityIds;
+}
+
+/**
+ * Highlight a specific article entity in the scene
+ * @param {ArticleManager} articleManager - The article manager instance
+ * @param {number} articleId - The article ID to highlight
+ * @param {Set} relevantEntityIds - Set of relevant entity IDs (optional, defaults to just the articleId)
+ * @param {number} visibilityMultiplier - Scale multiplier for visibility (default: 1.5)
+ * @returns {Object} Object containing currentEntity and relevantEntities arrays
+ */
+function highlightArticleEntity(articleManager, articleId, relevantEntityIds = null, visibilityMultiplier = 1.5) {
+    // Find the entity that corresponds to the current article
+    const currentEntity = articleManager.entities.find(entity => 
+        entity.article.id === articleId
+    );
+    
+    if (!currentEntity) {
+        console.warn("Could not find entity for article ID:", articleId);
+        return { currentEntity: null, relevantEntities: [] };
+    }
+    
+    console.log("Found current article entity:", currentEntity);
+    
+    // Create hover entity map for highlighting
+    const hoverEntityMap = new Map();
+    
+    // Populate ad-hoc map: all entities with min scale except highlighted one
+    articleManager.entityMap.forEach((entity) => {
+        hoverEntityMap.set(entity.id, {scale: SIM_TO_SCALE_MIN * visibilityMultiplier});
+        if (entity.id !== currentEntity.id) {
+            entity.sphere.scale.setScalar(SIM_TO_SCALE_MIN * visibilityMultiplier);
+        } else {
+            entity.sphere.scale.setScalar(entity.sphere.scale.x * visibilityMultiplier);
+        }
+    });
+    
+    hoverEntityMap.set(currentEntity.id, {scale: currentEntity.scale * visibilityMultiplier});
+    articleManager.updateLinks(hoverEntityMap);
+    
+    // Get actual entities from pre-calculated relevant entity IDs
+    let relevantEntities = [];
+    if (relevantEntityIds) {
+        relevantEntities = Array.from(relevantEntityIds)
+            .map(id => articleManager.entities.find(e => e.article.id === id))
+            .filter(e => e !== undefined);
+    } else {
+        relevantEntities = [currentEntity];
+    }
+    
+    console.log("relevantEntities", relevantEntities);
+    
+    return { currentEntity, relevantEntities };
+}
+
+/**
  * Load embeddings JSON data
  * @returns {Promise<Object|null>} The embeddings data or null if error/invalid
  */
@@ -687,7 +767,7 @@ class BaseArticleVisualizer {
         );
     }
     
-    cameraOptimalPosition() {
+    calculateCameraOptimalPosition() {
         if (!this.articleManager || !this.articleManager.entities) {
             return;
         }
