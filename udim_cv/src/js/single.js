@@ -107,12 +107,21 @@
         // Initialize SearchControls with article data
         window.searchControls = new SearchControls(articleId);
         
+        // Get links with high technology cross similarity
+        const linksField = `${REDUCTION_METHOD}_links`;
+        const links = data[linksField] || [];
+        const TECH_SIMILARITY_THRESHOLD = 0.8;
+        const relevantEntityIds = getRelevantEntityIds(links, articleId, articleId, TECH_SIMILARITY_THRESHOLD);
+        
+        // Populate similar pills container
+        populateSimilarPills(data, relevantEntityIds, articleId);
+        
         // Initialize static 3D visualizer with already loaded data
         const container = document.getElementById('container-3d');
         if (container) {
             const { width: canvasWidth, height: canvasHeight } = calculateCanvasDimensions();
             window.staticVisualizer = new StaticArticleVisualizer(container, canvasWidth, canvasHeight);
-            await window.staticVisualizer.initialize(data, articleId);
+            await window.staticVisualizer.initialize(data, articleId, relevantEntityIds);
             
             // Handle window resize
             window.addEventListener('resize', () => {
@@ -126,6 +135,72 @@
     }
 })();
 
+/**
+ * Get relevant entity IDs based on links with high technology similarity
+ * @param {Array} links - Array of link objects with origin_id, end_id, and cross_similarity
+ * @param {number} articleId - The current article ID
+ * @param {number} currentEntityId - The current entity ID (same as articleId)
+ * @param {number} threshold - Technology similarity threshold (default: 0.8)
+ * @returns {Set} Set of relevant entity IDs
+ */
+function getRelevantEntityIds(links, articleId, currentEntityId, threshold = 0.8) {
+    // Filter links where current article is involved and technology similarity > threshold
+    const relevantLinks = links.filter(link => {
+        const isRelevant = (link.origin_id === articleId || link.end_id === articleId);
+        const hasTechSimilarity = link.cross_similarity?.technologies > threshold;
+        return isRelevant && hasTechSimilarity;
+    });
+    
+    // Collect entities from filtered links
+    const relevantEntityIds = new Set([currentEntityId]);
+    relevantLinks.forEach(link => {
+        if (link.origin_id === articleId) {
+            relevantEntityIds.add(link.end_id);
+        } else {
+            relevantEntityIds.add(link.origin_id);
+        }
+    });
+    
+    return relevantEntityIds;
+}
+
+/**
+ * Populate the similar pills container with relevant articles
+ * @param {Object} data - The embeddings data containing articles
+ * @param {Set} relevantEntityIds - Set of relevant entity IDs
+ * @param {number} currentArticleId - The current article ID to exclude from pills
+ */
+function populateSimilarPills(data, relevantEntityIds, currentArticleId) {
+    const container = document.getElementById('similar-pills-container');
+    if (!container) {
+        console.warn('similar-pills-container not found');
+        return;
+    }
+    
+    // Clear existing content
+    container.innerHTML = '';
+    
+    // Filter out current article and get relevant articles
+    const relevantArticles = Array.from(relevantEntityIds)
+        .filter(id => id !== currentArticleId)
+        .map(id => data.articles.find(a => a.id === id))
+        .filter(article => article !== undefined && article.html_filepath);
+    
+    if (relevantArticles.length === 0) {
+        return;
+    }
+    
+    // Create pills for each relevant article
+    relevantArticles.forEach(article => {
+        const pill = document.createElement('a');
+        pill.className = 'no-suggestions-item';
+        pill.href = article.html_filepath;
+        pill.textContent = article.title || 'Untitled';
+        pill.title = article.title || 'Untitled';
+        container.appendChild(pill);
+    });
+}
+
 // Static Article Visualizer Class - extends BaseArticleVisualizer for static rendering
 class StaticArticleVisualizer extends BaseArticleVisualizer {
     constructor(container, width = null, height = null) {
@@ -134,7 +209,7 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
         this.customHeight = height;
     }
     
-    async initialize(data, articleId) {
+    async initialize(data, articleId, relevantEntityIds) {
         if (!data) {
             console.error('No data provided to visualizer');
             return;
@@ -176,30 +251,7 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
             hoverEntityMap.set(currentEntity.id, {scale: currentEntity.scale*visibility_multiplier});
             this.articleManager.updateLinks(hoverEntityMap);
 
-            // Get links with high technology cross similarity
-            const linksField = `${REDUCTION_METHOD}_links`;
-            const links = data[linksField] || [];
-
-            const TECH_SIMILARITY_THRESHOLD = 0.8;
-            
-            // Filter links where current article is involved and technology similarity > 0.5
-            const relevantLinks = links.filter(link => {
-                const isRelevant = (link.origin_id === articleId || link.end_id === articleId);
-                const hasTechSimilarity = link.cross_similarity?.technologies > TECH_SIMILARITY_THRESHOLD;
-                return isRelevant && hasTechSimilarity;
-            });
-            
-            // Collect entities from filtered links
-            const relevantEntityIds = new Set([currentEntity.id]);
-            relevantLinks.forEach(link => {
-                if (link.origin_id === articleId) {
-                    relevantEntityIds.add(link.end_id);
-                } else {
-                    relevantEntityIds.add(link.origin_id);
-                }
-            });
-            
-            // Get actual entities
+            // Get actual entities from pre-calculated relevant entity IDs
             const relevantEntities = Array.from(relevantEntityIds)
                 .map(id => this.articleManager.entities.find(e => e.article.id === id))
                 .filter(e => e !== undefined);

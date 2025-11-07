@@ -43,7 +43,7 @@ body::before {
     max-width: 1024px;
     margin: 0 auto;
     width: 100%;
-    /* flex: 0 1 auto; */
+    flex: 0 1 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -597,9 +597,32 @@ body::before {
     position: relative;
     z-index: 1;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     background-color: var(--single-bg-color-trans);
+}
+
+.after-article-container h2 {
+    margin-bottom: 1.2rem;
+    color: rgba(168, 168, 168, 0.9);
+    font-size: 1.2rem;
+    font-weight: 500;
+}
+
+#similar-pills-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+#similar-pills-container .no-suggestions-item {
+    text-decoration: none;
+    display: inline-block;
 }
 
 #container-3d {
