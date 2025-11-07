@@ -215,6 +215,7 @@ class ArticleVisualizer extends BaseArticleVisualizer {
         // Mark scene as updated after clearing search (object appearances change)
         this._render_required = true;
         this.cameraZoomOut();
+        this.articleManager.hoverEntityMap = null;
     }
 
     cameraZoomOut() {
@@ -585,7 +586,6 @@ class ArticleVisualizer extends BaseArticleVisualizer {
                 hoverEntityMap.set(hoveredEntity.id, {scale: hoveredEntity.scale * 1.01});
                 
                 // Update links with ad-hoc map to highlight hovered entity's connections
-                this.articleManager.hoverEntityMap = hoverEntityMap;
                 this.articleManager.updateLinks(hoverEntityMap);
                 // Mark scene as updated after link changes
                 this._render_required = true;
@@ -594,9 +594,8 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             if (this.hoveredObject) {
                 this.clearHover(this.hoveredObject);
                 this.hoveredObject = null;
-                this.articleManager.hoverEntityMap = null;
                 // Restore original links when hover is cleared
-                this.articleManager.updateLinks();
+                this.articleManager.updateLinks(this.articleManager.hoverEntityMap);
                 // Mark scene as updated after link changes
                 this._render_required = true;
             }
@@ -629,7 +628,7 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             const pScale = object.scale.x;
             object.userData.prev_scale = pScale;
             object.material.opacity = 1.0;
-            object.scale.set(pScale * 1.1, pScale * 1.1, pScale * 1.1);
+            object.scale.setScalar(SIM_TO_SCALE_MAX);
         }
         
         // Mark scene as updated after hover state change

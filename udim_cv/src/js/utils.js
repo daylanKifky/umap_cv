@@ -569,14 +569,16 @@ function buildWeightedArticleList(articles, technologiesRatio = 0.3, tagsRatio =
  * @param {number} threshold - Technology similarity threshold (default: 0.8)
  * @returns {Set} Set of relevant entity IDs
  */
-function getRelevantEntityIds(links, articleId, threshold = 0.8) {
-    // Filter links where current article is involved and technology similarity > threshold
+function getRelevantEntityIds(links, articleId, threshold = 0.8, similarityField = 'technologies') {
+    // Filter links where current article is involved and similarityField > threshold
     const relevantLinks = links.filter(link => {
         const isRelevant = (link.origin_id === articleId || link.end_id === articleId);
-        const hasTechSimilarity = link.cross_similarity?.technologies > threshold;
-        return isRelevant && hasTechSimilarity;
+        // dynamic similarity field support (safe access)
+        const similarityValue = link.cross_similarity?.[similarityField];
+        const hasSimilarity = similarityValue > threshold;
+        return isRelevant && hasSimilarity;
     });
-    
+
     // Collect entities from filtered links
     const relevantEntityIds = new Set([articleId]);
     relevantLinks.forEach(link => {
@@ -586,7 +588,7 @@ function getRelevantEntityIds(links, articleId, threshold = 0.8) {
             relevantEntityIds.add(link.origin_id);
         }
     });
-    
+
     return relevantEntityIds;
 }
 
@@ -638,6 +640,7 @@ function highlightArticleEntity(articleManager, articleId, relevantEntityIds = n
     }
     
     console.log("relevantEntities", relevantEntities);
+    articleManager.hoverEntityMap = hoverEntityMap;
     
     return { currentEntity, relevantEntities };
 }

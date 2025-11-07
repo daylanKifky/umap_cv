@@ -110,8 +110,14 @@
         // Get links with high technology cross similarity
         const linksField = `${REDUCTION_METHOD}_links`;
         const links = data[linksField] || [];
-        const TECH_SIMILARITY_THRESHOLD = 0.9;
-        const relevantEntityIds = getRelevantEntityIds(links, articleId, TECH_SIMILARITY_THRESHOLD);
+        let TECH_SIMILARITY_THRESHOLD = 0.9;
+        let relevantEntityIds = getRelevantEntityIds(links, articleId, TECH_SIMILARITY_THRESHOLD);
+        
+        // If no other relevant entities found (only current article), retry with lower threshold
+        if (relevantEntityIds.size <= 1) {
+            TECH_SIMILARITY_THRESHOLD = 0.2;
+            relevantEntityIds = getRelevantEntityIds(links, articleId, TECH_SIMILARITY_THRESHOLD, 'tags');
+        }
         
         // Populate similar pills container
         populateSimilarPills(data, relevantEntityIds, articleId);
@@ -122,6 +128,15 @@
             const { width: canvasWidth, height: canvasHeight } = calculateCanvasDimensions();
             window.staticVisualizer = new StaticArticleVisualizer(container, canvasWidth, canvasHeight);
             await window.staticVisualizer.initialize(data, articleId, relevantEntityIds);
+            
+            // Add click handler to navigate to main view with highlight parameter
+            container.addEventListener('click', () => {
+                // Get the directory path of current page and construct index.html URL
+                const currentPath = window.location.pathname;
+                const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+                const indexUrl = basePath + 'index.html?highlight=' + articleId.toString();
+                window.location.href = indexUrl;
+            });
             
             // Handle window resize
             window.addEventListener('resize', () => {

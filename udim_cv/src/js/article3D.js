@@ -620,6 +620,7 @@ class ArticleManager {
         this.animation = {active: false, progress: 0.0, duration: 1000, linkRefresh: 200, lastLinkUpdate: 0};
         this.activeCards = []; // Track active cards for click detection
         this.activeSpheres = []; // Track spheres without active cards for hover detection
+        this.hoverEntityMap = null;
         
         // Extract articles and links from data
         this.articles = data.articles || [];

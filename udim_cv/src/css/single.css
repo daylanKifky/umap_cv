@@ -635,13 +635,46 @@ body::before {
     z-index: 1;
     display: flex;
     justify-content: center;
-
+    cursor: pointer;
     /* align-items: center; */
 }
 
 #container-3d canvas {
     border-radius: 10px;
     opacity: 1.1;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#container-3d:hover canvas {
+    opacity: 0.6;
+    transform: scale(0.98);
+}
+
+#container-3d::before {
+    content: 'Open 3D viewer';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) translateY(10px);
+    background: rgba(0, 0, 0, 0.85);
+    color: #ffffff;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    z-index: 10;
+    white-space: nowrap;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+#container-3d:hover::before {
+    opacity: 1;
+    transform: translate(-50%, -50%) translateY(0);
 }
 
 
