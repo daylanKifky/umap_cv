@@ -18,6 +18,21 @@
         return null;
     }
     
+    // Calculate canvas dimensions with aspect ratio constraint (same as article3D.js)
+    function calculateCanvasDimensions() {
+        let width = Math.floor(window.innerWidth / 2);
+        let height = Math.floor(window.innerHeight / 2);
+        let aspectRatio = width / height;
+        
+        // Apply aspect ratio constraint: minimum 0.6
+        if (aspectRatio < 0.6) {
+            aspectRatio = 0.6;
+            height = width / aspectRatio;
+        }
+        
+        return { width, height };
+    }
+    
     // Get article ID from URL
     const articleId = getArticleIdFromUrl();
     
@@ -95,8 +110,16 @@
         // Initialize static 3D visualizer with already loaded data
         const container = document.getElementById('container-3d');
         if (container) {
-            const visualizer = new StaticArticleVisualizer(container);
-            await visualizer.initialize(data, articleId );
+            const { width: canvasWidth, height: canvasHeight } = calculateCanvasDimensions();
+            window.staticVisualizer = new StaticArticleVisualizer(container, canvasWidth, canvasHeight);
+            await window.staticVisualizer.initialize(data, articleId);
+            
+            // Handle window resize
+            window.addEventListener('resize', () => {
+                if (window.staticVisualizer) {
+                    window.staticVisualizer.onWindowResize();
+                }
+            });
         }
     } catch (error) {
         console.error('Error loading embeddings or applying color:', error);
@@ -105,8 +128,10 @@
 
 // Static Article Visualizer Class - extends BaseArticleVisualizer for static rendering
 class StaticArticleVisualizer extends BaseArticleVisualizer {
-    constructor(container) {
-        super(container);
+    constructor(container, width = null, height = null) {
+        super(container, width, height);
+        this.customWidth = width;
+        this.customHeight = height;
     }
     
     async initialize(data, articleId) {
@@ -206,5 +231,28 @@ class StaticArticleVisualizer extends BaseArticleVisualizer {
         } else {
             this.renderer.render(this.scene, this.camera);
         }
+    }
+    
+    onWindowResize() {
+        // Calculate new dimensions with aspect ratio constraint
+        let width = Math.floor(window.innerWidth / 2);
+        let height = Math.floor(window.innerHeight / 2);
+        let aspectRatio = width / height;
+        
+        // Apply aspect ratio constraint: minimum 0.6
+        if (aspectRatio < 0.6) {
+            aspectRatio = 0.6;
+            height = width / aspectRatio;
+        }
+        
+        // Update custom dimensions
+        this.customWidth = width;
+        this.customHeight = height;
+        
+        // Call parent's resize handler with calculated dimensions
+        super.onWindowResize(width, height);
+        
+        // Re-render after resize
+        this.render();
     }
 }

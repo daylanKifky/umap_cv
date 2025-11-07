@@ -589,7 +589,7 @@ async function loadEmbeddingsData() {
  * Handles initialization of THREE.js scene, camera, renderer, and bloom effects
  */
 class BaseArticleVisualizer {
-    constructor(container) {
+    constructor(container, width = null, height = null) {
         if (!container) {
             throw new Error('Container element is required');
         }
@@ -609,23 +609,23 @@ class BaseArticleVisualizer {
         );
         this.cameraDistance = this.cameraInitialPosition.length();
         
-        this.init();
+        this.init(width, height);
         this.setupBloom();
     }
     
-    init() {
+    init(width = null, height = null) {
         // Scene
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x0a0a0a);
         
-        // Get container dimensions
-        const width = this.container.clientWidth;
-        const height = this.container.clientHeight;
+        // Get container dimensions (use provided values or fall back to container size)
+        const canvasWidth = width !== null ? width : this.container.clientWidth;
+        const canvasHeight = height !== null ? height : this.container.clientHeight;
         
         // Camera
         this.camera = new THREE.PerspectiveCamera(
             35, 
-            width / height, 
+            canvasWidth / canvasHeight, 
             0.1, 
             1000
         );
@@ -634,7 +634,7 @@ class BaseArticleVisualizer {
         // Renderer
         this.renderer = new THREE.WebGLRenderer({ antialias: false });
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 4));
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(canvasWidth, canvasHeight);
         this.renderer.shadowMap.enabled = false;
         
         this.container.appendChild(this.renderer.domElement);
@@ -702,25 +702,26 @@ class BaseArticleVisualizer {
         this.cameraDistance = this.cameraInitialPosition.length();
     }
     
-    onWindowResize() {
-        const width = this.container.clientWidth;
-        const height = this.container.clientHeight;
+    onWindowResize(width = null, height = null) {
+        // Get container dimensions (use provided values or fall back to container size)
+        const canvasWidth = width !== null ? width : this.container.clientWidth;
+        const canvasHeight = height !== null ? height : this.container.clientHeight;
 
-        this.camera.aspect = width / height;
+        this.camera.aspect = canvasWidth / canvasHeight;
         this.camera.updateProjectionMatrix();
-        this.renderer.setSize(width, height);
+        this.renderer.setSize(canvasWidth, canvasHeight);
 
         // Update composer size
         if (this.composer) {
-            this.composer.setSize(width, height);
+            this.composer.setSize(canvasWidth, canvasHeight);
 
             // Update FXAA resolution
             if (FXAA_RESOLUTION > 0) {
                 this.composer.passes.forEach(pass => {
                     if (pass.material && pass.material.uniforms && pass.material.uniforms['resolution']) {
                         pass.material.uniforms['resolution'].value.set(
-                            FXAA_RESOLUTION / width, 
-                            FXAA_RESOLUTION / height
+                            FXAA_RESOLUTION / canvasWidth, 
+                            FXAA_RESOLUTION / canvasHeight
                         );
                     }
                 });
