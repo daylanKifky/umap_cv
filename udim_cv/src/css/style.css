@@ -157,47 +157,33 @@
             to { opacity: 1; }
         }
         
-        .startup-modal-content {
-            background: rgba(30, 30, 30, 0.35);
-            -webkit-backdrop-filter: blur(12px) saturate(120%);
-            backdrop-filter: blur(12px) saturate(120%);
+        /* General about-* styles (shared by both contexts) */
+        .about-content {
             margin: 0 auto;
             padding: 0;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 740px;
-            max-height: 85vh;
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            /* subtle tonal outline */
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.35);
         }
         
-        .startup-header {
+        .about-header {
             background: transparent;
-            color: #e9e9e9;
             padding: 28px 30px 10px 30px;
             text-align: left;
             position: relative;
         }
 
-        .startup-hero {
+        .about-hero {
             display: flex;
             gap: 18px;
             align-items: center;
         }
 
-        .startup-hero-text {
+        .about-hero-text {
             display: flex;
             flex-direction: column;
             gap: 6px;
         }
         
-        
-        .startup-body {
+        .about-body {
             padding: 24px 30px 32px 30px;
-            color: #dcdcdc;
             text-align: left;
         }
         
@@ -208,49 +194,120 @@
             object-fit: cover;
             margin: 0;
             display: block;
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
         }
         
-        .startup-title {
+        .about-title {
             font-size: 30px;
             font-weight: 700;
             margin: 0;
-            color: #f2f2f2;
         }
         
-        .startup-subtitle {
+        .about-subtitle {
             font-size: 16px;
-            color: #bdbdbd;
             margin: 0;
         }
         
-        .startup-description {
+        .about-description {
             font-size: 16px;
             line-height: 1.7;
             margin-bottom: 22px;
+        }
+        
+        #startup-modal .about-description {
             max-width: 560px;
         }
         
-        .startup-button {
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            color: #f2f2f2;
+        .about-button {
             padding: 12px 28px;
             font-size: 16px;
             border-radius: 14px;
             cursor: pointer;
             transition: all 0.25s ease;
             margin-top: 6px;
+        }
+        
+        .about-button:hover {
+            transform: translateY(-1px);
+        }
+
+        /* Startup modal specific styles (dark glassmorphism) */
+        #startup-modal .about-content {
+            background: rgba(30, 30, 30, 0.35);
+            -webkit-backdrop-filter: blur(12px) saturate(120%);
+            backdrop-filter: blur(12px) saturate(120%);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 740px;
+            max-height: 85vh;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), inset 1px 1px 0 rgba(255, 255, 255, 0.08), inset -1px -1px 0 rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        #startup-modal .about-header {
+            color: #e9e9e9;
+        }
+        
+        #startup-modal .about-body {
+            color: #dcdcdc;
+        }
+        
+        #startup-modal .avatar-photo {
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+        
+        #startup-modal .about-title {
+            color: #f2f2f2;
+        }
+        
+        #startup-modal .about-subtitle {
+            color: #bdbdbd;
+        }
+        
+        .about-button {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            color: #f2f2f2;
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.3);
         }
         
-        .startup-button:hover {
-            transform: translateY(-1px);
+        .about-button:hover {
             background: rgba(255, 255, 255, 0.12);
             border-color: rgba(255, 255, 255, 0.3);
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
         }
+
+       
+        .article-container .about-header {
+            color: #1a1a1a;
+            padding: 0 0 10px 0;
+        }
+        
+        .article-container .about-hero {
+            gap: 24px;
+        }
+        
+        .article-container .about-body {
+            color: #2a2a2a;
+            padding: 16px 0 20px 0;
+        }
+        
+        .article-container .avatar-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+        
+        .article-container .about-hero-text {
+            flex: 1;
+            min-width: 0;
+        }
+        
+
         
         /* Mobile optimizations */
         @media (max-width: 768px) {
@@ -268,30 +325,32 @@
                 max-height: 95vh;
             }
             
-            .startup-modal-content {
+            /* Startup modal mobile styles */
+            #startup-modal .about-content {
                 width: 95%;
                 max-width: 95%;
                 margin: 0 auto;
                 max-height: 95vh;
             }
             
-            .startup-body {
+            /* General mobile styles */
+            .about-body {
                 padding: 18px 20px 24px 20px;
             }
             
-            .startup-title {
+            .about-title {
                 font-size: 22px;
             }
             
-            .startup-subtitle {
+            .about-subtitle {
                 font-size: 15px;
             }
             
-            .startup-description {
+            .about-description {
                 font-size: 15px;
             }
 
-            .startup-hero {
+            .about-hero {
                 gap: 14px;
             }
 
@@ -301,12 +360,7 @@
                 border-radius: 14px;
             }
             
-            .startup-instructions {
-                font-size: 14px;
-                padding: 15px;
-            }
-            
-            .startup-button {
+            .about-button {
                 padding: 11px 22px;
                 font-size: 15px;
             }
@@ -318,7 +372,7 @@
 
         /* Stack hero on very small screens */
         @media (max-width: 520px) {
-            .startup-hero {
+            .about-hero {
                 flex-direction: column;
                 align-items: flex-start;
             }

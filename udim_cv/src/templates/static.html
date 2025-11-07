@@ -29,24 +29,18 @@
     <meta property="og:url" content="{{ config.site.base_url }}">
 </head>
 <body>
-    {% include 'startup_modal.html' %}
     
     <div class="content-wrapper">
         {% include 'navbar.html' %}
         
+        
         <div class="article-container">
+            {% include 'startup_modal.html' %}
             {% if page_content %}
             {{ page_content | safe }}
             {% endif %}
         </div>
-        
-        <div class="after-article-container">
-            <h2>Take a look at similar projects...</h2>
-            <div id="similar-pills-container"></div>
-            <h2>Or continue exploring the latent 3D space...</h2>
-            <div id="container-3d"></div>
-        </div>
-        
+               
         <footer class="article-footer">
             <p>&copy; {{ config.header.title }} - All rights reserved</p>
         </footer>

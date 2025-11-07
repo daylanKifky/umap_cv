@@ -3,7 +3,7 @@ function setupStartupModal() {
     const startupModal = document.getElementById('startup-modal');
 
     // end of temporarily hide it
-    const startupExplore = document.getElementById('startup-explore');
+    const startupExplore = document.getElementById('about-explore');
     
     // Close startup modal when clicking the explore button
     startupExplore.addEventListener('click', () => closeStartupModal());
