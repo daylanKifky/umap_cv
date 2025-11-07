@@ -213,6 +213,15 @@ class SearchControls {
      * Create the search overlay element that will position below the navbar.
      */
     createSearchOverlay() {
+        // Check if overlay already exists to prevent duplicates
+        const existingOverlay = document.querySelector('.search-overlay-navbar');
+        if (existingOverlay) {
+            this.searchOverlay = existingOverlay;
+            this.searchInput = existingOverlay.querySelector('.search-overlay-input');
+            this.searchIcon = existingOverlay.querySelector('.search-overlay-icon');
+            return;
+        }
+        
         const overlay = document.createElement('div');
         overlay.className = 'search-overlay-navbar';
         

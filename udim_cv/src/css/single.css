@@ -39,11 +39,10 @@ body::before {
 
 /* Content wrapper - controls max-width on big screens */
 .content-wrapper {
-    width: 72%;
+    width: 100%;
     max-width: 1024px;
     margin: 0 auto;
-    width: 100%;
-    flex: 0 1 auto;
+    flex: 1 0 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -52,6 +51,7 @@ body::before {
 /* Glass navbar - reusing fab-button glass effect */
 .navbar-glass {
     width: 100%;
+    max-width: 100%;
     background: rgba(255, 255, 255, 0.08);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
@@ -63,6 +63,7 @@ body::before {
     z-index: 1000;
     transition: all 0.25s ease;
     position: relative;
+    box-sizing: border-box;
 }
 
 /* Navbar overlay - dims navbar elements when search is open */
@@ -143,6 +144,7 @@ body::before {
 .search-overlay-navbar {
     position: relative;
     width: 100%;
+    max-width: 100%;
     background: rgba(255, 255, 255, 0.08);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
@@ -160,6 +162,7 @@ body::before {
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.28);
     margin-top: 0;
     margin-bottom: 0;
+    box-sizing: border-box;
 }
 
 .search-overlay-navbar:not(.open) {
@@ -717,9 +720,6 @@ body::before {
         font-size: 1.5rem;
     }
     
-    .search-overlay-navbar {
-        border-radius: 0;
-    }
     
     .search-overlay-navbar:not(.open) {
         padding-top: 0;
