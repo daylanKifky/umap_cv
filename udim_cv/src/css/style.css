@@ -770,3 +770,484 @@
 .search-bubble .fab-icon-stroke {
     stroke: white;
 }
+
+/* ============ Navbar Styles ============ */
+
+/* Glass navbar - reusing fab-button glass effect */
+.navbar-glass {
+    width: 100%;
+    max-width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.28);
+    z-index: 1000;
+    transition: all 0.25s ease;
+    position: relative;
+    box-sizing: border-box;
+}
+
+.navbar-glass:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+}
+
+/* Navbar overlay - dims navbar elements when search is open */
+.navbar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 100;
+    border-radius: 0;
+}
+
+.navbar-overlay.active {
+    opacity: 1;
+    pointer-events: none; /* Don't block clicks, just provide visual dimming */
+}
+
+/* Close button in navbar overlay */
+.navbar-overlay-close {
+    position: absolute;
+    top: 50%;
+    right: 1.5rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #f2f2f2;
+    transition: all 0.25s ease;
+    border-radius: 6px;
+    z-index: 101;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.navbar-overlay.active .navbar-overlay-close {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.navbar-overlay-close:hover {
+    color: #ffffff;
+    transform: translateY(-50%) translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-overlay-close-icon {
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.navbar-overlay-close-icon .fab-icon-stroke {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+}
+
+/* Hide original search button when overlay is active */
+.navbar-glass:has(.navbar-overlay.active) .navbar-search-btn {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/* Hide hamburger menu when search overlay is active */
+.navbar-glass:has(.navbar-overlay.active) .navbar-hamburger {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Hide mobile menu when search overlay is active */
+.navbar-glass:has(.navbar-overlay.active) .navbar-mobile-menu {
+    display: none !important;
+    opacity: 0 !important;
+    max-height: 0 !important;
+}
+
+/* Search overlay that positions below navbar */
+.search-overlay-navbar {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 0 0 8px 8px;
+    display: flex;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    gap: 12px;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 1002;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.28);
+    margin-top: 0;
+    margin-bottom: 0;
+    box-sizing: border-box;
+}
+
+.search-overlay-navbar:not(.open) {
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.search-overlay-navbar.open {
+    max-height: 100px;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.search-overlay-navbar .search-overlay-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: #f2f2f2;
+    font-size: 16px;
+    font-family: var(--font-family);
+    outline: none;
+    opacity: 0;
+    transition: opacity 0.2s ease 0.1s;
+}
+
+.search-overlay-navbar.open .search-overlay-input {
+    opacity: 1;
+}
+
+.search-overlay-navbar .search-overlay-input::placeholder {
+    color: rgba(242, 242, 242, 0.5);
+}
+
+.search-overlay-navbar .search-overlay-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #f2f2f2;
+    transition: color 0.25s ease;
+}
+
+.search-overlay-navbar .search-overlay-icon:hover {
+    color: #ffffff;
+}
+
+.search-overlay-navbar .search-overlay-icon .fab-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.search-overlay-navbar .search-overlay-icon .fab-icon-stroke {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-title {
+    color: #f2f2f2;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 700;
+    transition: color 0.25s ease, opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.navbar-title:hover {
+    color: #ffffff;
+}
+
+.navbar-social {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    transition: opacity 0.3s ease;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.navbar-link {
+    color: #f2f2f2;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 400;
+    transition: color 0.25s ease;
+    text-transform: lowercase;
+}
+
+.navbar-link:hover {
+    color: #ffffff;
+}
+
+.navbar-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    gap: 5px;
+    transition: all 0.25s ease;
+}
+
+.hamburger-line {
+    width: 20px;
+    height: 2px;
+    background-color: #f2f2f2;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.navbar-hamburger:hover .hamburger-line {
+    background-color: #ffffff;
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: rotate(45deg) translate(4.5px, 6px);
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg) translate(4.5px, -6px);
+}
+
+.navbar-mobile-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: rgb(26, 26, 26);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 1rem 1.5rem;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 6px 6px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 1s ease;
+}
+
+.navbar-mobile-menu.open {
+    display: flex;
+    max-height: 500px;
+    opacity: 0.9;
+}
+
+.mobile-menu-social {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    z-index: 10;
+}
+
+.mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10;
+}
+
+.mobile-menu-links .navbar-link {
+    font-size: 18px;
+    padding: 0.5rem 0;
+}
+
+.navbar-search-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    color: #f2f2f2;
+    transition: all 0.25s ease;
+    border-radius: 6px;
+}
+
+.navbar-search-btn:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.navbar-search-icon {
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.navbar-search-icon .fab-icon-stroke {
+    stroke: currentColor;
+    stroke-width: 1.5;
+    fill: none;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    color: #f2f2f2;
+    transition: all 0.25s ease;
+    border-radius: 6px;
+}
+
+.social-link:hover {
+    color: #ffffff;
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.social-icon {
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+/* Navbar Responsive Styles */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none;
+    }
+    
+    .navbar-hamburger {
+        display: flex;
+    }
+    
+    .mobile-menu-social {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar-glass {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border-radius: 0;
+    }
+    
+    .navbar-title {
+        font-size: 13px;
+    }
+    
+    .navbar-search-btn {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .navbar-search-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .navbar-overlay-close {
+        right: 1rem;
+        width: 28px;
+        height: 28px;
+    }
+    
+    .navbar-overlay-close-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .social-link {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .social-icon {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .navbar-social {
+        gap: 0.75rem;
+        display: none;
+    }
+    
+    .navbar-hamburger {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .hamburger-line {
+        width: 20px;
+    }
+    
+    .mobile-menu-social {
+        display: flex;
+    }
+    
+    .search-overlay-navbar:not(.open) {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+    
+    .search-overlay-navbar.open {
+        max-height: var(--navbar-height, 60px);
+        padding: 0.75rem 1rem;
+    }
+    
+    .search-overlay-navbar .search-overlay-input {
+        font-size: 15px;
+    }
+}

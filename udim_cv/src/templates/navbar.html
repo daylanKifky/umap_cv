@@ -16,16 +16,23 @@
     </div>
     <div class="navbar-right">
         <div class="navbar-links">
+            {% if main_view %}
+            <a href="{{ 'home.html' | url }}" class="navbar-link">plain view</a>
+            <a href="#contact" class="navbar-link">contact</a>
+            {% else %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
             <a href="{{ 'index.html' | url }}?no_modal=true" class="navbar-link">3D view</a>
             <a href="#contact" class="navbar-link">contact</a>
+            {% endif %}
         </div>
+        {% if not main_view %}
         <button class="navbar-search-btn" id="navbar-search" aria-label="Search">
             <svg viewBox="120 223 10 10" class="navbar-search-icon">
                 <circle class="fab-icon-stroke" cx="126.08" cy="227.03" r="2.83" />
                 <path class="fab-icon-stroke" d="m 123.96732,229.32748 -3.06064,3.06064" />
             </svg>
         </button>
+        {% endif %}
         <button class="navbar-hamburger" id="navbar-hamburger" aria-label="Menu" aria-expanded="false">
             <span class="hamburger-line"></span>
             <span class="hamburger-line"></span>
@@ -34,9 +41,14 @@
     </div>
     <div class="navbar-mobile-menu" id="navbar-mobile-menu">
         <div class="mobile-menu-links">
+            {% if main_view %}
+            <a href="{{ 'home.html' | url }}" class="navbar-link">plain view</a>
+            <a href="#contact" class="navbar-link">contact</a>
+            {% else %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
             <a href="{{ 'index.html' | url }}?no_modal=true" class="navbar-link">3D view</a>
             <a href="#contact" class="navbar-link">contact</a>
+            {% endif %}
         </div>
         <div class="mobile-menu-social">
             <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="LinkedIn">

@@ -24,7 +24,9 @@
 <body>
     <div id="loading" style="display: none;">Loading articles...</div>
 
-    {% include 'header.html' %}
+    {% with main_view=True %}
+    {% include 'navbar.html' %}
+    {% endwith %}
     <div id="container"></div>
     
     {% if config.bloom.enabled %}
