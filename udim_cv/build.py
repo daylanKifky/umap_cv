@@ -191,13 +191,13 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
     output_file.write_text(output, encoding='utf-8')
     print(f"  ✓ index.html rendered")
 
-    # Render plain.html
-    template = env.get_template('plain.html')
+    # Render home.html
+    template = env.get_template('home.html')
     output = template.render(config=config)
     
-    output_file = public_dir / 'plain.html'
+    output_file = public_dir / 'home.html'
     output_file.write_text(output, encoding='utf-8')
-    print(f"  ✓ plain.html rendered")
+    print(f"  ✓ home.html rendered")
     
     return env  # Return environment for reuse
 

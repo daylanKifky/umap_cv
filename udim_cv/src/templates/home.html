@@ -36,15 +36,30 @@
         
         <div class="article-container">
             {% include 'startup_modal.html' %}
-            {% if page_content %}
-            {{ page_content | safe }}
-            {% endif %}
+
+            <div id="latent-cta">
+                <p>This website allows to explore the latent space of my projects thourg a 3D visualization. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+                <a href="{{ 'index.html' | url }}" class="btn"><button class="about-button">Explore the 3D space</button> </a>
+            </div>
         </div>
                
         <footer class="article-footer">
             <p>&copy; {{ config.header.title }} - All rights reserved</p>
         </footer>
     </div>
+
+    <!-- THREE.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+
+    <!-- MiniSearch -->
+    <script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.min.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="{{ 'conf.js' | url }}"></script>
+    <script src="{{ 'utils.js' | url }}"></script>
+    <script src="{{ 'search.js' | url }}"></script>
+    <script src="{{ 'searchControls.js' | url }}"></script>
+    <script src="{{ 'home.js' | url }}"></script>
 </body>
 </html>
 

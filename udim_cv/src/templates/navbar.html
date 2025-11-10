@@ -1,6 +1,6 @@
 <nav class="navbar-glass">
     <div class="navbar-left">
-        <a href="{{ 'index.html' | url }}" class="navbar-title">{{ config.header.title }}</a>
+        <a href="{{ 'home.html' | url }}" class="navbar-title">{{ config.header.title }}</a>
         <div class="navbar-social">
             <a href="https://linkedin.com/in/yourprofile" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="LinkedIn">
                 <svg class="social-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -16,8 +16,8 @@
     </div>
     <div class="navbar-right">
         <div class="navbar-links">
-            <a href="#about" class="navbar-link">about</a>
-            <a href="#3d-view" class="navbar-link">3D view</a>
+            <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
+            <a href="{{ 'index.html' | url }}" class="navbar-link">3D view</a>
             <a href="#contact" class="navbar-link">contact</a>
         </div>
         <button class="navbar-search-btn" id="navbar-search" aria-label="Search">
@@ -34,8 +34,8 @@
     </div>
     <div class="navbar-mobile-menu" id="navbar-mobile-menu">
         <div class="mobile-menu-links">
-            <a href="#about" class="navbar-link">about</a>
-            <a href="#3d-view" class="navbar-link">3D view</a>
+            <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
+            <a href="{{ 'index.html' | url }}" class="navbar-link">3D view</a>
             <a href="#contact" class="navbar-link">contact</a>
         </div>
         <div class="mobile-menu-social">

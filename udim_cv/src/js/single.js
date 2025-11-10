@@ -6,17 +6,6 @@
 (async function() {
     'use strict';
     
-    // Extract article ID from current page URL
-    // URLs are in format: {id}_{name}.html (e.g., "000_python_blender_automation.html")
-    function getArticleIdFromUrl() {
-        const path = window.location.pathname;
-        const filename = path.split('/').pop() || path;
-        const match = filename.match(/^(\d+)[_-]/);
-        if (match) {
-            return parseInt(match[1], 10);
-        }
-        return null;
-    }
     
     // Calculate canvas dimensions with aspect ratio constraint (same as article3D.js)
     function calculateCanvasDimensions() {

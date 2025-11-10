@@ -49,6 +49,41 @@ body::before,
     min-height: 0;
 }
 
+#latent-cta {
+    padding: 20px;
+    text-align: center;
+    background: rgba(141, 140, 140, 0.08);
+    border-radius: 8px;
+    box-shadow: 0 6px 6px rgba(0, 0, 0, 0.5) inset;
+    opacity: 0.9;
+    transition: all 0.3s ease;
+}
+#latent-cta:hover {
+    opacity: 1;
+    box-shadow: 0 6px 6px rgba(0, 0, 0, 0.5) inset;
+}
+
+#latent-cta p{
+    color: var(--single-bg-color-trans);
+    font-weight: 700;
+    transition: all 0.3s ease;
+}
+
+#latent-cta:hover p{
+    color: var(--single-bg-color);
+}
+
+#latent-cta:hover button {
+    background: var(--single-bg-color);
+    color: var(--single-text-color);
+    cursor: pointer;
+}
+
+#latent-cta button {
+    background: var(--single-bg-color-trans);
+    color: var(--single-text-color);
+    cursor: pointer;
+}
 
 @media (min-width: 1023px) {
     #home-page .about-content {

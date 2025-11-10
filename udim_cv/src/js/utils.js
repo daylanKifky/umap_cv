@@ -28,7 +28,7 @@ function degToRad(degrees)
  * coordinateConverter - Converts and normalizes 3D coordinates to scene space
  */
 class coordinateConverter {
-    constructor(scaleFactor = 30, saturation = 0.6, lightness = 0.7) {
+    constructor(scaleFactor = 30, saturation = COLOR_SATURATION, lightness = COLOR_LIGHTNESS) {
         this.min = new THREE.Vector3(Infinity, Infinity, Infinity);
         this.max = new THREE.Vector3(-Infinity, -Infinity, -Infinity);
         this.center = new THREE.Vector3();
@@ -813,6 +813,18 @@ class BaseArticleVisualizer {
     }
 }
 
+// Extract article ID from current page URL
+// URLs are in format: {id}_{name}.html (e.g., "000_python_blender_automation.html")
+function getArticleIdFromUrl() {
+    const path = window.location.pathname;
+    const filename = path.split('/').pop() || path;
+    const match = filename.match(/^(\d+)[_-]/);
+    if (match) {
+        return parseInt(match[1], 10);
+    }
+    return null;
+}
+
 
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
@@ -827,7 +839,8 @@ if (typeof module !== 'undefined' && module.exports) {
         drawTextLines, 
         buildWeightedArticleList,
         loadEmbeddingsData,
-        BaseArticleVisualizer
+        BaseArticleVisualizer,
+        getArticleIdFromUrl
     };
 }
 
