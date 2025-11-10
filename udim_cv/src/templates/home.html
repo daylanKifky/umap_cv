@@ -34,13 +34,26 @@
         {% include 'navbar.html' %}
         
         
-        <div class="article-container">
+        <div class="article-container hero-section">
             {% include 'startup_modal.html' %}
 
             <div id="latent-cta">
-                <p>This website allows to explore the latent space of my projects thourg a 3D visualization. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
-                <a href="{{ 'index.html' | url }}?no_modal=true" class="btn"><button class="about-button">Explore the 3D space</button> </a>
+                <p>{{ config.home_page.cta_description }}</p>
+                <a href="{{ 'index.html' | url }}?no_modal=true" class="btn"><button class="about-button">{{ config.home_page.cta_button_text }}</button></a>
             </div>
+            
+            <div class="plain-view-intro">
+                <p>{{ config.home_page.plain_view_intro }}</p>
+            </div>
+            
+            <button class="about-button" id="plain-explore">
+                {{ config.home_page.plain_view_button_text }}
+                <span class="arrow-down">↓</span>
+            </button>
+        </div>
+
+        <div class="content-section" id="projects-section">
+            <!-- Projects content will go here -->
         </div>
                
         <footer class="article-footer">

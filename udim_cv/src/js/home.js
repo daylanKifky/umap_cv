@@ -33,6 +33,9 @@
         // Initialize dynamic gradient for latent-cta
         initializeLatentCtaGradient();
         
+        // Initialize scroll behavior for plain-explore button
+        initializePlainExploreScroll();
+        
     } catch (error) {
         console.error('Error loading embeddings or initializing search controls:', error);
     }
@@ -50,19 +53,22 @@ function initializeLatentCtaGradient() {
     
     let hue = 0;
     const hueShiftSpeed = 0.5; // degrees per frame
-    const hueOffset = 60; // offset between the two gradient colors
+    const hueOffset = 100; // offset between the two gradient colors
     
     function updateGradient() {
         // Calculate two hues for the gradient
         const hue1 = hue % 360;
         const hue2 = (hue + hueOffset) % 360;
+
+        const saturation = COLOR_SATURATION * 40;
+        const lightness  = COLOR_LIGHTNESS  * 70; 
         
         // Convert HSL to CSS color strings
-        const color1 = `hsla(${hue1}, ${COLOR_SATURATION * 100}%, ${COLOR_LIGHTNESS * 100}%, 0.9)`;
-        const color2 = `hsla(${hue2}, ${COLOR_SATURATION * 100}%, ${COLOR_LIGHTNESS * 100}%, 0.9)`;
+        const color1 = `hsl(${hue1}, ${saturation}%, ${lightness}%)`;
+        const color2 = `hsl(${hue2}, ${saturation}%, ${lightness}%)`;
         
         // Apply linear gradient
-        latentCta.style.background = `linear-gradient(135deg, ${color1}, ${color2})`;
+        latentCta.style.background = `linear-gradient(45deg, ${color1}, ${color2})`;
         
         // Increment hue for next frame
         hue = (hue + hueShiftSpeed) % 360;
@@ -73,5 +79,24 @@ function initializeLatentCtaGradient() {
     
     // Start the animation
     updateGradient();
+}
+
+/**
+ * Initialize smooth scroll behavior for the plain-explore button
+ */
+function initializePlainExploreScroll() {
+    const plainExploreBtn = document.getElementById('plain-explore');
+    const projectsSection = document.getElementById('projects-section');
+    
+    if (!plainExploreBtn || !projectsSection) {
+        return;
+    }
+    
+    plainExploreBtn.addEventListener('click', () => {
+        projectsSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+    });
 }
 
