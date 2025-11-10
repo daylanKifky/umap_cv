@@ -423,6 +423,9 @@ class SearchControls {
         // Disable pointer events on navbar elements
         const navbarTitle = this.navbar.querySelector('.navbar-title');
         const navbarSocial = this.navbar.querySelector('.navbar-social');
+        const navbarLinks = this.navbar.querySelector('.navbar-links');
+        const navbarHamburger = this.navbar.querySelector('.navbar-hamburger');
+        const mobileMenu = document.getElementById('navbar-mobile-menu');
         
         if (navbarTitle) {
             navbarTitle.style.pointerEvents = 'none';
@@ -430,6 +433,25 @@ class SearchControls {
         
         if (navbarSocial) {
             navbarSocial.style.pointerEvents = 'none';
+        }
+        
+        if (navbarLinks) {
+            navbarLinks.style.pointerEvents = 'none';
+        }
+        
+        if (navbarHamburger) {
+            navbarHamburger.style.pointerEvents = 'none';
+            // Hide hamburger menu button
+            navbarHamburger.style.opacity = '0';
+            navbarHamburger.style.visibility = 'hidden';
+        }
+        
+        // Close mobile menu if it's open
+        if (mobileMenu && mobileMenu.classList.contains('open')) {
+            mobileMenu.classList.remove('open');
+            if (navbarHamburger) {
+                navbarHamburger.setAttribute('aria-expanded', 'false');
+            }
         }
         
         // Hide search button (close button in overlay will be visible)
@@ -780,6 +802,8 @@ class SearchControls {
         // Re-enable pointer events on navbar elements
         const navbarTitle = this.navbar.querySelector('.navbar-title');
         const navbarSocial = this.navbar.querySelector('.navbar-social');
+        const navbarLinks = this.navbar.querySelector('.navbar-links');
+        const navbarHamburger = this.navbar.querySelector('.navbar-hamburger');
         
         if (navbarTitle) {
             navbarTitle.style.pointerEvents = 'auto';
@@ -787,6 +811,17 @@ class SearchControls {
         
         if (navbarSocial) {
             navbarSocial.style.pointerEvents = 'auto';
+        }
+        
+        if (navbarLinks) {
+            navbarLinks.style.pointerEvents = 'auto';
+        }
+        
+        if (navbarHamburger) {
+            navbarHamburger.style.pointerEvents = 'auto';
+            // Restore hamburger menu button visibility
+            navbarHamburger.style.opacity = '1';
+            navbarHamburger.style.visibility = 'visible';
         }
         
         // Restore search button visibility

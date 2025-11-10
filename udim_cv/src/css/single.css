@@ -21,7 +21,8 @@ body {
 }
 
 /* Diagonal overlay */
-body::before {
+body::before,
+.navbar-mobile-menu::before {
     content: '';
     position: fixed;
     top: 0;
@@ -47,6 +48,15 @@ body::before {
     flex-direction: column;
     min-height: 0;
 }
+
+
+@media (min-width: 1023px) {
+    #home-page .about-content {
+        padding: 0 20px;
+    }
+
+} 
+
 
 /* Glass navbar - reusing fab-button glass effect */
 .navbar-glass {
@@ -135,9 +145,23 @@ body::before {
 }
 
 /* Hide original search button when overlay is active */
-.navbar-glass .navbar-overlay.active ~ .navbar-social .navbar-search-btn {
+.navbar-glass:has(.navbar-overlay.active) .navbar-search-btn {
     opacity: 0;
     pointer-events: none;
+}
+
+/* Hide hamburger menu when search overlay is active */
+.navbar-glass:has(.navbar-overlay.active) .navbar-hamburger {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+/* Hide mobile menu when search overlay is active */
+.navbar-glass:has(.navbar-overlay.active) .navbar-mobile-menu {
+    display: none !important;
+    opacity: 0 !important;
+    max-height: 0 !important;
 }
 
 /* Search overlay that positions below navbar */
@@ -406,6 +430,12 @@ body::before {
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
 }
 
+.navbar-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
 .navbar-title {
     color: #f2f2f2;
     text-decoration: none;
@@ -425,6 +455,117 @@ body::before {
     gap: 1rem;
     align-items: center;
     transition: opacity 0.3s ease;
+}
+
+.navbar-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+.navbar-link {
+    color: #f2f2f2;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 400;
+    transition: color 0.25s ease;
+    text-transform: lowercase;
+}
+
+.navbar-link:hover {
+    color: #ffffff;
+}
+
+.navbar-hamburger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    gap: 5px;
+    transition: all 0.25s ease;
+}
+
+.hamburger-line {
+    width: 20px;
+    height: 2px;
+    background-color: #f2f2f2;
+    transition: all 0.3s ease;
+    border-radius: 2px;
+}
+
+.navbar-hamburger:hover .hamburger-line {
+    background-color: #ffffff;
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(1) {
+    transform: rotate(45deg) translate(4.5px, 6px);
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(2) {
+    opacity: 0;
+}
+
+.navbar-hamburger[aria-expanded="true"] .hamburger-line:nth-child(3) {
+    transform: rotate(-45deg) translate(4.5px, -6px);
+}
+
+.navbar-mobile-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--single-bg-color);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    padding: 1rem 1.5rem;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    box-shadow: 0 6px 6px rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: all 1s ease;
+}
+
+.navbar-mobile-menu.open {
+    display: flex;
+    max-height: 500px;
+    opacity: 0.9;
+}
+
+.mobile-menu-social {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    z-index: 10;
+}
+
+.mobile-menu-links {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    z-index: 10;
+}
+
+.mobile-menu-links .navbar-link {
+    font-size: 18px;
+    padding: 0.5rem 0;
 }
 
 .navbar-search-btn {
@@ -496,6 +637,12 @@ body::before {
     opacity: 0.9;
     flex: 1 0 auto;
 }
+
+#home-page .article-container {
+    opacity: 1;
+    background-color: var(--single-bg-color-trans);
+}
+
 
 /* Article footer */
 .article-footer {
@@ -691,6 +838,22 @@ body::before {
     }
 }
 
+/* Medium screens: show social icons, hide nav links, show hamburger */
+@media (max-width: 768px) {
+    .navbar-links {
+        display: none;
+    }
+    
+    .navbar-hamburger {
+        display: flex;
+    }
+    
+    .mobile-menu-social {
+        display: none;
+    }
+}
+
+/* Small screens: hide social icons and nav links, show hamburger */
 @media (max-width: 600px) {
     body {
         padding: 0 0.5rem;
@@ -743,6 +906,23 @@ body::before {
     
     .navbar-social {
         gap: 0.75rem;
+    }
+    
+    .navbar-hamburger {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .hamburger-line {
+        width: 20px;
+    }
+    
+    .navbar-social {
+        display: none;
+    }
+    
+    .mobile-menu-social {
+        display: flex;
     }
     
     .article-container {
