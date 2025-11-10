@@ -224,6 +224,7 @@
             cursor: pointer;
             transition: all 0.25s ease;
             margin-top: 6px;
+            text-decoration: none;
         }
         
         .about-button:hover {
@@ -265,11 +266,32 @@
             color: #bdbdbd;
         }
         
+        .button-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
         .about-button {
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.22);
             color: #f2f2f2;
             box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.3);
+        }
+        
+        .about-button-primary {
+            padding: 16px 40px;
+            font-size: 18px;
+            font-weight: 600;
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        #plain-view {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            vertical-align: middle;
         }
         
         .about-button:hover {
@@ -363,6 +385,20 @@
             .about-button {
                 padding: 11px 22px;
                 font-size: 15px;
+            }
+            
+            .about-button-primary {
+                padding: 14px 32px;
+                font-size: 16px;
+            }
+            
+            #plain-view {
+                flex: 1 1 100%;
+                text-align: center;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
             
             #bloom-controls {

@@ -21,7 +21,12 @@
                 {% endif %}
                 {% endfor %}
             </div>
-            <button class="about-button" id="about-explore">{{ config.startup_modal.button_text }}</button>
+            {% if show_button is defined and show_button %}
+            <div class="button-group">
+                <button class="about-button about-button-primary" id="about-explore">{{ config.startup_modal.button_text }}</button>
+                <a href="{{ 'home.html' | url }}" class="about-button" id="plain-view">{{ config.startup_modal.plain_view_button_text }}</a>
+            </div>
+            {% endif %}
         </div>
     </div>
 {% endif %}

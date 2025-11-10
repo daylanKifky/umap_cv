@@ -59,7 +59,9 @@
     {% endif %}
 
     <div id="startup-modal">
+        {% with show_button=True %}
         {% include 'startup_modal.html' %}
+        {% endwith %}
     </div>
 
 

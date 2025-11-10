@@ -25,6 +25,7 @@ description = [
     "lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
 ]
 button_text = "Start Exploring"
+plain_view_button_text = "Go to the plain view"
 
 [js-conf]
 # JavaScript configuration overrides

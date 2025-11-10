@@ -5,6 +5,9 @@ function setupStartupModal() {
     // end of temporarily hide it
     const startupExplore = document.getElementById('about-explore');
     
+    // Initialize color cycling for the explore button border
+    initializeExploreBorderAnimation(startupExplore);
+    
     // Close startup modal when clicking the explore button
     startupExplore.addEventListener('click', () => closeStartupModal());
     
@@ -21,6 +24,41 @@ function setupStartupModal() {
             closeStartupModal();
         }
     });
+}
+
+/**
+ * Initialize dynamic gradient border for explore button
+ * Creates a cycling hue effect similar to the latent CTA
+ */
+function initializeExploreBorderAnimation(button) {
+    if (!button) {
+        return;
+    }
+    
+    let hue = 160;
+    const hueShiftSpeed = 0.5; // degrees per frame
+    const COLOR_SATURATION = 0.7;
+    const COLOR_LIGHTNESS = 0.6;
+    
+    function updateBorder() {
+        // Calculate hue for the border
+        const currentHue = hue % 360;
+        
+        // Convert HSL to CSS color string
+        const borderColor = `hsla(${currentHue}, ${COLOR_SATURATION * 100}%, ${COLOR_LIGHTNESS * 100}%, 0.7)`;
+        
+        // Apply border color
+        button.style.borderColor = borderColor;
+        
+        // Increment hue for next frame
+        hue = (hue + hueShiftSpeed) % 360;
+        
+        // Continue animation
+        requestAnimationFrame(updateBorder);
+    }
+    
+    // Start the animation
+    updateBorder();
 }
 
 function closeStartupModal() {
@@ -161,9 +199,12 @@ class ArticleVisualizer extends BaseArticleVisualizer {
                     this.orbit_controls.update();
 
                 }
+                this.calculateCameraOptimalPosition();
             } else {
                 const centroid = new THREE.Vector3(0, 0, 0);
                 const startupModal = document.getElementById('startup-modal');
+                this.calculateCameraOptimalPosition();
+
                 if (startupModal.style.display === 'none') {
                     this.animateCamera(this.cameraInitialPosition, centroid);
                 } else {
@@ -175,7 +216,6 @@ class ArticleVisualizer extends BaseArticleVisualizer {
                 }
             }
             
-            this.calculateCameraOptimalPosition();
             
             // Mark scene as updated after creating objects (initial render needed)
             this._render_required = true;
@@ -674,11 +714,14 @@ class ArticleVisualizer extends BaseArticleVisualizer {
 
 // Initialize when page loads
 window.addEventListener('DOMContentLoaded', async () => {
-    // Extract highlight query parameter from URL
+    // Extract query parameters from URL
     const urlParams = new URLSearchParams(window.location.search);
     const highlightParam = urlParams.get('highlight');
+    const noModalParam = urlParams.get('no_modal');
     const highlightId = highlightParam ? parseInt(highlightParam, 10) : null;
-    if (highlightId !== null) {
+    
+    // Hide modal if highlight or no_modal parameter is present
+    if (highlightId !== null || noModalParam === 'true') {
         const startupModal = document.getElementById('startup-modal');
         startupModal.style.display = 'none';
     } else {
