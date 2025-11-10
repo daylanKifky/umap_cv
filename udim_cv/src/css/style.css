@@ -787,7 +787,8 @@
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), inset 1px 1px 0 rgba(255, 255, 255, 0.06), inset -1px -1px 0 rgba(0, 0, 0, 0.28);
     z-index: 1000;
     transition: all 0.25s ease;
-    position: relative;
+    position: sticky;
+    top: 0;
     box-sizing: border-box;
 }
 
