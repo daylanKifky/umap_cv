@@ -825,6 +825,42 @@ function getArticleIdFromUrl() {
     return null;
 }
 
+/**
+ * Initialize dynamic gradient border for explore button
+ * Creates a cycling hue effect similar to the latent CTA
+ * @param {HTMLElement} button - The button element to animate
+ */
+function initializeExploreBorderAnimation(button) {
+    if (!button) {
+        return;
+    }
+    
+    let hue = 160;
+    const hueShiftSpeed = 0.5; // degrees per frame
+    const COLOR_SATURATION = 0.7;
+    const COLOR_LIGHTNESS = 0.6;
+    
+    function updateBorder() {
+        // Calculate hue for the border
+        const currentHue = hue % 360;
+        
+        // Convert HSL to CSS color string
+        const borderColor = `hsla(${currentHue}, ${COLOR_SATURATION * 100}%, ${COLOR_LIGHTNESS * 100}%, 0.7)`;
+        
+        // Apply border color
+        button.style.borderColor = borderColor;
+        
+        // Increment hue for next frame
+        hue = (hue + hueShiftSpeed) % 360;
+        
+        // Continue animation
+        requestAnimationFrame(updateBorder);
+    }
+    
+    // Start the animation
+    updateBorder();
+}
+
 
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
@@ -840,7 +876,8 @@ if (typeof module !== 'undefined' && module.exports) {
         buildWeightedArticleList,
         loadEmbeddingsData,
         BaseArticleVisualizer,
-        getArticleIdFromUrl
+        getArticleIdFromUrl,
+        initializeExploreBorderAnimation
     };
 }
 

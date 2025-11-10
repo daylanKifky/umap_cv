@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% set default_title = '404 - Page Not Found' %}
+    {% set default_og_description = '404 - Page Not Found' %}
+    {% include 'header.html' %}
+    <link rel="stylesheet" href="{{ 'style.css' | url }}">
+    <link rel="stylesheet" href="{{ 'single.css' | url }}">
+
+    <style>
+        body {
+            background-color: #fff;
+        }
+    </style>
+</head>
+<body>
+    
+    <div class="content-wrapper" id="home-page">
+        {% include 'navbar.html' %}
+        
+        
+        <div class="article-container">
+            <div id="not-found-message">
+                <h1>404 - Page Not Found</h1>
+                <p>Oops! The page you're looking for doesn't exist. But don't worry, there's plenty to explore!</p>
+                <div class="button-group">
+                    <a href="{{ 'home.html' | url }}" class="btn"><button class="about-button" id="404-home-button">Go to Home</button></a>
+                    <a href="{{ 'index.html' | url }}?no_modal=true" class="btn"><button class="about-button about-button-primary" id="404-explore-button">Explore 3D View</button></a>
+                </div>
+            </div>
+
+            <div class="project-search-hints">
+                <p class="white-text">While you're here, why not explore some projects?</p>
+                <p>Click on the search icon <span class="search-icon-inline"><svg viewBox="120 223 10 10" class="fab-icon"><circle class="fab-icon-stroke" cx="126.08" cy="227.03" r="2.83" /><path class="fab-icon-stroke" d="m 123.96732,229.32748 -3.06064,3.06064" /></svg></span> in the navbar to find projects. Or click on any technology or topic below to discover related work.</p>
+            </div>
+            
+            <div class="projects-filters">
+                <div class="projects-filters-section" id="technologies-pills">
+                    <p class="projects-filters-message white-text">Explore projects by technology:</p>
+                    <div class="projects-pills-container"></div>
+                </div>
+                <div class="projects-filters-section" id="tags-pills">
+                    <p class="projects-filters-message white-text">Or browse by topic:</p>
+                    <div class="projects-pills-container"></div>
+                </div>
+            </div>
+        </div>
+               
+        <footer class="article-footer">
+            <p>&copy; {{ config.header.title }} - All rights reserved</p>
+        </footer>
+    </div>
+
+    <!-- THREE.js -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+
+    <!-- MiniSearch -->
+    <script src="https://cdn.jsdelivr.net/npm/minisearch@7.2.0/dist/umd/index.min.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="{{ 'conf.js' | url }}"></script>
+    <script src="{{ 'utils.js' | url }}"></script>
+    <script src="{{ 'search.js' | url }}"></script>
+    <script src="{{ 'searchControls.js' | url }}"></script>
+    <script src="{{ 'home.js' | url }}"></script>
+    
+    <!-- Initialize 404 page buttons -->
+    <script>
+        (function() {
+            // Initialize border animation for both buttons
+            const exploreButton = document.getElementById('404-explore-button');
+            
+            if (exploreButton) {
+                initializeExploreBorderAnimation(exploreButton);
+            }
+        })();
+    </script>
+
