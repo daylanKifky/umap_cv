@@ -493,6 +493,88 @@ body::before,
     gap: 0.5rem;
 }
 
+/* Contact section */
+.contact-section {
+    width: 100%;
+    padding: 2.5rem;
+    background-color: var(--single-bg-color);
+    text-align: center;
+    z-index: 10;
+    opacity: 0.95;
+}
+
+.contact-section h2 {
+    color: #ffffff;
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+
+.contact-section p {
+    color: var(--single-text-color);
+    font-size: 1rem;
+    margin: 0 0 1.5rem 0;
+    opacity: 0.85;
+}
+
+.contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.contact-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.5rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    color: var(--single-text-color);
+    text-decoration: none;
+    transition: all 0.25s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.contact-link:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.contact-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.contact-link-icon .social-icon {
+    width: 100%;
+    height: 100%;
+}
+
+@media (min-width: 768px) {
+    .contact-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .contact-link {
+        flex: 0 1 auto;
+        min-width: 200px;
+    }
+}
+
 /* Article footer */
 .article-footer {
     width: 100%;
@@ -507,6 +589,53 @@ body::before,
 
 .article-footer p {
     margin: 0;
+}
+
+.footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.footer-copyright {
+    margin: 0;
+}
+
+.footer-links {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.footer-link {
+    color: #d0d0d0;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+    color: #ffffff;
+}
+
+.footer-social {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.footer-social .social-link {
+    color: #d0d0d0;
+    transition: color 0.2s ease;
+}
+
+.footer-social .social-link:hover {
+    color: #ffffff;
+}
+
+.footer-social .social-icon {
+    width: 20px;
+    height: 20px;
 }
 
 /* Typography */

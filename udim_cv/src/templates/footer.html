@@ -1,0 +1,17 @@
+<footer class="article-footer">
+    <div class="footer-content">
+        <p class="footer-copyright">&copy; {{ config.site.title }} - All rights reserved</p>
+        <div class="footer-links">
+            <a href="{{ 'home.html' | url }}#contact" class="footer-link">Contact</a>
+        </div>
+        <div class="footer-social">
+            <a href="{{ config.contact.linkedin }}" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="LinkedIn">
+                {% include 'icons/linkedin_icon.html' %}
+            </a>
+            <a href="{{ config.contact.github }}" target="_blank" rel="noopener noreferrer" class="social-link" aria-label="GitHub">
+                {% include 'icons/github_icon.html' %}
+            </a>
+        </div>
+    </div>
+</footer>
+

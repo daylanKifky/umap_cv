@@ -1,13 +1,18 @@
 [site]
 base_url = ""
+title = "John Doe"
 
 [style]
 font-general = "Noto Sans"
 font-cards = "Space Grotesk"
 
-[header]
-title = "John Doe"
-subtitle = "Latent Space Visualization"
+[meta]
+default_description = "Explore the latent space of my projects through an interactive 3D visualization. Discover connections between technologies, ideas, and implementations in an immersive experience."
+
+[contact]
+github = "https://github.com/yourprofile"
+linkedin = "https://linkedin.com/in/yourprofile"
+email = "your.email@example.com"
 
 [bloom]
 enabled = true
@@ -29,7 +34,7 @@ plain_view_button_text = "Go to the plain view"
 
 [home_page]
 cta_description = "Explore the latent space of my projects through an interactive 3D visualization. Discover connections between technologies, ideas, and implementations in an immersive experience."
-cta_button_text = "Explore the 3D project space"
+cta_button_text = "Explore the projects in 3D space"
 plain_view_intro = "You can also use the plain view to see the projects"
 plain_view_button_text = "View Projects List"
 

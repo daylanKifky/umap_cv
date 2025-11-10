@@ -2,7 +2,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>{% if page_title %}{{ page_title }}{% elif article_title %}{{ article_title }}{% elif default_title %}{{ default_title }}{% else %}Latent Space Visualization{% endif %}</title>
+<title>{% if page_title %}{{ page_title }} | {{ config.site.title }}{% elif article_title %}{{ article_title }} | {{ config.site.title }}{% elif default_title %}{{ default_title }} | {{ config.site.title }}{% else %}{{ config.site.title }}{% endif %}</title>
 <!-- Cache Control: HTML should be revalidated, but versioned assets can be cached long-term -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -18,8 +18,8 @@
 <link rel="manifest" href="{{ 'site.webmanifest' | url }}">
 
 <!-- Open Graph -->
-<meta property="og:title" content="{% if page_title %}{{ page_title }}{% elif article_title %}{{ article_title }}{% elif default_title %}{{ default_title }}{% else %}Latent Space Visualization{% endif %}">
-<meta property="og:description" content="{% if og_description %}{{ og_description }}{% elif page_title %}{{ page_title }}{% elif article_title %}{{ article_title }}{% elif default_og_description %}{{ default_og_description }}{% elif default_title %}{{ default_title }}{% else %}Interactive 3D portfolio - Latent Space Visualization{% endif %}">
+<meta property="og:title" content="{% if page_title %}{{ page_title }} | {{ config.site.title }}{% elif article_title %}{{ article_title }} | {{ config.site.title }}{% elif default_title %}{{ default_title }} | {{ config.site.title }}{% else %}{{ config.site.title }}{% endif %}">
+<meta property="og:description" content="{% if og_description %}{{ og_description }}{% elif default_og_description %}{{ default_og_description }}{% else %}{{ config.meta.default_description }}{% endif %}">
 <meta property="og:image" content="{{ 'udim_cv_prev.jpg' | url }}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ config.site.base_url }}">
