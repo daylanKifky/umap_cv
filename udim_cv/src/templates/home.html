@@ -34,28 +34,17 @@
         {% include 'navbar.html' %}
         
         
-        <div class="article-container hero-section">
+        <div class="article-container">
             {% include 'startup_modal.html' %}
 
             <div id="latent-cta">
                 <p>{{ config.home_page.cta_description }}</p>
                 <a href="{{ 'index.html' | url }}?no_modal=true" class="btn"><button class="about-button">{{ config.home_page.cta_button_text }}</button></a>
             </div>
-            
-            <div class="plain-view-intro">
-                <p>{{ config.home_page.plain_view_intro }}</p>
-            </div>
-            
-            <button class="about-button" id="plain-explore">
-                {{ config.home_page.plain_view_button_text }}
-                <span class="arrow-down">▼</span>
-            </button>
-        </div>
 
-        <div class="content-section" id="projects-section">
-            <div class="projects-header">
-                <h2>Browse All Projects</h2>
-                <p class="projects-instruction">Use the search bar above to find specific projects, or click on any technology or topic below to see related work.</p>
+            <div class="project-search-hints">
+                <p>You can also browse projects using this plain view</p>
+                <p>Click on the search icon <span class="search-icon-inline"><svg viewBox="120 223 10 10" class="fab-icon"><circle class="fab-icon-stroke" cx="126.08" cy="227.03" r="2.83" /><path class="fab-icon-stroke" d="m 123.96732,229.32748 -3.06064,3.06064" /></svg></span> in the navbar to find projects. Or click on any technology or topic below to see related work.</p>
             </div>
             
             <div class="projects-filters">
@@ -67,10 +56,6 @@
                     <p class="projects-filters-message">You can also browse projects by topic:</p>
                     <div class="projects-pills-container"></div>
                 </div>
-            </div>
-            
-            <div class="projects-cards-container" id="projects-cards">
-                <!-- Article cards will be rendered here -->
             </div>
         </div>
                
