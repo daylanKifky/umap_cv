@@ -81,9 +81,10 @@ def calculate_assets_version_hash(src_dir: Path, public_dir: Path,
         style_config = config.get('style', {})
         font_general = style_config.get('font-general', 'Noto Sans')
         font_cards = style_config.get('font-cards', 'Space Grotesk')
+        bg_pattern = style_config.get('bg_pattern', 'diagonal.png')
         for css_file in css_files:
             # Use processed CSS content
-            content = process_css_file(css_file, font_general, font_cards)
+            content = process_css_file(css_file, font_general, font_cards, bg_pattern)
             file_contents.append(f"{css_file.name}:{content}")
     
     # Combine all contents and calculate hash
@@ -179,6 +180,7 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
     style_config = config.get('style', {})
     font_general = style_config.get('font-general', 'Noto Sans')
     font_cards = style_config.get('font-cards', 'Space Grotesk')
+    bg_pattern = style_config.get('bg_pattern', 'diagonal.png')
     
     # Add global function to read critical CSS using existing process_css_file
     def get_critical_css() -> str:
@@ -187,7 +189,7 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
         if not critical_css_path.exists():
             return ""
         # Reuse existing process_css_file function
-        return process_css_file(critical_css_path, font_general, font_cards)
+        return process_css_file(critical_css_path, font_general, font_cards, bg_pattern)
     
     env.globals['critical_css'] = get_critical_css
     
@@ -240,14 +242,15 @@ def build_google_fonts_url(font_general: str, font_cards: str) -> str:
     return url
 
 
-def process_css_file(css_path: Path, font_general: str, font_cards: str) -> str:
+def process_css_file(css_path: Path, font_general: str, font_cards: str, bg_pattern: str = None) -> str:
     """
-    Process CSS file and update font variables.
+    Process CSS file and update font variables and background pattern.
     
     Args:
         css_path: Path to CSS source file
         font_general: General font name
         font_cards: Card font name
+        bg_pattern: Background pattern image filename (optional)
         
     Returns:
         Modified CSS content as string
@@ -266,6 +269,12 @@ def process_css_file(css_path: Path, font_general: str, font_cards: str) -> str:
     pattern = r'--font-mono:\s*"[^"]+",\s*monospace;'
     replacement = f'--font-mono: "{font_cards}", monospace;'
     content = re.sub(pattern, replacement, content)
+    
+    # Replace bg-pattern variable if provided
+    if bg_pattern:
+        pattern = r"--bg-pattern:\s*url\(['\"][^'\"]+['\"]\);"
+        replacement = f"--bg-pattern: url('{bg_pattern}');"
+        content = re.sub(pattern, replacement, content)
     
     return content
 
@@ -419,11 +428,12 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any], e
             style_config = config.get('style', {})
             font_general = style_config.get('font-general', 'Noto Sans')
             font_cards = style_config.get('font-cards', 'Space Grotesk')
+            bg_pattern = style_config.get('bg_pattern', 'diagonal.png')
             
             for css_file in css_files:
                 output_path = public_dir / css_file.name
-                # Process CSS to update font variables
-                processed_css = process_css_file(css_file, font_general, font_cards)
+                # Process CSS to update font variables and background pattern
+                processed_css = process_css_file(css_file, font_general, font_cards, bg_pattern)
                 output_path.write_text(processed_css, encoding='utf-8')
                 print(f"  ✓ {css_file.name}")
         else:
@@ -533,6 +543,7 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
     style_config = config.get('style', {})
     font_general = style_config.get('font-general', 'Noto Sans')
     font_cards = style_config.get('font-cards', 'Space Grotesk')
+    bg_pattern = style_config.get('bg_pattern', 'diagonal.png')
     
     # Add global function to read critical CSS using existing process_css_file
     def get_critical_css() -> str:
@@ -541,7 +552,7 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         if not critical_css_path.exists():
             return ""
         # Reuse existing process_css_file function
-        return process_css_file(critical_css_path, font_general, font_cards)
+        return process_css_file(critical_css_path, font_general, font_cards, bg_pattern)
     
     env.globals['critical_css'] = get_critical_css
     

@@ -14,6 +14,8 @@
     --single-bg-color: rgb(26, 26, 26);
     --single-bg-color-trans: rgba(26, 26, 26, 0.9);
     --single-text-color: #e0e0e0;
+    /* Background pattern image - processed during build from config.toml style.bg_pattern */
+    --bg-pattern: url('diagonal.png');
 }
 
 /* Dark theme base - Critical body styles to prevent layout shift */
@@ -40,7 +42,7 @@ body::before,
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('diagonal.png');
+    background-image: var(--bg-pattern);
     background-size: auto;
     background-position: 0 0;
     background-repeat: repeat;
