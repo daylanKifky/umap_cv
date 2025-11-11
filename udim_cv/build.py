@@ -175,6 +175,22 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
     
     env.filters['url'] = url_filter
     
+    # Get font config for critical CSS processing
+    style_config = config.get('style', {})
+    font_general = style_config.get('font-general', 'Noto Sans')
+    font_cards = style_config.get('font-cards', 'Space Grotesk')
+    
+    # Add global function to read critical CSS using existing process_css_file
+    def get_critical_css() -> str:
+        """Read and process critical.css file using existing CSS processing."""
+        critical_css_path = src_dir / 'css' / 'critical.css'
+        if not critical_css_path.exists():
+            return ""
+        # Reuse existing process_css_file function
+        return process_css_file(critical_css_path, font_general, font_cards)
+    
+    env.globals['critical_css'] = get_critical_css
+    
     # Render index.html
     template = env.get_template('index.html')
     output = template.render(config=config)
@@ -512,6 +528,22 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         return base_url + path
     
     env.filters['url'] = url_filter
+    
+    # Get font config for critical CSS processing
+    style_config = config.get('style', {})
+    font_general = style_config.get('font-general', 'Noto Sans')
+    font_cards = style_config.get('font-cards', 'Space Grotesk')
+    
+    # Add global function to read critical CSS using existing process_css_file
+    def get_critical_css() -> str:
+        """Read and process critical.css file using existing CSS processing."""
+        critical_css_path = src_dir / 'css' / 'critical.css'
+        if not critical_css_path.exists():
+            return ""
+        # Reuse existing process_css_file function
+        return process_css_file(critical_css_path, font_general, font_cards)
+    
+    env.globals['critical_css'] = get_critical_css
     
     # Ensure articles_data is provided
     if articles_data is None:

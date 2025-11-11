@@ -479,8 +479,8 @@ class ArticleVisualizer extends BaseArticleVisualizer {
                 const clickedCard = cardIntersects[0].object;
                 const entity = clickedCard.userData.entity;
                 if (entity && entity.article.html_filepath) {
-                    // Open the HTML file in a new tab
-                    window.open(entity.article.html_filepath);
+                    // Open the HTML file 
+                    window.location.href = entity.article.html_filepath;
                     return;
                 }
             }

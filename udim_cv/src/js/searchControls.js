@@ -7,7 +7,7 @@
  * Shows search suggestions as cards while typing.
  */
 
-const PLACEHOLDER_IMAGE = "android-chrome-512x512.png"
+
 
 class SearchControls {
     constructor(articleId) {

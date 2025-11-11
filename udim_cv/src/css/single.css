@@ -1,43 +1,4 @@
 
-:root {
-    --single-bg-color: rgb(26, 26, 26);
-    --single-bg-color-trans: rgba(26, 26, 26, 0.9);
-    --single-text-color: #e0e0e0;
-}
-
-/* Dark theme base */
-body {
-    /* CSS custom properties for single page theming */
-    background-color: var(--single-bg-color);
-    color: var(--single-text-color);
-    font-family: var(--font-family);
-    line-height: 1.6;
-    margin: 0;
-    padding: 0 1rem;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow-x: hidden;
-    overflow-y: auto;
-}
-
-/* Diagonal overlay */
-body::before,
-.navbar-mobile-menu::before {
-    content: '';
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image: url('diagonal.png');
-    background-size: auto;
-    background-position: 0 0;
-    background-repeat: repeat;
-    pointer-events: none;
-    z-index: 0;
-    opacity: 1;
-}
 
 #home-page .about-description p,
 #home-page p.white-text {

@@ -8,9 +8,7 @@
     <link rel="stylesheet" href="{{ 'single.css' | url }}">
 
     <style>
-        body {
-            background-color: #fff;
-        }
+        {{ critical_css() | safe }}
     </style>
 </head>
 <body>
