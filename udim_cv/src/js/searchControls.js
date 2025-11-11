@@ -6,6 +6,9 @@
  * and displays a semitransparent glass overlay over article content when open.
  * Shows search suggestions as cards while typing.
  */
+
+const PLACEHOLDER_IMAGE = "android-chrome-512x512.png"
+
 class SearchControls {
     constructor(articleId) {
         this.searchOpen = false;
@@ -34,6 +37,14 @@ class SearchControls {
         this.noResultsMessage = null;
         this.articleId = articleId;
         this.data = null;
+        this.placeholderImage = null;
+        
+        // Preload placeholder image
+        const placeholderImg = new Image();
+        placeholderImg.onload = () => {
+            this.placeholderImage = placeholderImg;
+        };
+        placeholderImg.src = PLACEHOLDER_IMAGE;
         
         this.init();
     }
@@ -739,8 +750,25 @@ class SearchControls {
         
         if (article.thumbnail && article.thumbnail !== false) {
             const img = document.createElement('img');
-            img.src = article.thumbnail;
             img.alt = article.title || '';
+            
+            // Set placeholder initially
+            if (this.placeholderImage) {
+                img.src = this.placeholderImage.src;
+            } else {
+                img.src = PLACEHOLDER_IMAGE;
+            }
+            
+            // Preload the real image and swap when ready
+            const realImg = new Image();
+            realImg.onload = () => {
+                img.src = article.thumbnail;
+            };
+            realImg.onerror = () => {
+                thumbnailDiv.style.display = 'none';
+            };
+            realImg.src = article.thumbnail;
+            
             img.onerror = () => {
                 thumbnailDiv.style.display = 'none';
             };

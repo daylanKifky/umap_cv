@@ -565,7 +565,6 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         if not article_image or article_image is False:
             article_image = None
 
-        print(f"Article image: {article_image}")
         
         output = template.render(
             config=config,
