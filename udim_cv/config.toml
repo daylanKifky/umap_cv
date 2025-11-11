@@ -38,6 +38,13 @@ cta_button_text = "Explore the projects in 3D space"
 plain_view_intro = "You can also use the plain view to see the projects"
 plain_view_button_text = "View Projects List"
 
+[weights]
+# Weights for embedding fields (only non-zero weights are used)
+title = 1
+technologies = 3
+description = 1.2
+tags = 0.1
+
 [js-conf]
 # JavaScript configuration overrides
 # Uncomment and modify values as needed

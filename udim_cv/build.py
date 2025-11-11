@@ -11,19 +11,11 @@ import os
 import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-
+import jinja2
 try:
-    import tomllib
+    import tomllib  # Python 3.11+
 except ImportError:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        raise ImportError("tomllib (Python 3.11+) or tomli is required. Install with: pip install tomli")
-
-try:
-    import jinja2
-except ImportError:
-    raise ImportError("jinja2 is required. Install it with: pip install jinja2")
+    import tomli as tomllib  # Python < 3.11
 
 # Import process module
 from .process import main as process_main
@@ -469,7 +461,7 @@ def apply_base_url(path: str, base_url: str) -> str:
     return base_url + path
 
 
-def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any], input_folder: str, base_url: str, assets_version: Optional[str] = None):
+def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any], base_url: str, articles_data: Dict[str, Dict], assets_version: Optional[str] = None):
     """
     Render article HTML pages using the single.html template.
     
@@ -477,8 +469,8 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         src_dir: Source directory (udim_cv/src)
         public_dir: Output directory (udim_cv/public)
         config: Configuration dictionary
-        input_folder: Path to folder containing markdown files
         base_url: Base URL for paths
+        articles_data: Pre-loaded article data dictionary
         assets_version: Optional version hash for cache-busting JS/CSS files
     """
     print("📝 Rendering article pages...")
@@ -521,10 +513,9 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
     
     env.filters['url'] = url_filter
     
-    # Load article data (without saving HTML files - we'll do that with template)
-    # We need to modify load_markdown_files to optionally skip HTML saving, but for now
-    # we'll just reload the data - the HTML files will be overwritten
-    articles_data = load_markdown_files(input_folder, None, skip_confirmation=True, base_url=base_url)
+    # Ensure articles_data is provided
+    if articles_data is None:
+        raise ValueError("articles_data must be provided")
     
     # Get single.html template
     template = env.get_template('single.html')
@@ -569,10 +560,18 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         html_content = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
         
         # Render template with article content
+        article_image = article.get('image', None)
+        # Only pass image if it's a valid string (not False or None)
+        if not article_image or article_image is False:
+            article_image = None
+
+        print(f"Article image: {article_image}")
+        
         output = template.render(
             config=config,
             article_content=html_content,
-            article_title=article.get('title', '')
+            article_title=article.get('title', ''),
+            article_image=article_image
         )
         
         # Save rendered HTML file
@@ -592,7 +591,8 @@ def build(
     skip_confirmation: bool = False,
     copy_only: bool = False,
     config_path: str = None,
-    base_url: str = None
+    base_url: str = None,
+    thumbnail_res: str = '400x210'
 ):
     """
     Main build function that copies source files and runs processing pipeline.
@@ -606,6 +606,7 @@ def build(
         copy_only: Only copy source files, skip processing
         config_path: Path to config.toml file (default: config.toml relative to build.py)
         base_url: Base URL override (default: None, uses config file value)
+        thumbnail_res: Thumbnail resolution in format WIDTHxHEIGHT (default: '400x210')
     """
     # Define paths relative to this file
     udim_cv_dir = Path(__file__).parent
@@ -657,13 +658,24 @@ def build(
         print("🔄 Running processing pipeline...")
         
         try:
+            # Load article data once
+            articles_data = load_markdown_files(
+                input_folder,
+                str(output_path),
+                skip_confirmation,
+                base_url,
+                thumbnail_res
+            )
+            
+            # Pass pre-loaded data to process_main
+            # Extract weights from config (default to empty dict if not present)
+            weights = config.get('weights', {})
             embeddings_filename = process_main(
-                input_folder=input_folder,
+                data=articles_data,
                 output_folder=str(output_path),
                 methods=methods,
                 dimensions=dimensions,
-                skip_confirmation=skip_confirmation,
-                base_url=base_url
+                weights=weights
             )
             
             # Update conf.js with the embeddings filename
@@ -686,8 +698,8 @@ def build(
             # Step 3: Render HTML templates with assets version
             render_templates(src_dir, output_path, config, assets_version)
             
-            # Step 4: Render article pages using single.html template
-            render_article_pages(src_dir, output_path, config, input_folder, base_url, assets_version)
+            # Step 4: Render article pages using single.html template (pass pre-loaded data)
+            render_article_pages(src_dir, output_path, config, base_url, articles_data, assets_version)
             
             print("\n✅ Build complete!")
             print(f"📦 Output directory: {output_path}")
@@ -790,6 +802,13 @@ Examples:
         help='Base URL for deployment (overrides config file value, e.g., "/subfolder")'
     )
     
+    parser.add_argument(
+        '--thumbnail-res',
+        type=str,
+        default='400x210',
+        help='Thumbnail resolution in format WIDTHxHEIGHT (default: 400x210)'
+    )
+    
     args = parser.parse_args()
     
     build(
@@ -800,7 +819,8 @@ Examples:
         skip_confirmation=args.skip_confirmation,
         copy_only=args.copy_only,
         config_path=args.config,
-        base_url=args.base_url
+        base_url=args.base_url,
+        thumbnail_res=args.thumbnail_res
     )
 
 

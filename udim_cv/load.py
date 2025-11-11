@@ -31,13 +31,16 @@ def apply_base_url(path: str, base_url: str) -> str:
     return base_url + path
 
 
-def load_markdown_files(input_folder: str, output_folder: str = None, skip_confirmation: bool = False, base_url: str = "") -> Dict[str, Dict]:
+def load_markdown_files(input_folder: str, output_folder: str = None, skip_confirmation: bool = False, base_url: str = "", thumbnail_res: str = '400x210') -> Dict[str, Dict]:
     """
     Load markdown files from a folder, convert to HTML, extract metadata and content.
 
     Args:
         input_folder: Path to folder containing markdown files
         output_folder: Path to folder where HTML files will be saved (optional)
+        skip_confirmation: Skip confirmation prompts
+        base_url: Base URL for paths
+        thumbnail_res: Thumbnail resolution in format WIDTHxHEIGHT (default: '400x210')
 
     Returns:
         Dictionary with filename as key and parsed data as value
@@ -123,24 +126,46 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
                 # Handle image copying if output folder is specified
                 if output_folder:
-                    image_path = None
+                    image_result = None
 
                     # Check precedence: thumbnail field in JSON first, then first image tag
                     # Skip if thumbnail is False, None, or empty string
                     if 'thumbnail' in json_data and json_data['thumbnail'] and json_data['thumbnail'] is not False:
                         image_source = json_data['thumbnail']
-                        image_path = handle_image(image_source, output_folder, input_folder)
+                        image_result = handle_image(image_source, output_folder, input_folder, thumbnail_res)
                     elif first_image_src:
-                        image_path = handle_image(first_image_src, output_folder, input_folder)
+                        image_result = handle_image(first_image_src, output_folder, input_folder, thumbnail_res)
 
-                    print(f"Processed image for {filename}: {image_path if image_path else 'NOT FOUND'}")
+                    print(f"Processed image for {filename}: {image_result if image_result else 'NOT FOUND'}")
                     
-                    # Apply base_url to thumbnail path only if image_path is a valid string
-                    if image_path and isinstance(image_path, str):
-                        data[key]['thumbnail'] = apply_base_url(image_path, base_url)
-                    else:
-                        # Store False as-is when image not found
+                    # Handle different return types from handle_image
+                    if image_result is False:
+                        # Image not found
                         data[key]['thumbnail'] = False
+                        data[key]['image'] = False
+                    elif isinstance(image_result, str):
+                        # Remote URL - use for both thumbnail and image
+                        data[key]['thumbnail'] = image_result
+                        data[key]['image'] = image_result
+                    elif isinstance(image_result, dict):
+                        # Local image with thumbnail and original paths
+                        thumbnail_path = image_result.get('thumbnail')
+                        image_path = image_result.get('image')
+                        
+                        # Apply base_url to paths if they are strings
+                        if thumbnail_path and isinstance(thumbnail_path, str):
+                            data[key]['thumbnail'] = apply_base_url(thumbnail_path, base_url)
+                        else:
+                            data[key]['thumbnail'] = False
+                        
+                        if image_path and isinstance(image_path, str):
+                            data[key]['image'] = apply_base_url(image_path, base_url)
+                        else:
+                            data[key]['image'] = False
+                    else:
+                        # Fallback
+                        data[key]['thumbnail'] = False
+                        data[key]['image'] = False
 
                 # Save HTML file if output folder specified
                 if output_folder:

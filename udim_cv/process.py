@@ -8,7 +8,7 @@ import os
 import xml.etree.ElementTree as ET
 
 import itertools
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
@@ -184,25 +184,18 @@ class ArticleEmbeddingGenerator:
         return reduced_embeddings, reducer
 
 
-def main(input_folder: str, output_folder: str, methods: List[str], dimensions: List[int], skip_confirmation: bool = False, base_url: str = "") -> str:
-    # Define weights for each field
-    weights = {
-        'title': 1,
-        'category': 0,
-        'technologies': 3,
-        'description': 1.2,
-        'features': 0,
-        'use_cases': 0,
-        'technical_details': 0,
-        'difficulty': 0,
-        'tags': 0.1
-    }
+def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, dimensions: List[int] = None, weights: Dict[str, float] = None) -> str:
+    # Use provided weights or default to empty dict (will be populated from config)
+    if weights is None:
+        raise ValueError("weights must be provided")
 
+    # Ensure data is provided
+    if data is None:
+        raise ValueError("data must be provided")
+    
+    # Ensure output_folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
-
-    # Load project data from markdown files
-    data = load_markdown_files(input_folder, output_folder, skip_confirmation, base_url)
 
     data_values = list(data.values())
     
@@ -221,7 +214,8 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
     generator = ArticleEmbeddingGenerator()
 
     ids = [i['id'] for i in data_values]
-    thumbnails = [i['thumbnail'] for i in data_values]
+    thumbnails = [i.get('thumbnail', False) for i in data_values]
+    images = [i.get('image', False) for i in data_values]
     html_filepaths = [i.get('html_filepath', '') for i in data_values]
 
     all_values = {}
@@ -337,6 +331,7 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
         article_entry = {
             "id": ids[i],
             "thumbnail": thumbnails[i],
+            "image": images[i],
             "html_filepath": html_filepaths[i],
             "checksum": article_checksums[i]
         }
@@ -386,8 +381,7 @@ def main(input_folder: str, output_folder: str, methods: List[str], dimensions: 
                 arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
                 fields = list(weights.keys())
-                fields.remove('description')
-                fields.remove('technical_details')
+
                 cross_similarity = calculate_cross_similarity(data_values, i, j, fields)
 
                 link = {
@@ -433,10 +427,27 @@ def _run():
     parser.add_argument('--dimensions', '-d', type=int, nargs='+', choices=[2, 3], default=[3],
                        help='Output dimensions (2D and/or 3D)')
     parser.add_argument('--skip-confirmation', '-s', action='store_true', help='Skip confirmation before running')
+    parser.add_argument('--base-url', type=str, default='', help='Base URL for paths')
+    parser.add_argument('--thumbnail-res', type=str, default='400x210', help='Thumbnail resolution in format WIDTHxHEIGHT')
 
     args = parser.parse_args()
 
-    main(args.input, args.output, args.methods, args.dimensions, args.skip_confirmation)
+    # Load markdown files first
+    data = load_markdown_files(
+        args.input,
+        args.output,
+        args.skip_confirmation,
+        args.base_url,
+        args.thumbnail_res
+    )
+    
+    # Pass pre-loaded data to main
+    main(
+        data=data,
+        output_folder=args.output,
+        methods=args.methods,
+        dimensions=args.dimensions
+    )
 
 
 

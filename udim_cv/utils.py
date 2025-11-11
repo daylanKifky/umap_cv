@@ -5,7 +5,8 @@ import json
 import hashlib
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from typing import List, Union, Dict
+from typing import List, Union, Dict, Tuple
+from PIL import Image
 
 def standardize_embeddings(embeddings: np.ndarray) -> np.ndarray:
     """
@@ -191,17 +192,21 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str]
     return chunks if chunks else [text]
 
 
-def handle_image(image_source: str, output_folder: str, base_input_folder: str = None) -> Union[str, bool]:
+def handle_image(image_source: str, output_folder: str, base_input_folder: str = None, thumbnail_res: str = '400x210') -> Union[Dict[str, Union[str, bool]], str, bool]:
     """
     Handle image source by copying local files or returning remote URLs.
+    For local images, creates a thumbnail version in JPG format.
 
     Args:
         image_source: Path to image file (local) or URL (remote)
         output_folder: Folder where images should be copied
         base_input_folder: Base folder to search for local images
+        thumbnail_res: Thumbnail resolution in format WIDTHxHEIGHT (default: '400x210')
 
     Returns:
-        Relative path to copied image, URL if remote, or False if not found
+        For local images: Dict with 'thumbnail' and 'image' keys containing relative paths
+        For remote URLs: URL string as-is
+        If not found: False
     """
     if not image_source:
         return False
@@ -231,7 +236,7 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
     filename = os.path.basename(image_path)
     dest_path = os.path.join(images_folder, filename)
 
-    # Copy if not already present
+    # Copy original image if not already present
     if not os.path.exists(dest_path):
         try:
             shutil.copy2(image_path, dest_path)
@@ -239,8 +244,68 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
             print(f"Warning: Could not copy image {image_path} to {dest_path}: {e}")
             return False
 
-    # Return relative path from output folder
-    return os.path.relpath(dest_path, output_folder)
+    # Get relative path for original image
+    image_rel_path = os.path.relpath(dest_path, output_folder)
+
+    # Create thumbnail for local images
+    try:
+        # Parse thumbnail dimensions
+        width, height = map(int, thumbnail_res.split('x'))
+        
+        # Generate thumbnail filename (change extension to .jpg)
+        base_name = os.path.splitext(filename)[0]
+        thumbnail_filename = f"{base_name}_thumb.jpg"
+        thumbnail_path = os.path.join(images_folder, thumbnail_filename)
+        
+        # Create thumbnail if it doesn't exist
+        if not os.path.exists(thumbnail_path):
+            img = Image.open(image_path)
+            
+            # Calculate desired aspect ratio
+            target_aspect = width / height
+            
+            # Get current image dimensions
+            img_width, img_height = img.size
+            current_aspect = img_width / img_height
+            
+            # Crop to match desired aspect ratio (centered crop)
+            if current_aspect > target_aspect:
+                # Image is wider than target - crop width
+                new_width = int(img_height * target_aspect)
+                left = (img_width - new_width) // 2
+                img = img.crop((left, 0, left + new_width, img_height))
+            elif current_aspect < target_aspect:
+                # Image is taller than target - crop height
+                new_height = int(img_width / target_aspect)
+                top = (img_height - new_height) // 2
+                img = img.crop((0, top, img_width, top + new_height))
+            
+            # Resize to exact dimensions
+            img = img.resize((width, height), Image.Resampling.LANCZOS)
+            
+            # Convert to RGB if necessary (for PNG with transparency, etc.)
+            if img.mode in ('RGBA', 'LA', 'P'):
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                if img.mode == 'P':
+                    img = img.convert('RGBA')
+                rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                img = rgb_img
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
+            
+            img.save(thumbnail_path, 'JPEG', quality=85)
+        
+        thumbnail_rel_path = os.path.relpath(thumbnail_path, output_folder)
+    except Exception as e:
+        print(f"Warning: Could not create thumbnail for {image_path}: {e}")
+        # If thumbnail creation fails, still return the original image
+        thumbnail_rel_path = image_rel_path
+
+    # Return dict with both paths
+    return {
+        'thumbnail': thumbnail_rel_path if thumbnail_rel_path else image_rel_path,
+        'image': image_rel_path
+    }
 
 
 def calculate_article_checksum(article: dict, weights: dict) -> str:
