@@ -22,11 +22,9 @@
         return { width, height };
     }
     
-    // Get article ID from URL
-    const articleId = getArticleIdFromUrl();
     
     if (articleId === null) {
-        console.warn('Could not extract article ID from URL');
+        console.warn('Could not extract article ID from script');
         return;
     }
     

@@ -813,18 +813,6 @@ class BaseArticleVisualizer {
     }
 }
 
-// Extract article ID from current page URL
-// URLs are in format: {id}_{name}.html (e.g., "000_python_blender_automation.html")
-function getArticleIdFromUrl() {
-    const path = window.location.pathname;
-    const filename = path.split('/').pop() || path;
-    const match = filename.match(/^(\d+)[_-]/);
-    if (match) {
-        return parseInt(match[1], 10);
-    }
-    return null;
-}
-
 /**
  * Initialize dynamic gradient border for explore button
  * Creates a cycling hue effect similar to the latent CTA
@@ -876,7 +864,6 @@ if (typeof module !== 'undefined' && module.exports) {
         buildWeightedArticleList,
         loadEmbeddingsData,
         BaseArticleVisualizer,
-        getArticleIdFromUrl,
         initializeExploreBorderAnimation
     };
 }

@@ -571,7 +571,8 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
             config=config,
             article_content=html_content,
             article_title=article.get('title', ''),
-            article_image=article_image
+            article_image=article_image,
+            article_id=article.get('id')
         )
         
         # Save rendered HTML file

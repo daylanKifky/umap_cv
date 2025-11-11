@@ -185,6 +185,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                         
                         html_content_to_save = re.sub(r'src="([^"]+)"', replace_img_src, html_content)
                     
+
                     # Write the HTML file with base_url applied
                     with open(html_filepath, 'w', encoding='utf-8') as f:
                         f.write(html_content_to_save)

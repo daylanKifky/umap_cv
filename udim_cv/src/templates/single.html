@@ -4,8 +4,11 @@
     {% include 'header.html' %}
     <link rel="stylesheet" href="{{ 'style.css' | url }}">
     <link rel="stylesheet" href="{{ 'single.css' | url }}">
+    <script>
+        const articleId = {{ article_id }};
+    </script>
 </head>
-<body>
+<body id="article-{{ article_id }}">
     <div class="content-wrapper">
         {% include 'navbar.html' %}
         <div class="article-container">
