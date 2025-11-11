@@ -572,7 +572,7 @@ class ArticleEntity {
             context.textBaseline = 'middle';
             const buttonTextX = width / 2;
             const buttonTextY = buttonY + buttonHeight / 2;
-            context.fillText(SEE_MORE_TEXT, buttonTextX, buttonTextY);
+            context.fillText(READ_MORE_TEXT, buttonTextX, buttonTextY);
         }
 
         // Draw text after image

@@ -44,7 +44,7 @@ const CARD_CONTENT_LINES = 3;
 const CARD_CONTENT_LENGTH = 300;
 
 // Card UI text
-const SEE_MORE_TEXT = "see more";
+const READ_MORE_TEXT = "read more...";
 
 // ============================================================================
 // User Controls & Autoplay
