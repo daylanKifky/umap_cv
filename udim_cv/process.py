@@ -234,7 +234,7 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
     # Process unique field values for embeddings and 3D reduction
     fields_embeddings_data = {}
     for field, weight in weights.items():
-        if weight > 0 and field != 'title':
+        if weight > 0 and field not in ['title', 'description']:
             field_data = all_values[field]
             
             if not field_data:
@@ -275,7 +275,6 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
             # Calculate 3D PCA reduction for each unique value
             if unique_embeddings.size > 0:
                 pca_3d, _ = generator.reduce_pca(unique_embeddings, n_components=3)
-                
                 # Store in the fields structure
                 fields_embeddings_data[field] = {}
                 for value, coords in zip(unique_values_list, pca_3d):
@@ -381,7 +380,9 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
                 arc_vertices = create_connecting_arc(origin_coords, end_coords, steps=3)
 
                 fields = list(weights.keys())
+                fields.remove('description') # Don't include description since it's normallytoo long
 
+                # Calculate cross similarity for the fields
                 cross_similarity = calculate_cross_similarity(data_values, i, j, fields)
 
                 link = {
@@ -407,8 +408,25 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
 
     # Save embeddings in the structured format
     output_file = os.path.join(output_folder, embeddings_filename)
+    
+    # Helper function to round floats in nested structures
+    def round_floats(obj, decimals=4):
+        if isinstance(obj, float):
+            return round(obj, decimals)
+        elif isinstance(obj, dict):
+            return {k: round_floats(v, decimals) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [round_floats(item, decimals) for item in obj]
+        elif isinstance(obj, np.ndarray):
+            return [round_floats(item, decimals) for item in obj.tolist()]
+        else:
+            return obj
+    
+    # Round all floats before JSON serialization
+    embedding_data_rounded = round_floats(embedding_data)
+    
     with open(output_file, 'w') as f:
-        json.dump(embedding_data, f, indent=2)
+        json.dump(embedding_data_rounded, f, indent=2)
     
     print(f"Saved embeddings to: {output_file}")
     return embeddings_filename
