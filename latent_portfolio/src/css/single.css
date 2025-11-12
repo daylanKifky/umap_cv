@@ -618,6 +618,16 @@
     margin: 1rem 0 1rem;
 }
 
+.article-container p a {
+    color: inherit;
+    background-color: #ffffff1a;
+    padding: 0 0.2rem;
+}
+
+.article-container p a:hover {
+    background-color: #ffffff33;
+}
+
 .article-container code {
     font-family: monospace;
     background-color: #3e3e3ec4;
