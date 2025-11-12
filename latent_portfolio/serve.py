@@ -65,8 +65,8 @@ def serve(directory: str, host: str = 'localhost', port: int = 8000, quiet: bool
 def _run():
     """Main entrypoint for command-line interface"""
     # Calculate default directory relative to this file
-    udim_cv_dir = Path(__file__).parent
-    project_root = udim_cv_dir.parent
+    latent_portfolio_dir = Path(__file__).parent
+    project_root = latent_portfolio_dir.parent
     default_directory = str(project_root / 'public')
     
     parser = argparse.ArgumentParser(
@@ -75,16 +75,16 @@ def _run():
         epilog=f"""
 Examples:
   # Serve from default directory (public/)
-  python -m udim_cv.serve
+  python -m latent_portfolio.serve
   
   # Serve from custom directory
-  python -m udim_cv.serve --directory build/public/
+  python -m latent_portfolio.serve --directory build/public/
   
   # Serve on custom host and port
-  python -m udim_cv.serve --host 0.0.0.0 --port 3000
+  python -m latent_portfolio.serve --host 0.0.0.0 --port 3000
   
   # Quiet mode (suppress request logs)
-  python -m udim_cv.serve --quiet
+  python -m latent_portfolio.serve --quiet
         """
     )
     

@@ -240,7 +240,7 @@ def clear_scene():
 
 
 if __name__ == "__main__":
-    json_path = "/home/daylan/Proyectos/152_umap_cv/udim_cv/public/embeddings.json"
+    json_path = "/home/daylan/Proyectos/152_umap_cv/latent_portfolio/public/embeddings.json"
     
     print(f"Using embeddings file: {json_path}")
     

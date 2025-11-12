@@ -1,15 +1,15 @@
 # Projects Latent Space viz
 
-![udim_cv preview](udim_cv/public/udim_cv_prev.jpg)
+![latent_portfolio preview](latent_portfolio/public/latent_portfolio_prev.jpg)
 
 ## Dev Run: 
 
 ```bash
 pip install -e .
 
-python -m udim_cv.process --input udim_cv/articles --output udim_cv/public/embeddings.json
+python -m latent_portfolio.process --input latent_portfolio/articles --output latent_portfolio/public/embeddings.json
 
-cd udim_cv/public
+cd latent_portfolio/public
 
 python -m http.server 8080
 

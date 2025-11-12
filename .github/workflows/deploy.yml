@@ -45,7 +45,7 @@ jobs:
             BASE_URL="/$REPO_NAME/"
           fi
           echo "Building with base_url: $BASE_URL"
-          python -m udim_cv.build --input udim_cv/articles --output public --skip-confirmation --base-url "$BASE_URL"
+          python -m latent_portfolio.build --input latent_portfolio/articles --output public --skip-confirmation --base-url "$BASE_URL"
 
 
       - name: Setup Pages

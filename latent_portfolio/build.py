@@ -47,8 +47,8 @@ def calculate_assets_version_hash(src_dir: Path, public_dir: Path,
     This hash will be used as a query parameter for cache-busting.
     
     Args:
-        src_dir: Source directory (udim_cv/src)
-        public_dir: Output directory (udim_cv/public) where files are copied
+        src_dir: Source directory (latent_portfolio/src)
+        public_dir: Output directory (latent_portfolio/public) where files are copied
         config: Configuration dictionary
         embeddings_file: Optional embeddings filename
         
@@ -127,8 +127,8 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
     Render Jinja2 templates from src/templates/ to public/.
     
     Args:
-        src_dir: Source directory (udim_cv/src)
-        public_dir: Output directory (udim_cv/public)
+        src_dir: Source directory (latent_portfolio/src)
+        public_dir: Output directory (latent_portfolio/public)
         config: Configuration dictionary
         assets_version: Optional version hash for cache-busting JS/CSS files
         
@@ -371,8 +371,8 @@ def copy_source_files(src_dir: Path, public_dir: Path, config: Dict[str, Any], e
     Copy all source files from src/ to public/.
     
     Args:
-        src_dir: Source directory (udim_cv/src)
-        public_dir: Output directory (udim_cv/public)
+        src_dir: Source directory (latent_portfolio/src)
+        public_dir: Output directory (latent_portfolio/public)
         config: Configuration dictionary
         embeddings_file: Optional embeddings filename
         
@@ -492,8 +492,8 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
     Render article HTML pages using the single.html template.
     
     Args:
-        src_dir: Source directory (udim_cv/src)
-        public_dir: Output directory (udim_cv/public)
+        src_dir: Source directory (latent_portfolio/src)
+        public_dir: Output directory (latent_portfolio/public)
         config: Configuration dictionary
         base_url: Base URL for paths
         articles_data: Pre-loaded article data dictionary
@@ -652,21 +652,21 @@ def build(
         thumbnail_res: Thumbnail resolution in format WIDTHxHEIGHT (default: '400x210')
     """
     # Define paths relative to this file
-    udim_cv_dir = Path(__file__).parent
-    project_root = udim_cv_dir.parent
-    src_dir = udim_cv_dir / 'src'
+    latent_portfolio_dir = Path(__file__).parent
+    project_root = latent_portfolio_dir.parent
+    src_dir = latent_portfolio_dir / 'src'
     
     # Set defaults relative to this file
     if output_dir is None:
         output_dir = str(project_root / 'public')
     if input_folder is None:
-        input_folder = str(udim_cv_dir / 'articles')
+        input_folder = str(latent_portfolio_dir / 'articles')
     if methods is None:
         methods = ['pca']
     if dimensions is None:
         dimensions = [3]
     if config_path is None:
-        config_path = str(udim_cv_dir / 'config.toml')
+        config_path = str(latent_portfolio_dir / 'config.toml')
     
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True)
@@ -757,7 +757,7 @@ def build(
         print("✅ Build complete (source files only)")
         print(f"📦 Output directory: {output_path}")
         print("\n💡 To generate embeddings, run:")
-        print(f"   python -m udim_cv.process -i {input_folder} -o {output_path} --methods {' '.join(methods)} --dimensions {' '.join(map(str, dimensions))} -s")
+        print(f"   python -m latent_portfolio.process -i {input_folder} -o {output_path} --methods {' '.join(methods)} --dimensions {' '.join(map(str, dimensions))} -s")
 
 
 def _run():
@@ -768,23 +768,23 @@ def _run():
         epilog="""
 Examples:
   # Full build with default settings
-  python -m udim_cv.build
+  python -m latent_portfolio.build
   
   # Build with custom methods and dimensions
-  python -m udim_cv.build --methods pca umap --dimensions 2 3
+  python -m latent_portfolio.build --methods pca umap --dimensions 2 3
   
   # Build with custom input/output directories
-  python -m udim_cv.build -i articles/ -o build/public/
+  python -m latent_portfolio.build -i articles/ -o build/public/
   
   # Copy source files only (skip processing)
-  python -m udim_cv.build --copy-only
+  python -m latent_portfolio.build --copy-only
         """
     )
     
     # Calculate default paths relative to this file
-    udim_cv_dir = Path(__file__).parent
-    project_root = udim_cv_dir.parent
-    default_input = str(udim_cv_dir / 'articles')
+    latent_portfolio_dir = Path(__file__).parent
+    project_root = latent_portfolio_dir.parent
+    default_input = str(latent_portfolio_dir / 'articles')
     default_output = str(project_root / 'public')
     
     parser.add_argument(
