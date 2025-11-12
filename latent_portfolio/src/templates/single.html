@@ -14,7 +14,7 @@
 <body id="article-{{ article_id }}">
     <div class="content-wrapper">
         {% include 'navbar.html' %}
-        <div class="article-container">
+        <div class="article-container single-article-container">
             {% if article_content %}
             {{ article_content | safe }}
             {% endif %}
