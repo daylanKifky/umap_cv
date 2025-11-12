@@ -556,7 +556,7 @@ class ArticleEntity {
             }, 2, 4, 0.5, "lines");
             
             const buttonHeight = height - contentHeight - padding; // Occupy all available space
-            const buttonFontSize = buttonHeight / 2; // Font size is half of button height
+            const buttonFontSize = Math.floor(width > height ? buttonHeight * 0.5 : buttonHeight * 0.3); 
             const buttonY = contentHeight;
     
             // Draw button background with article color
