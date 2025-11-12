@@ -38,12 +38,20 @@ jobs:
           # Extract owner and repo name from GitHub context
           OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
+          echo "DEBUG: Repository owner: $OWNER"
+          echo "DEBUG: Repository name: $REPO_NAME"
+          echo "DEBUG: Expected personal site pattern: ${OWNER}.github.io"
           # If repo name is <owner>.github.io, use root path, otherwise use /repo-name/
           if [ "$REPO_NAME" = "${OWNER}.github.io" ]; then
+            echo "DEBUG: Repository matches personal site pattern (<owner>.github.io)"
+            echo "DEBUG: Using root path (BASE_URL=\"\")"
             BASE_URL=""
           else
+            echo "DEBUG: Repository does not match personal site pattern"
+            echo "DEBUG: Using subdirectory path (/repo-name/)"
             BASE_URL="/$REPO_NAME/"
           fi
+          echo "DEBUG: Final BASE_URL: '$BASE_URL'"
           echo "Building with base_url: $BASE_URL"
           python -m latent_portfolio.build --input latent_portfolio/articles --output public --skip-confirmation --base-url "$BASE_URL"
 
