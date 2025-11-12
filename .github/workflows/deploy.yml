@@ -41,8 +41,15 @@ jobs:
           echo "DEBUG: Repository owner: $OWNER"
           echo "DEBUG: Repository name: $REPO_NAME"
           echo "DEBUG: Expected personal site pattern: ${OWNER}.github.io"
+          # Convert to lowercase for case-insensitive comparison
+          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME_LOWER=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]')
+          EXPECTED_PATTERN="${OWNER_LOWER}.github.io"
+          echo "DEBUG: Owner (lowercase): $OWNER_LOWER"
+          echo "DEBUG: Repo name (lowercase): $REPO_NAME_LOWER"
+          echo "DEBUG: Expected pattern (lowercase): $EXPECTED_PATTERN"
           # If repo name is <owner>.github.io, use root path, otherwise use /repo-name/
-          if [ "$REPO_NAME" = "${OWNER}.github.io" ]; then
+          if [ "$REPO_NAME_LOWER" = "$EXPECTED_PATTERN" ]; then
             echo "DEBUG: Repository matches personal site pattern (<owner>.github.io)"
             echo "DEBUG: Using root path (BASE_URL=\"\")"
             BASE_URL=""
