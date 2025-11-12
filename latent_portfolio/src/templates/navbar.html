@@ -14,9 +14,11 @@
         <div class="navbar-links">
             {% if main_view %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">plain view</a>
+            <a href="#" class="navbar-link" id="how-it-works-link">how it works</a>
             <a href="{{ 'home.html' | url }}#contact" class="navbar-link">contact</a>
             {% else %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
+            <a href="#" class="navbar-link" id="how-it-works-link">how it works</a>
             <a href="{{ 'index.html' | url }}?no_modal=true" class="navbar-link">3D view</a>
             <a href="{{ 'home.html' | url }}#contact" class="navbar-link">contact</a>
             {% endif %}
@@ -35,13 +37,15 @@
             <span class="hamburger-line"></span>
         </button>
     </div>
-    <div class="navbar-mobile-menu" id="navbar-mobile-menu">
+        <div class="navbar-mobile-menu" id="navbar-mobile-menu">
         <div class="mobile-menu-links">
             {% if main_view %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">plain view</a>
+            <a href="#" class="navbar-link" id="how-it-works-link-mobile">how it works</a>
             <a href="{{ 'home.html' | url }}#contact" class="navbar-link">contact</a>
             {% else %}
             <a href="{{ 'home.html' | url }}" class="navbar-link">about</a>
+            <a href="#" class="navbar-link" id="how-it-works-link-mobile">how it works</a>
             <a href="{{ 'index.html' | url }}?no_modal=true" class="navbar-link">3D view</a>
             <a href="{{ 'home.html' | url }}#contact" class="navbar-link">contact</a>
             {% endif %}

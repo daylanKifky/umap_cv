@@ -233,3 +233,89 @@ function initializeLatentCtaGradient() {
     updateGradient();
 }
 
+// How It Works Modal Functions (reused from main.js)
+function setupHowItWorksModal() {
+    const howItWorksModal = document.getElementById('how-it-works-modal');
+    const howItWorksLink = document.getElementById('how-it-works-link');
+    const howItWorksLinkMobile = document.getElementById('how-it-works-link-mobile');
+    const closeButton = document.getElementById('how-it-works-close');
+    
+    function openHowItWorksModal() {
+        howItWorksModal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        howItWorksModal.style.animation = 'fadeIn 0.5s ease-in';
+    }
+    
+    function closeHowItWorksModal() {
+        howItWorksModal.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => {
+            howItWorksModal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }, 300);
+    }
+    
+    // Add fade out animation if not already present
+    if (!document.querySelector('#fadeOutKeyframes')) {
+        const style = document.createElement('style');
+        style.id = 'fadeOutKeyframes';
+        style.textContent = `
+            @keyframes fadeOut {
+                from { opacity: 1; }
+                to { opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Open modal when clicking the link
+    if (howItWorksLink) {
+        howItWorksLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            openHowItWorksModal();
+        });
+    }
+    
+    // Open modal when clicking the mobile link
+    if (howItWorksLinkMobile) {
+        howItWorksLinkMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            openHowItWorksModal();
+            // Close mobile menu if open
+            const hamburger = document.getElementById('navbar-hamburger');
+            const mobileMenu = document.getElementById('navbar-mobile-menu');
+            if (hamburger && mobileMenu) {
+                hamburger.setAttribute('aria-expanded', 'false');
+                mobileMenu.classList.remove('open');
+            }
+        });
+    }
+    
+    // Close modal when clicking the close button
+    if (closeButton) {
+        closeButton.addEventListener('click', () => closeHowItWorksModal());
+    }
+    
+    // Close modal when clicking outside the modal content
+    if (howItWorksModal) {
+        howItWorksModal.addEventListener('click', (event) => {
+            if (event.target === howItWorksModal) {
+                closeHowItWorksModal();
+            }
+        });
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && howItWorksModal.style.display === 'flex') {
+            closeHowItWorksModal();
+        }
+    });
+}
+
+// Setup how it works modal when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupHowItWorksModal);
+} else {
+    setupHowItWorksModal();
+}
+

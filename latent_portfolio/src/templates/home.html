@@ -20,6 +20,10 @@
         <div class="article-container">
             {% include 'startup_modal.html' %}
 
+            <div id="how-it-works-modal" style="display: none;">
+                {% include 'how_it_works_modal.html' %}
+            </div>
+
             <div id="latent-cta">
                 <p>{{ config.home_page.cta_description }}</p>
                 <a href="{{ 'index.html' | url }}?no_modal=true" class="btn"><button class="about-button">{{ config.home_page.cta_button_text }}</button></a>
