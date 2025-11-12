@@ -60,7 +60,15 @@ jobs:
           fi
           echo "DEBUG: Final BASE_URL: '$BASE_URL'"
           echo "Building with base_url: $BASE_URL"
-          python -m latent_portfolio.build --input latent_portfolio/articles --output public --skip-confirmation --base-url "$BASE_URL"
+
+          if [ -d articles ]; then
+            echo "DEBUG: articles directory exists"
+            INPUT_FOLDER="articles"
+          else
+            echo "DEBUG: articles directory does not exist, using sample_articles"
+            INPUT_FOLDER="sample_articles"
+          fi
+          python -m latent_portfolio.build --input $INPUT_FOLDER --output public --skip-confirmation --base-url "$BASE_URL"
 
 
       - name: Setup Pages

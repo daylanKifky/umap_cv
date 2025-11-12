@@ -9,7 +9,6 @@ This project allows you to view a list of projects as a 3D representation of the
 
 The easiest way to use this project is to **fork** the repository and modify the article `.md` files in the `latent_portfolio/articles` folder. Each markdown file represents a project that will be visualized in the 3D space.
 
-
 To publish your portfolio site, you need to configure GitHub Pages to use a custom GitHub Actions workflow:
 
 1. **Enable GitHub Pages**: Go to your repository Settings → Pages
@@ -21,6 +20,18 @@ The site will be available at:
 - `https://<your-username>.github.io/<repository-name>/` otherwise
 
 For detailed instructions, see the [GitHub Pages documentation on publishing with a custom GitHub Actions workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow).
+
+### Customizing your fork
+
+To customize the configuration, copy `config.toml.template` to `config.toml` and modify it according to your needs.
+
+You can customize your name and contact data, tweak the style, or adjust the fields used for dimensionality reduction. By creating your own `config.toml` file (instead of modifying the template), your customizations won't be overridden when pulling updates from the upstream repository. The build script will automatically detect and use your custom configuration file.
+
+### Create your articles
+
+Create an `articles` folder at the root of this repository, and populate it with markdown files, using [sample_articles/_article_boilerplate.md](sample_articles/_article_boilerplate.md) as a base.
+
+**Be sure to populate the JSON part with significant content**, since it will be used to create the embeddings of your article
 
 ## Dev Run
 

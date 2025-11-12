@@ -660,19 +660,37 @@ def build(
     if output_dir is None:
         output_dir = str(project_root / 'public')
     if input_folder is None:
-        input_folder = str(latent_portfolio_dir / 'articles')
+        input_folder = str(project_root / 'sample_articles')
     if methods is None:
         methods = ['pca']
     if dimensions is None:
         dimensions = [3]
     if config_path is None:
-        config_path = str(latent_portfolio_dir / 'config.toml')
+        config_path = str(project_root / 'config.toml')
     
     output_path = Path(output_dir)
     output_path.mkdir(exist_ok=True)
     
     # Load configuration
-    config = load_config(Path(config_path))
+    config_path = Path(config_path)
+    try:
+        config = load_config(config_path)
+    except FileNotFoundError as e:
+        print(f"Configuration file not found: {config_path}")
+        if config_path.with_suffix('.toml.template').exists():
+            if not skip_confirmation:
+                print("The configuration file is missing. You can use the template configuration file for now, but note that any changes you make to it may be overridden when you pull updates from the upstream repository.")
+                print("For a fork-based workflow, we recommend creating your own configuration file (e.g., 'config.toml') based on the template. Would you like to use the template configuration file for now? (y/n)")
+                answer = input()
+                if answer != 'y':
+                    print("❌ Exiting...")
+                    exit(1)
+
+            config = load_config(config_path.with_suffix('.toml.template'))
+            print(f"Using template configuration file: {config_path.with_suffix('.toml.template')}")
+        else:
+            print(f"❌ No template configuration file found at {config_path}. Exiting...")
+            exit(1)
     
     # Normalize base_url (use command-line override if provided, otherwise use config)
     if 'site' not in config:
@@ -784,7 +802,7 @@ Examples:
     # Calculate default paths relative to this file
     latent_portfolio_dir = Path(__file__).parent
     project_root = latent_portfolio_dir.parent
-    default_input = str(latent_portfolio_dir / 'articles')
+    default_input = str(project_root / 'sample_articles')
     default_output = str(project_root / 'public')
     
     parser.add_argument(
@@ -835,7 +853,7 @@ Examples:
         '--config', '-c',
         type=str,
         default=None,
-        help='Path to config.toml file (default: config.toml relative to build.py)'
+        help='Path to config.toml file (default: ../config.toml relative to build.py)'
     )
     
     parser.add_argument(
