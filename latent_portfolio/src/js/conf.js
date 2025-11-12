@@ -49,7 +49,7 @@ const READ_MORE_TEXT = "read more...";
 // ============================================================================
 // Placeholder Image for thumbnails
 // ============================================================================
-const PLACEHOLDER_IMAGE = "android-chrome-512x512.png";
+const PLACEHOLDER_IMAGE = "loading.png";
 
 // ============================================================================
 // User Controls & Autoplay
