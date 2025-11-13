@@ -35,30 +35,49 @@ jobs:
 
       - name: Build site
         run: |
-          # Extract owner and repo name from GitHub context
-          OWNER="${{ github.repository_owner }}"
-          REPO_NAME="${{ github.event.repository.name }}"
-          echo "DEBUG: Repository owner: $OWNER"
-          echo "DEBUG: Repository name: $REPO_NAME"
-          echo "DEBUG: Expected personal site pattern: ${OWNER}.github.io"
-          # Convert to lowercase for case-insensitive comparison
-          OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
-          REPO_NAME_LOWER=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]')
-          EXPECTED_PATTERN="${OWNER_LOWER}.github.io"
-          echo "DEBUG: Owner (lowercase): $OWNER_LOWER"
-          echo "DEBUG: Repo name (lowercase): $REPO_NAME_LOWER"
-          echo "DEBUG: Expected pattern (lowercase): $EXPECTED_PATTERN"
-          # If repo name is <owner>.github.io, use root path, otherwise use /repo-name/
-          if [ "$REPO_NAME_LOWER" = "$EXPECTED_PATTERN" ]; then
-            echo "DEBUG: Repository matches personal site pattern (<owner>.github.io)"
-            echo "DEBUG: Using root path (BASE_URL=\"\")"
-            BASE_URL=""
-          else
-            echo "DEBUG: Repository does not match personal site pattern"
-            echo "DEBUG: Using subdirectory path (/repo-name/)"
-            BASE_URL="/$REPO_NAME/"
+
+          # Check if config.toml exists
+          if [ ! -f config.toml ]; then
+            echo "DEBUG: config.toml does not exist"
+            echo "DEBUG: Creating config.toml"
+            cp config.toml.example config.toml
           fi
-          echo "DEBUG: Final BASE_URL: '$BASE_URL'"
+
+          # Extract base_url from config.toml
+          CONFIG_BASE_URL=$(grep -E '^base_url\s*=' config.toml | sed -E 's/^base_url\s*=\s*["'\'']?([^"'\'']*)["'\'']?/\1/' | tr -d ' ')
+          echo "DEBUG: base_url from config.toml: '$CONFIG_BASE_URL'"
+
+          # If base_url is not empty in config, use it; otherwise calculate it
+          if [ -n "$CONFIG_BASE_URL" ] && [ "$CONFIG_BASE_URL" != '""' ]; then
+            echo "DEBUG: Using base_url from config.toml"
+            BASE_URL="$CONFIG_BASE_URL"
+          else
+            echo "DEBUG: base_url is empty in config.toml, calculating from GitHub context"
+            # Extract owner and repo name from GitHub context
+            OWNER="${{ github.repository_owner }}"
+            REPO_NAME="${{ github.event.repository.name }}"
+            echo "DEBUG: Repository owner: $OWNER"
+            echo "DEBUG: Repository name: $REPO_NAME"
+            echo "DEBUG: Expected personal site pattern: ${OWNER}.github.io"
+            # Convert to lowercase for case-insensitive comparison
+            OWNER_LOWER=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+            REPO_NAME_LOWER=$(echo "$REPO_NAME" | tr '[:upper:]' '[:lower:]')
+            EXPECTED_PATTERN="${OWNER_LOWER}.github.io"
+            echo "DEBUG: Owner (lowercase): $OWNER_LOWER"
+            echo "DEBUG: Repo name (lowercase): $REPO_NAME_LOWER"
+            echo "DEBUG: Expected pattern (lowercase): $EXPECTED_PATTERN"
+            # If repo name is <owner>.github.io, use root path, otherwise use /repo-name/
+            if [ "$REPO_NAME_LOWER" = "$EXPECTED_PATTERN" ]; then
+              echo "DEBUG: Repository matches personal site pattern (<owner>.github.io)"
+              echo "DEBUG: Using root path (BASE_URL=\"\")"
+              BASE_URL=""
+            else
+              echo "DEBUG: Repository does not match personal site pattern"
+              echo "DEBUG: Using subdirectory path (/repo-name/)"
+              BASE_URL="/$REPO_NAME/"
+            fi
+          fi
+
           echo "Building with base_url: $BASE_URL"
 
           if [ -d articles ]; then
