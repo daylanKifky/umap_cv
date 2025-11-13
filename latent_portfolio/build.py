@@ -679,11 +679,12 @@ def build(
         print(f"Configuration file not found: {config_path}")
         if config_path.with_suffix('.toml.template').exists():
             if not skip_confirmation:
-                print("The configuration file is missing. You can use the template configuration file for now, but note that any changes you make to it may be overridden when you pull updates from the upstream repository.")
-                print("For a fork-based workflow, we recommend creating your own configuration file (e.g., 'config.toml') based on the template. Would you like to use the template configuration file for now? (y/n)")
+                print("<<< ⚠️  A custom configuration file is missing. (config.toml) ⚠️  >>>")
+                print("You can use the template configuration file for a quick start (config.toml.template), but note that any changes you make to it may be overridden when you pull updates from the upstream repository.")
+                print("Would you like to use the template configuration file for now? (y/n)")
                 answer = input()
                 if answer != 'y':
-                    print("❌ Exiting...")
+                    print("❌ Confirmation not given. Exiting...")
                     exit(1)
 
             config = load_config(config_path.with_suffix('.toml.template'))
@@ -727,6 +728,12 @@ def build(
                 base_url,
                 thumbnail_res
             )
+            if len(articles_data) < 4:
+                print("<<< ❌ Not enough articles. ❌ >>>")
+                print("You need at least 4 articles to generate significant dimensionality reductions.")
+                print("Please add more articles to the input folder and try again.")
+                print(" ❌ Build aborted.")
+                exit(1)
             
             # Pass pre-loaded data to process_main
             # Extract weights from config (default to empty dict if not present)
