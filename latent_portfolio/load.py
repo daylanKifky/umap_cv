@@ -160,13 +160,14 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     if 'thumbnail' in json_data and json_data['thumbnail'] and json_data['thumbnail'] is not False:
                         image_source = json_data['thumbnail']
                         image_result = handle_image(image_source, output_folder, input_folder, thumbnail_res)
+                        handle_image(first_image_src, output_folder, input_folder, None)
                     elif first_image_src:
                         image_result = handle_image(first_image_src, output_folder, input_folder, thumbnail_res)
 
                     print(f"\tProcessed first image: {image_result if image_result else 'NOT FOUND'}")
                     
                     for image_src in other_image_srcs:
-                        image_result = handle_image(image_src, output_folder, input_folder, None)
+                        handle_image(image_src, output_folder, input_folder, None)
                         print(f"\tProcessed other image: {image_result if image_result else 'NOT FOUND'}")
 
                     
