@@ -735,6 +735,14 @@ def build(
                 print(" ❌ Build aborted.")
                 exit(1)
             
+            ids = [i['id'] for i in articles_data.values()]
+            if len(ids) != len(set(ids)):
+                print("<<< ❌ Duplicate IDs found. ❌ >>>")
+                print(f"Duplicate IDs: {set([ f'{idx:03d}' for idx in ids if ids.count(idx) > 1])}")
+                print("Please ensure each article has a unique ID.")
+                print(" ❌ Build aborted.")
+                exit(1)
+
             # Pass pre-loaded data to process_main
             # Extract weights from config (default to empty dict if not present)
             weights = config.get('weights', {})

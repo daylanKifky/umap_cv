@@ -31,7 +31,7 @@ You can customize your name and contact data, tweak the style, or adjust the fie
 
 Create an `articles` folder at the root of this repository, and populate it with markdown files, using [sample_articles/_article_boilerplate.md](sample_articles/_article_boilerplate.md) as a base.
 
-**Be sure to populate the JSON part with significant content**, since it will be used to create the embeddings of your article
+**Be sure to populate the JSON part with significant content**, since it will be used to create the embeddings of your article. Add at least 2 technologies and 2 tags.
 
 ## Dev Run
 

@@ -75,7 +75,6 @@ class ArticleEmbeddingGenerator:
         if not articles:
             return np.array([])
         
-        print(f"Generating embeddings for {len(articles)} articles...")
         embeddings = self.model.encode(articles, convert_to_numpy=True)
         print(f"Generated embeddings with shape: {embeddings.shape}")
         return embeddings
@@ -227,6 +226,7 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
     for field, weight in weights.items():
         field_data = [i[field] for i in data_values]
         if weight > 0:
+            print(f"Generating embeddings for {field} x {len(field_data)} items...")
             embeddings_dict[field] = generator.generate_embeddings(field_data)
         
         all_values[field] = field_data

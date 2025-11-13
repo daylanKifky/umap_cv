@@ -47,8 +47,8 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
     """
     data = {}
 
-    # Get all .md files in the folder
-    md_files = [f for f in os.listdir(input_folder) if f.endswith('.md')]
+    # Get all .md and .html files in the folder
+    md_files = [f for f in os.listdir(input_folder) if f.endswith('.md') or f.endswith('.html')]
 
     n = len(md_files)
     total_combinations = (n * (n-1)) // 2
@@ -70,20 +70,26 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
         os.makedirs(output_folder, exist_ok=True)
 
     for filename in md_files:
-        search = re.search(r'^(\d+)[_-].*\.md$', filename)
+        search = re.search(r'^(\d+)[_-].*\.(md|html)$', filename)
         if not search:
-            print(f"Warning: Could not find file ID in {filename}")
+            print(f"\n> Warning: Could not find file ID in {filename}")
             continue
         article_id = int(search.group(1))
+        file_extension = search.group(2)
 
         filepath = os.path.join(input_folder, filename)
 
+        print(f"\n> Processing {filename}...")
+
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
+                file_contents = f.read()
 
-            # Convert markdown to HTML
-            html_content = markdown.markdown(markdown_content)
+            if file_extension == 'md':
+                # Convert markdown to HTML
+                html_content = markdown.markdown(file_contents)
+            if file_extension == 'html':
+                html_content = file_contents
 
             # Parse HTML to extract structured data FIRST (before applying base_url)
             try:
@@ -118,6 +124,19 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                         json_data = json.loads(script_elem.text.strip())
                     except json.JSONDecodeError as e:
                         print(f"\n\tWarning: Could not parse JSON in {filename}: {e}")
+
+
+                # Validate JSON data
+                required_keys = set(['technologies', 'description', 'tags'])
+                if not required_keys <= set(json_data.keys()) :
+                    print(f"\n\tWarning: JSON data in {filename} is not valid")
+                    raise ValueError(f"JSON data in {filename} Should contain {required_keys} keys")
+
+                if len(json_data['tags']) < 2:
+                    raise ValueError(f"JSON data [tags] in {filename} Should contain at least 2 tags")
+
+                if len(json_data['technologies']) < 2:
+                    raise ValueError(f"JSON data [technologies] in {filename} Should contain at least 2 technologies")
 
                 key = os.path.splitext(filename)[0]
                 data[key] = {
@@ -210,7 +229,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                 continue
 
         except Exception as e:
-            print(f"Error reading {filename}: {e}")
+            print(f"Error processing {filename}: {e}")
 
     print(f"\nLoaded {len(data)} articles from {input_folder}")
     return data
