@@ -1,7 +1,7 @@
 
 import re
 import markdown
-import xml.etree.ElementTree as ET
+from lxml import html, etree
 import json
 import os
 from typing import Dict
@@ -93,8 +93,8 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
             # Parse HTML to extract structured data FIRST (before applying base_url)
             try:
-                # Parse HTML with XML parser
-                root = ET.fromstring(f'<root>{html_content}</root>')
+                # Parse HTML with lxml (handles malformed HTML)
+                root = html.fromstring(f'<root>{html_content}</root>')
 
                 # Extract first h1 tag as title
                 h1_elem = root.find('.//h1')
@@ -225,7 +225,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     data[key]['html_filepath'] = apply_base_url(html_filename, base_url)
                     print(f"\tSaved HTML: {html_filepath}")
 
-            except ET.ParseError as e:
+            except (etree.ParserError, etree.XMLSyntaxError, TypeError) as e:
                 print(f"Error: Could not parse HTML in {filename}: {e}")
                 continue
 
