@@ -98,9 +98,17 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                 p_elem = root.find('.//p')
                 content = p_elem.text.strip() if p_elem is not None and p_elem.text else None
 
-                # Extract first img tag for image source
-                img_elem = root.find('.//img')
-                first_image_src = img_elem.get('src') if img_elem is not None else None
+                # Find all <img> tags and collect their src attributes (except the first one)
+                other_img_elems = root.findall('.//img')
+                # Skip the first (already in first_image_src), then extract src from the rest
+                first_image_src = None
+                other_image_srcs = []
+                for i, elem in enumerate(other_img_elems):
+                    if i == 0:
+                        first_image_src = elem.get('src')
+                    else:
+                        other_image_srcs.append(elem.get('src'))
+                other_image_srcs = list(set(other_image_srcs))
 
                 # Extract JSON script data
                 script_elem = root.find('.//script[@type="application/json"]')
@@ -109,7 +117,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     try:
                         json_data = json.loads(script_elem.text.strip())
                     except json.JSONDecodeError as e:
-                        print(f"Warning: Could not parse JSON in {filename}: {e}")
+                        print(f"\n\tWarning: Could not parse JSON in {filename}: {e}")
 
                 key = os.path.splitext(filename)[0]
                 data[key] = {
@@ -136,7 +144,12 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     elif first_image_src:
                         image_result = handle_image(first_image_src, output_folder, input_folder, thumbnail_res)
 
-                    print(f"Processed image for {filename}: {image_result if image_result else 'NOT FOUND'}")
+                    print(f"\tProcessed first image: {image_result if image_result else 'NOT FOUND'}")
+                    
+                    for image_src in other_image_srcs:
+                        image_result = handle_image(image_src, output_folder, input_folder, None)
+                        print(f"\tProcessed other image: {image_result if image_result else 'NOT FOUND'}")
+
                     
                     # Handle different return types from handle_image
                     if image_result is False:
@@ -190,7 +203,7 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
                     with open(html_filepath, 'w', encoding='utf-8') as f:
                         f.write(html_content_to_save)
                     data[key]['html_filepath'] = apply_base_url(html_filename, base_url)
-                    print(f"Saved HTML: {html_filepath}")
+                    print(f"\tSaved HTML: {html_filepath}")
 
             except ET.ParseError as e:
                 print(f"Error: Could not parse HTML in {filename}: {e}")
@@ -199,5 +212,5 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
         except Exception as e:
             print(f"Error reading {filename}: {e}")
 
-    print(f"Loaded {len(data)} articles from {input_folder}")
+    print(f"\nLoaded {len(data)} articles from {input_folder}")
     return data

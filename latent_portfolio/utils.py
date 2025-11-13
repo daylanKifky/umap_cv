@@ -246,60 +246,62 @@ def handle_image(image_source: str, output_folder: str, base_input_folder: str =
 
     # Get relative path for original image
     image_rel_path = os.path.relpath(dest_path, output_folder)
+    thumbnail_rel_path = None
 
     # Create thumbnail for local images
-    try:
-        # Parse thumbnail dimensions
-        width, height = map(int, thumbnail_res.split('x'))
-        
-        # Generate thumbnail filename (change extension to .jpg)
-        base_name = os.path.splitext(filename)[0]
-        thumbnail_filename = f"{base_name}_thumb.jpg"
-        thumbnail_path = os.path.join(images_folder, thumbnail_filename)
-        
-        # Create thumbnail if it doesn't exist
-        if not os.path.exists(thumbnail_path):
-            img = Image.open(image_path)
+    if thumbnail_res:
+        try:
+            # Parse thumbnail dimensions
+            width, height = map(int, thumbnail_res.split('x'))
             
-            # Calculate desired aspect ratio
-            target_aspect = width / height
+            # Generate thumbnail filename (change extension to .jpg)
+            base_name = os.path.splitext(filename)[0]
+            thumbnail_filename = f"{base_name}_{thumbnail_res}.jpg"
+            thumbnail_path = os.path.join(images_folder, thumbnail_filename)
             
-            # Get current image dimensions
-            img_width, img_height = img.size
-            current_aspect = img_width / img_height
+            # Create thumbnail if it doesn't exist
+            if not os.path.exists(thumbnail_path):
+                img = Image.open(image_path)
+                
+                # Calculate desired aspect ratio
+                target_aspect = width / height
+                
+                # Get current image dimensions
+                img_width, img_height = img.size
+                current_aspect = img_width / img_height
+                
+                # Crop to match desired aspect ratio (centered crop)
+                if current_aspect > target_aspect:
+                    # Image is wider than target - crop width
+                    new_width = int(img_height * target_aspect)
+                    left = (img_width - new_width) // 2
+                    img = img.crop((left, 0, left + new_width, img_height))
+                elif current_aspect < target_aspect:
+                    # Image is taller than target - crop height
+                    new_height = int(img_width / target_aspect)
+                    top = (img_height - new_height) // 2
+                    img = img.crop((0, top, img_width, top + new_height))
+                
+                # Resize to exact dimensions
+                img = img.resize((width, height), Image.Resampling.LANCZOS)
+                
+                # Convert to RGB if necessary (for PNG with transparency, etc.)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'P':
+                        img = img.convert('RGBA')
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
+                    img = rgb_img
+                elif img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                img.save(thumbnail_path, 'JPEG', quality=85)
             
-            # Crop to match desired aspect ratio (centered crop)
-            if current_aspect > target_aspect:
-                # Image is wider than target - crop width
-                new_width = int(img_height * target_aspect)
-                left = (img_width - new_width) // 2
-                img = img.crop((left, 0, left + new_width, img_height))
-            elif current_aspect < target_aspect:
-                # Image is taller than target - crop height
-                new_height = int(img_width / target_aspect)
-                top = (img_height - new_height) // 2
-                img = img.crop((0, top, img_width, top + new_height))
-            
-            # Resize to exact dimensions
-            img = img.resize((width, height), Image.Resampling.LANCZOS)
-            
-            # Convert to RGB if necessary (for PNG with transparency, etc.)
-            if img.mode in ('RGBA', 'LA', 'P'):
-                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
-                if img.mode == 'P':
-                    img = img.convert('RGBA')
-                rgb_img.paste(img, mask=img.split()[-1] if img.mode in ('RGBA', 'LA') else None)
-                img = rgb_img
-            elif img.mode != 'RGB':
-                img = img.convert('RGB')
-            
-            img.save(thumbnail_path, 'JPEG', quality=85)
-        
-        thumbnail_rel_path = os.path.relpath(thumbnail_path, output_folder)
-    except Exception as e:
-        print(f"Warning: Could not create thumbnail for {image_path}: {e}")
-        # If thumbnail creation fails, still return the original image
-        thumbnail_rel_path = image_rel_path
+            thumbnail_rel_path = os.path.relpath(thumbnail_path, output_folder)
+        except Exception as e:
+            print(f"Warning: Could not create thumbnail for {image_path}: {e}")
+            # If thumbnail creation fails, still return the original image
+            thumbnail_rel_path = image_rel_path
 
     # Return dict with both paths
     return {
