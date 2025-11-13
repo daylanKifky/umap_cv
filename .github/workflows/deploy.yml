@@ -40,7 +40,7 @@ jobs:
           if [ ! -f config.toml ]; then
             echo "DEBUG: config.toml does not exist"
             echo "DEBUG: Creating config.toml"
-            cp config.toml.example config.toml
+            cp config.toml.template config.toml
           fi
 
           # Extract base_url from config.toml
