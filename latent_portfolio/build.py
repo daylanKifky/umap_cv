@@ -12,6 +12,7 @@ import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import jinja2
+import markdown
 try:
     import tomllib  # Python 3.11+
 except ImportError:
@@ -175,6 +176,13 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
         return base_url + path
     
     env.filters['url'] = url_filter
+    
+    # Add markdown filter
+    def markdown_filter(text: str) -> str:
+        """Convert markdown text to HTML."""
+        return markdown.markdown(text)
+    
+    env.filters['markdown'] = markdown_filter
     
     # Get font config for critical CSS processing
     style_config = config.get('style', {})
@@ -538,6 +546,13 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         return base_url + path
     
     env.filters['url'] = url_filter
+    
+    # Add markdown filter
+    def markdown_filter(text: str) -> str:
+        """Convert markdown text to HTML."""
+        return markdown.markdown(text)
+    
+    env.filters['markdown'] = markdown_filter
     
     # Get font config for critical CSS processing
     style_config = config.get('style', {})

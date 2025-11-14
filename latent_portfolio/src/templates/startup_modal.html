@@ -14,7 +14,7 @@
         <div class="about-body">
             <div class="about-description">
                 {% for paragraph in config.startup_modal.description %}
-                    <p>{{ paragraph | safe }}</p>
+                    <p>{{ paragraph | markdown | safe }}</p>
                 {% endfor %}
             </div>
             {% if show_button is defined and show_button %}
