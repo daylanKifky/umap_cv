@@ -34,7 +34,7 @@
         initializePillsView(data);
         
         // Initialize dynamic gradient for latent-cta
-        initializeLatentCtaGradient();
+        initializelatentCtaButtonGradient();
         
     } catch (error) {
         console.error('Error loading embeddings or initializing search controls:', error);
@@ -197,9 +197,9 @@ function triggerNavbarSearch(type, value) {
  * Initialize dynamic gradient background for #latent-cta
  * Creates a two-color gradient that cycles through hues
  */
-function initializeLatentCtaGradient() {
-    const latentCta = document.getElementById('latent-cta');
-    if (!latentCta) {
+function initializelatentCtaButtonGradient() {
+    const latentCtaButton = document.querySelector('#latent-cta button');
+    if (!latentCtaButton) {
         return;
     }
     
@@ -212,15 +212,15 @@ function initializeLatentCtaGradient() {
         const hue1 = hue % 360;
         const hue2 = (hue + hueOffset) % 360;
 
-        const saturation = COLOR_SATURATION * 40;
-        const lightness  = COLOR_LIGHTNESS  * 70; 
+        const saturation = COLOR_SATURATION * 90;
+        const lightness  = COLOR_LIGHTNESS  * 90; 
         
         // Convert HSL to CSS color strings
         const color1 = `hsl(${hue1}, ${saturation}%, ${lightness}%)`;
         const color2 = `hsl(${hue2}, ${saturation}%, ${lightness}%)`;
         
         // Apply linear gradient
-        latentCta.style.background = `linear-gradient(45deg, ${color1}, ${color2})`;
+        latentCtaButton.style.background = `linear-gradient(45deg, ${color1}, ${color2})`;
         
         // Increment hue for next frame
         hue = (hue + hueShiftSpeed) % 360;
