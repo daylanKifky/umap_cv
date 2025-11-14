@@ -7,9 +7,7 @@ This project allows you to view a list of projects as a 3D representation of the
 
 ## Usage
 
-The easiest way to use this project is to **fork** the repository and modify the article `.md` files in the `latent_portfolio/articles` folder. Each markdown file represents a project that will be visualized in the 3D space.
-
-To publish your portfolio site, you need to configure GitHub Pages to use a custom GitHub Actions workflow:
+The easiest way to use this project is to **fork** the repository and configure Github pages.
 
 1. **Enable GitHub Pages**: Go to your repository Settings → Pages
 2. **Set source**: Select "GitHub Actions" as the publishing source
@@ -35,7 +33,7 @@ Create an `articles` folder at the root of this repository, and populate it with
 
 ## Dev Run
 
-To run the project locally:
+To run the project locally to test the changes before pushing:
 
 1. **Clone and Install dependencies:**
    ```bash
@@ -45,9 +43,9 @@ To run the project locally:
    ```
 
 2. **Process articles and generate embeddings:**
-   This step reads all markdown files from the `latent_portfolio/articles` folder, generates semantic embeddings, applies dimensionality reduction, and calculates cross-similarities between projects.
+   This step reads all markdown files from the `articles` folder, generates semantic embeddings, applies dimensionality reduction, and calculates cross-similarities between projects.
    ```bash
-   python -m latent_portfolio.build 
+   python -m latent_portfolio.build -i articles
    ```
 
 3. **Serve the visualization:**

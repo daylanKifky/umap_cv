@@ -323,6 +323,15 @@
         #how-it-works-modal .about-description p {
             margin-bottom: 16px;
         }
+
+        #how-it-works-modal .about-description a {
+            color: #b9b9b9;
+        }
+        
+        #how-it-works-modal .about-description a:hover {
+            color: #f2f2f2;
+            transform: translateY(-1px);
+        }
         
         .button-group {
             display: flex;
