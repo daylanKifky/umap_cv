@@ -212,6 +212,10 @@
             line-height: 1.7;
             margin-bottom: 22px;
         }
+
+        .about-description p {
+            margin: 0 0 1rem;
+        }
         
         #startup-modal .about-description {
             max-width: 560px;
