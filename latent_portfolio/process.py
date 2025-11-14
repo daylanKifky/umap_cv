@@ -451,7 +451,7 @@ def _run():
     args = parser.parse_args()
 
     # Load markdown files first
-    data = load_markdown_files(
+    data, errors, warnings = load_markdown_files(
         args.input,
         args.output,
         args.skip_confirmation,

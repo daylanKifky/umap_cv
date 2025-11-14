@@ -746,7 +746,7 @@ def build(
         
         try:
             # Load article data once
-            articles_data = load_markdown_files(
+            articles_data, errors, warnings = load_markdown_files(
                 input_folder,
                 str(output_path),
                 skip_confirmation,
@@ -806,6 +806,16 @@ def build(
             print(f"📦 Output directory: {output_path}")
             if embeddings_filename:
                 print(f"📊 Embeddings file: {embeddings_filename}")
+
+            if warnings:
+                print("\n============ Warnings processing articles =============")
+                for warning in warnings:
+                    print(f"\n  ⚠️ {warning}")
+            if errors:
+                print("\n============ Errors processing articles =============")
+                for error in errors:
+                    print(f"\n  ❌ {error}")
+            
         except Exception as e:
             print(f"\n❌ Error during processing: {e}")
             raise

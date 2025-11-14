@@ -69,10 +69,14 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
     if output_folder:
         os.makedirs(output_folder, exist_ok=True)
 
+    errors = []
+    warnings = []
+
     for filename in md_files:
         search = re.search(r'^(\d+)[_-].*\.(md|html)$', filename)
         if not search:
             print(f"\n> Warning: Could not find file ID in {filename}")
+            warnings.append(f"Could not find file ID in {filename}")
             continue
         article_id = int(search.group(1))
         file_extension = search.group(2)
@@ -227,10 +231,12 @@ def load_markdown_files(input_folder: str, output_folder: str = None, skip_confi
 
             except (etree.ParserError, etree.XMLSyntaxError, TypeError) as e:
                 print(f"Error: Could not parse HTML in {filename}: {e}")
+                errors.append(f"Could not parse HTML in {filename}: {e}")
                 continue
 
         except Exception as e:
             print(f"Error processing {filename}: {e}")
+            errors.append(f"Error processing {filename}: {e}")
 
     print(f"\nLoaded {len(data)} articles from {input_folder}")
-    return data
+    return data, errors, warnings
