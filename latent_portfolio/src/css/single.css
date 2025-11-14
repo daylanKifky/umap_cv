@@ -37,7 +37,7 @@
     position: relative;
     padding: 20px;
     text-align: center;
-    background: rgba(141, 140, 140, 0.08);
+    background: rgba(13, 13, 13, 0.16);
     border-radius: 8px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.6) inset;
     opacity: 0.9;
@@ -54,6 +54,7 @@
     font-weight: 700;
     transition: all 0.3s ease;
     color: white;
+    margin: 0 0 1rem;
 }
 
 #latent-cta:hover p{
