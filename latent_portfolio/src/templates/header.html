@@ -19,8 +19,14 @@
 
 <!-- Open Graph -->
 <meta property="og:title" content="{% if page_title %}{{ page_title }} | {{ config.site.title }}{% elif article_title %}{{ article_title }} | {{ config.site.title }}{% elif default_title %}{{ default_title }} | {{ config.site.title }}{% else %}{{ config.site.title }}{% endif %}">
-<meta property="og:description" content="{% if og_description %}{{ og_description }}{% elif default_og_description %}{{ default_og_description }}{% else %}{{ config.meta.default_description }}{% endif %}">
+<meta property="og:description" content="{% if article_description %}{{ article_description }}{% elif og_description %}{{ og_description }}{% elif default_og_description %}{{ default_og_description }}{% else %}{{ config.meta.default_description }}{% endif %}">
 <meta property="og:image" content="{% if article_image %}{{ article_image | url }}{% else %}{{ 'latent_portfolio_prev.jpg' | url }}{% endif %}">
+<meta property="og:logo" content="{{ 'favicon-16x16.png' | url }}" size="16x16">
+<meta property="og:logo" content="{{ 'favicon-32x32.png' | url }}" size="32x32">
+<meta property="og:logo" content="{{ 'apple-touch-icon.png' | url }}" size="180x180">
+<meta property="og:logo" content="{{ 'android-chrome-192x192.png' | url }}" size="192x192">
+<meta property="og:logo" content="{{ 'android-chrome-512x512.png' | url }}" size="512x512">
+
 <meta property="og:type" content="website">
-<meta property="og:url" content="{{ config.site.base_url }}">
+<meta property="og:url" content="{% if page_url %}{{ page_url }}{% else %}{{ config.site.base_url }}{% endif %}">
 

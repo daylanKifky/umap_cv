@@ -203,7 +203,8 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
     
     # Render index.html
     template = env.get_template('index.html')
-    output = template.render(config=config)
+    page_url = apply_base_url('index.html', base_url) if base_url else None
+    output = template.render(config=config, page_url=page_url)
     
     output_file = public_dir / 'index.html'
     output_file.write_text(output, encoding='utf-8')
@@ -211,7 +212,8 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
 
     # Render home.html
     template = env.get_template('home.html')
-    output = template.render(config=config)
+    page_url = apply_base_url('home.html', base_url) if base_url else None
+    output = template.render(config=config, page_url=page_url)
     
     output_file = public_dir / 'home.html'
     output_file.write_text(output, encoding='utf-8')
@@ -219,7 +221,8 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
 
     # Render 404.html
     template = env.get_template('404.html')
-    output = template.render(config=config)
+    page_url = apply_base_url('404.html', base_url) if base_url else None
+    output = template.render(config=config, page_url=page_url)
     
     output_file = public_dir / '404.html'
     output_file.write_text(output, encoding='utf-8')
@@ -624,12 +627,19 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
             article_image = None
 
         
+        # Construct page URL
+        page_url = None
+        if base_url:
+            page_url = apply_base_url(f"{key}.html", base_url)
+        
         output = template.render(
             config=config,
             article_content=html_content,
             article_title=article.get('title', ''),
+            article_description=article.get('description', ''),
             article_image=article_image,
-            article_id=article.get('id')
+            article_id=article.get('id'),
+            page_url=page_url
         )
         
         # Save rendered HTML file

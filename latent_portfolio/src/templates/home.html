@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     {% set page_title = 'Home' %}
-    {% set og_description = 'Home' %}
+    {% set default_og_description = config.meta.default_description %}
     {% include 'header.html' %}
     <link rel="stylesheet" href="{{ 'style.css' | url }}">
     <link rel="stylesheet" href="{{ 'single.css' | url }}">
