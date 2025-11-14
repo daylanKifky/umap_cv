@@ -28,7 +28,7 @@ class linksManager {
             const arcVertices = link.arc_vertices;
             
             const tangent = new THREE.Vector3(link.tangent[0], link.tangent[1], link.tangent[2]);
-            const cross_similarity = link.cross_similarity.technologies;
+            const cross_similarity = link.cross_similarity.technologies * 0.8 + link.cross_similarity.tags * 0.2;
             const origin_value = entityMap.get(link.origin_id).scale
             const end_value = entityMap.get(link.end_id).scale
             
