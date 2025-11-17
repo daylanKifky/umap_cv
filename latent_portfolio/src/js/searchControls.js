@@ -38,6 +38,7 @@ class SearchControls {
         this.articleId = articleId;
         this.data = null;
         this.placeholderImage = null;
+        this.results = [];
         
         // Preload placeholder image
         const placeholderImg = new Image();
@@ -479,7 +480,9 @@ class SearchControls {
         // Focus input with slight delay for smooth transition
         if (this.searchInput) {
             setTimeout(() => {
-                this.searchInput.focus();
+                if (!detectMobileAndTablet()) {
+                    this.searchInput.focus();
+                }
                 // Show no suggestions message if input is empty
                 if (!this.searchInput.value || this.searchInput.value.trim().length < 2) {
                     this.showNoSuggestionsMessage();
@@ -528,6 +531,7 @@ class SearchControls {
         
         // Perform search
         const results = this.searchManager.performSearch(trimmedQuery);
+        this.results = results;
 
         
         if (!results || results.length === 0) {
@@ -955,15 +959,16 @@ class SearchControls {
         
         if (hasVisibleSuggestions) {
             let articleToOpen = null;
-            // TODO: when clearwinner navigate to that
             
             // If a suggestion is selected, use that one
             if (this.selectedIndex >= 0 && this.selectedIndex < this.currentSuggestions.length) {
                 articleToOpen = this.currentSuggestions[this.selectedIndex];
             } else {
                 // Otherwise, pick a random suggestion
-                const randomIndex = Math.floor(Math.random() * this.currentSuggestions.length);
-                articleToOpen = this.currentSuggestions[randomIndex];
+                if (this.results.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * this.currentSuggestions.length);
+                    articleToOpen = this.currentSuggestions[randomIndex];
+                } 
             }
             
             if (articleToOpen && articleToOpen.html_filepath) {
@@ -973,8 +978,9 @@ class SearchControls {
             }
         }
         
-        // If no suggestions are visible, just close the search
-        this.closeSearch();
+        // Optionally, close the search at this point
+        // we are leaving it open for now so that user can see the "not found" message
+        // this.closeSearch();
     }
     
     /**

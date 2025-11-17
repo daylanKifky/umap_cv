@@ -850,6 +850,17 @@ function initializeExploreBorderAnimation(button) {
 }
 
 
+function detectMobileAndTablet() {
+    let isMobileOrTablet = false;
+    (function(a){
+        const mobileRegex = /(Android|bb\d+|Meego|avantgo|Bada\/|BlackBerry|Blazer|compal|elaine|Fennec|hiptop|IEMobile|iPhone|iPad|iPod|kernel|kindle|lge|maemo|midp|MMP|mobile.+Firefox|NetFront|Opera M(ob|in)i|palm( os)?|phone|P(ixi|re)\/|Plucker|pocket|PSP|series(4|6)0|Symbian|Treo|up\.(browser|link)|Vodafone|wap|Windows CE|xda|xiino|android|ipad|playbook|silk)/i;
+        if (mobileRegex.test(a)) {
+            isMobileOrTablet = true;
+        }
+    })(navigator.userAgent || navigator.vendor || window.opera);
+    return isMobileOrTablet;
+}
+
 // Export for use in other modules (if using modules)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = { 
@@ -864,7 +875,8 @@ if (typeof module !== 'undefined' && module.exports) {
         buildWeightedArticleList,
         loadEmbeddingsData,
         BaseArticleVisualizer,
-        initializeExploreBorderAnimation
+        initializeExploreBorderAnimation,
+        detectMobileAndTablet
     };
 }
 
