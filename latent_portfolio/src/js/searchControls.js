@@ -475,6 +475,7 @@ class SearchControls {
         // Show article overlay
         if (this.articleOverlay) {
             this.articleOverlay.style.display = 'block';
+            document.body.style.overflow = 'hidden';
         }
         
         // Focus input with slight delay for smooth transition
@@ -865,6 +866,7 @@ class SearchControls {
         // Hide article overlay
         if (this.articleOverlay) {
             this.articleOverlay.style.display = 'none';
+            document.body.style.overflow = 'auto';
         }
         
         // Hide suggestions
