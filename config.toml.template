@@ -27,8 +27,8 @@ image = "girl.jpeg"
 title = "Hi! I'm John Doe"
 subtitle = "Welcome to my 3D Portfolio"
 description = [
-    "I'm using this neat latent space visualization tool, **check it out!**",
-    "lorem ipsum dolor sit amet, _consectetur adipiscing elit_. Sed do [eiusmod](#) tempor incididunt ut labore et dolore magna aliqua."
+    "I'm using this neat latent space visualization tool, [check it out!](https://github.com/daylanKifky/latent_portfolio)",
+    "lorem ipsum dolor sit amet, _consectetur adipiscing elit_. Sed do **eiusmod tempor incididunt** ut labore et dolore magna aliqua."
 ]
 button_text = "Start Exploring"
 plain_view_button_text = "Go to the plain view"

@@ -217,8 +217,14 @@
             margin: 0 0 1rem;
         }
         
-        #startup-modal .about-description {
+        /* #startup-modal .about-description {
             max-width: 560px;
+        } */
+
+        #startup-modal .about-description p a{
+            color: inherit;
+            background-color: #ffffff1a;
+            padding: 0 0.2rem;
         }
         
         .about-button {
