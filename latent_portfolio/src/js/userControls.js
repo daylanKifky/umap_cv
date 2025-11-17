@@ -30,6 +30,7 @@ class ButtonFactory {
             fabIconActive: root.getPropertyValue('--fab-icon-active').trim(),
             fabProgress: root.getPropertyValue('--fab-progress').trim(),
             fabBubbleHint: root.getPropertyValue('--fab-bubble-hint').trim(),
+            fabError: root.getPropertyValue('--fab-error').trim(),
         };
     }
     
@@ -262,7 +263,7 @@ class UserControls {
             if (this.isNavigatingBack) return;
     
             const query = event.detail?.query;
-            if (query && query.trim()) {
+            if (query && query.trim() && event.detail.results.length > 0) {
                 this.addToSearchHistory(query.trim());
             }
         });
@@ -737,8 +738,11 @@ class UserControls {
         
         // Use SearchManager to perform search
         if (this.searchManager) {
-            this.searchManager.performSearch(query);
+            const results = this.searchManager.performSearch(query);
             // SearchManager will dispatch 'performSearch' event
+            if (results.length == 0) {
+                this.showBubble("No results found with query: " + query, this.factory.getSearchSVG(), this.factory.colors.fabError, 2)
+            }
         }
         
         // Close search after performing search
@@ -805,10 +809,10 @@ class UserControls {
         // Trigger animation
         setTimeout(() => {
             bubble.classList.add('show');
-            // Remove after interval
+            // Remove after interval - display for as long as possible without exceeding UPDATE_INTERVAL
             setTimeout(() => {
                 bubble.classList.remove('show');
-            }, Math.max(UPDATE_INTERVAL * 0.1, 2000) * timeMultiplier);
+            }, Math.min(UPDATE_INTERVAL * 0.4 *timeMultiplier, UPDATE_INTERVAL));
         }, 20);
 
     }

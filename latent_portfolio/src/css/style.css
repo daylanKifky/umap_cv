@@ -17,6 +17,8 @@
             --fab-search-border: #7f7f7f;
             --fab-bubble-bg: #5e5e5e67;
             --fab-bubble-hint: #4eafb6;
+            --fab-error: #af6a6a;
+
         }
         * {
             margin: 0;
@@ -819,7 +821,6 @@
     font-weight: 500;
     opacity: 0;
     transform: translateY(100px);
-    transition: all 0.5s ease-out;
     pointer-events: none;
     z-index: 2;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -828,6 +829,7 @@
     align-items: flex-start;
     gap: 8px;
     margin: 0 20px;
+    transition: all 0.5s ease-out;
 }
 
 .search-bubble.show {

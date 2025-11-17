@@ -274,11 +274,14 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             
             // Set up event listeners for search events
             this.searchManager.addEventListener('performSearch', (event) => {
-                this.articleManager.handleSearch(event.detail.results);
-                // Mark scene as updated after search (object appearances change)
-                this._render_required = true;
-                
-                this.animateCamera(event.detail.results);
+
+                if (event.detail.results.length > 0) {
+                    this.articleManager.handleSearch(event.detail.results);
+                    // Mark scene as updated after search (object appearances change)
+                    this._render_required = true;
+                    
+                    this.animateCamera(event.detail.results);
+                } 
             });
             
             this.searchManager.addEventListener('clearSearch', () => {
