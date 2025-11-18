@@ -130,18 +130,24 @@ class SearchManager extends EventTarget {
                 searchQuery = searchQuery.substring(prefixLength).trim();
                 searchOptions.fields = ['technologies'];
             } else {
+                // Exact matches
                 const queryLower = searchQuery.toLowerCase();
                 if (this.technologies.includes(queryLower)) {
                     searchOptions.fields = ['technologies'];
-                    searchOptions.fuzzy = 0; // Remove fuzzy for exact matches
-                    searchOptions.prefix = false; // Remove prefix for exact matches
+                    searchOptions.fuzzy = 0; 
+                    searchOptions.prefix = false; 
                     console.log(`Found technology: ${queryLower}`);
                 } else if (this.tags.includes(queryLower)) {
                     searchOptions.fields = ['tags'];
-                    searchOptions.fuzzy = 0; // Remove fuzzy for exact matches
-                    searchOptions.prefix = false; // Remove prefix for exact matches
+                    searchOptions.fuzzy = 0; 
+                    searchOptions.prefix = false; 
                     console.log(`Found tag: ${queryLower}`);
-                }
+                } else if (this.titles.includes(queryLower)) {
+                    searchOptions.fields = ['title'];
+                    searchOptions.fuzzy = 0; 
+                    searchOptions.prefix = false; 
+                    console.log(`Found title: ${queryLower}`);
+                } 
             }
 
             const results = this.miniSearch.search(searchQuery, searchOptions);
