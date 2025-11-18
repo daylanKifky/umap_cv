@@ -580,6 +580,8 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             const clickedSphere = intersects[0].object;
             const entity = clickedSphere.userData.entity;
             if (entity) {
+                this.clearHover(clickedSphere);
+                this.hoveredObject = null;
                 this.userControls.searchFor(entity.article.title);
             }
         }
