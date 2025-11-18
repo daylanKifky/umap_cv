@@ -54,7 +54,8 @@ class SearchManager extends EventTarget {
         super();
         this.searchResults = null;
         this.miniSearch = null;
-        
+        this.technologies = articles.map(article => article.technologies).flat().map(tech => tech.toLowerCase());
+        this.tags = articles.map(article => article.tags).flat().map(tag => tag.toLowerCase());
         this.initializeMiniSearch(articles);
     }
     
@@ -128,6 +129,19 @@ class SearchManager extends EventTarget {
                 const prefixLength = searchQuery.startsWith('tech:') ? 5 : 11;
                 searchQuery = searchQuery.substring(prefixLength).trim();
                 searchOptions.fields = ['technologies'];
+            } else {
+                const queryLower = searchQuery.toLowerCase();
+                if (this.technologies.includes(queryLower)) {
+                    searchOptions.fields = ['technologies'];
+                    searchOptions.fuzzy = 0; // Remove fuzzy for exact matches
+                    searchOptions.prefix = false; // Remove prefix for exact matches
+                    console.log(`Found technology: ${queryLower}`);
+                } else if (this.tags.includes(queryLower)) {
+                    searchOptions.fields = ['tags'];
+                    searchOptions.fuzzy = 0; // Remove fuzzy for exact matches
+                    searchOptions.prefix = false; // Remove prefix for exact matches
+                    console.log(`Found tag: ${queryLower}`);
+                }
             }
 
             const results = this.miniSearch.search(searchQuery, searchOptions);
