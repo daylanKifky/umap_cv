@@ -56,6 +56,7 @@ class SearchManager extends EventTarget {
         this.miniSearch = null;
         this.technologies = articles.map(article => article.technologies).flat().map(tech => tech.toLowerCase());
         this.tags = articles.map(article => article.tags).flat().map(tag => tag.toLowerCase());
+        this.titles = articles.map(article => article.title).map(title => title.toLowerCase());
         this.initializeMiniSearch(articles);
     }
     
