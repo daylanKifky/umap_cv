@@ -143,15 +143,21 @@ def render_templates(src_dir: Path, public_dir: Path, config: Dict[str, Any],
         print(f"  ⚠ Warning: {templates_dir} not found")
         return None
     
+    user_templates_dir = src_dir / 'user_templates'
+    
     # Normalize base_url
     if 'site' not in config:
         config['site'] = {}
     base_url = normalize_base_url(config['site'].get('base_url', ''))
     config['site']['base_url'] = base_url
     
-    # Set up Jinja2 environment
+    # Set up Jinja2 environment with ChoiceLoader to search both templates and user_templates
+    loaders = [jinja2.FileSystemLoader(str(templates_dir))]
+    if user_templates_dir.exists():
+        loaders.append(jinja2.FileSystemLoader(str(user_templates_dir)))
+    
     env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(templates_dir)),
+        loader=jinja2.ChoiceLoader(loaders),
         autoescape=jinja2.select_autoescape(['html', 'xml'])
     )
     
@@ -517,15 +523,21 @@ def render_article_pages(src_dir: Path, public_dir: Path, config: Dict[str, Any]
         print(f"  ⚠ Warning: {templates_dir} not found")
         return
     
+    user_templates_dir = src_dir / 'user_templates'
+    
     # Normalize base_url
     if 'site' not in config:
         config['site'] = {}
     base_url = normalize_base_url(base_url)
     config['site']['base_url'] = base_url
     
-    # Set up Jinja2 environment
+    # Set up Jinja2 environment with ChoiceLoader to search both templates and user_templates
+    loaders = [jinja2.FileSystemLoader(str(templates_dir))]
+    if user_templates_dir.exists():
+        loaders.append(jinja2.FileSystemLoader(str(user_templates_dir)))
+    
     env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(str(templates_dir)),
+        loader=jinja2.ChoiceLoader(loaders),
         autoescape=jinja2.select_autoescape(['html', 'xml'])
     )
     

@@ -12,6 +12,7 @@
     </style>
 </head>
 <body>
+{% include 'body_start.html' %}
     
     <div class="content-wrapper" id="home-page">
         {% include 'navbar.html' %}
@@ -68,6 +69,7 @@
                     <span>GitHub</span>
                 </a>
                 {% endif %}
+                {% include 'additional_contact.html' %}
             </div>
         </div>
                
@@ -86,6 +88,7 @@
     <script src="{{ 'search.js' | url }}"></script>
     <script src="{{ 'searchControls.js' | url }}"></script>
     <script src="{{ 'home.js' | url }}"></script>
+{% include 'body_end.html' %}
 </body>
 </html>
 

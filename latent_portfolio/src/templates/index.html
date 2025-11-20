@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="{{ 'style.css' | url }}">
 </head>
 <body>
+{% include 'body_start.html' %}
     <div id="loading" style="display: none;">Loading articles...</div>
 
     {% with main_view=True %}
@@ -79,5 +80,6 @@
     <script src="{{ 'search.js' | url }}"></script>
     <script src="{{ 'userControls.js' | url }}"></script>
     <script src="{{ 'main.js' | url }}"></script>
+{% include 'body_end.html' %}
 </body>
 </html>

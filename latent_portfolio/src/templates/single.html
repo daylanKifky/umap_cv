@@ -12,6 +12,7 @@
     </style>
 </head>
 <body id="article-{{ article_id }}">
+{% include 'body_start.html' %}
     <div class="content-wrapper">
         {% include 'navbar.html' %}
         <div class="article-container single-article-container">
@@ -50,5 +51,6 @@
     <script src="{{ 'search.js' | url }}"></script>
     <script src="{{ 'searchControls.js' | url }}"></script>
     <script src="{{ 'single.js' | url }}"></script>
+{% include 'body_end.html' %}
 </body>
 </html>

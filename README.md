@@ -80,3 +80,9 @@ Colors are also derived from the 3D coordinates, making articles within a cluste
 
 Connecting arcs are drawn between projects based on their cross-similarity scores. The system calculates similarity between all pairs of projects across different fields (title, tags, etc.), and uses these scores to determine which projects should be visually connected. The thickness and opacity of the arcs represent the strength of the semantic relationship between projects.
 
+## Advanced Customization
+
+For advanced users who need more control over the HTML structure, you can insert custom HTML snippets that will be automatically included in the generated pages. 
+
+See the `latent_portfolio/src/user_templates`, each file contains comments explaining its purpose and example use cases. Simply edit these files to add your custom HTML, scripts, analytics, or other content without modifying the core template files. This makes it easier to maintain your customizations when pulling updates from the upstream repository.
+
