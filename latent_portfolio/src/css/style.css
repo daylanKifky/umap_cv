@@ -1356,6 +1356,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
+    z-index:10;
 }
 
 #credit-text img {
