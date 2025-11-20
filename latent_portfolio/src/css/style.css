@@ -1394,6 +1394,7 @@
         padding-top: 1rem;
         margin-top: 0.5rem;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
+        z-index:10;
     }
     
     .navbar-mobile-menu .credit-text img {
