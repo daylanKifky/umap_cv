@@ -4,6 +4,7 @@
 
 This project allows you to view a list of projects as a 3D representation of their semantic latent space.
 
+
 ![latent_portfolio preview](latent_portfolio/src/assets/latent_portfolio_prev.jpg)
 
 
@@ -88,3 +89,9 @@ For advanced users who need more control over the HTML structure, you can insert
 
 See the `latent_portfolio/src/user_templates`, each file contains comments explaining its purpose and example use cases. Simply edit these files to add your custom HTML, scripts, analytics, or other content without modifying the core template files. This makes it easier to maintain your customizations when pulling updates from the upstream repository.
 
+
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+**Important**: When using this project, please retain the credit text that appears in the generated pages (the "made with Latent Portfolio" attribution). This helps others discover and use this tool :)
