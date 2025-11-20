@@ -9,22 +9,22 @@
     </div>
     <div class="about-body">
         <div class="about-description">
-            <h3>Made with Open Source Software</h3>
-            <p>This project is made with <a href="https://github.com/daylanKifky/latent_portfolio">Latent Portfolio</a>, a tool for creating 3D visualizations of projects created by <a href="https://laurenci.ch">Bruno Laurencich</a>.</p>
-            
             <h3>Semantic Space</h3>
             <p>Each project article is converted into a high-dimensional semantic embedding using a sentence transformer model. This embedding captures the semantic meaning of the project's content (title, description, tags, etc.) as a vector in a semantic space where similar projects are positioned closer together.</p>
-
+            
             <h3>Dimensionality Reduction with PCA</h3>
             <p>The high-dimensional embeddings (typically 384 or 768 dimensions) are reduced to 3D coordinates using <a href="https://en.wikipedia.org/wiki/Principal_component_analysis">Principal Component Analysis</a>. PCA finds the principal components that capture the most variance in the data, allowing the semantic relationships to be visualized in 3D space while preserving as much information as possible.</p>
             <p>While other dimensionality reduction methods such as <a href="https://umap-learn.readthedocs.io/en/latest/">UMAP</a> and <a href="https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding">t-SNE</a> are also available, PCA tends to produce well-defined clusters that work better for visualizing project relationships in this use case.</p>
-
+            
             <h3>Positioning Points in Space</h3>
             <p>The reduced 3D coordinates are used to position each project as a point in the 3D visualization. Projects with similar semantic content will be positioned closer together in this space, creating natural clusters of related projects.</p>
             <p>Colors are also derived from the 3D coordinates, making articles within a cluster use similar colors.</p>
-
+            
             <h3>Cross Similarity for Links</h3>
             <p>Connecting arcs are drawn between projects based on their cross-similarity scores. The system calculates similarity between all pairs of projects across different fields (title, tags, etc.), and uses these scores to determine which projects should be visually connected. The thickness and opacity of the arcs represent the strength of the semantic relationship between projects.</p>
+
+            <h2>Made with Open Source Software</h2>
+            <p>This website is made with <a href="https://github.com/daylanKifky/latent_portfolio">Latent Portfolio</a>, a tool for creating 3D visualizations of projects created by <a href="https://laurenci.ch">Bruno Laurencich</a>.</p>
         </div>
         <div class="button-group">
             <button class="about-button about-button-primary" id="how-it-works-close">Close</button>

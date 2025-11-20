@@ -1,5 +1,7 @@
 # Latent portfolio
 
+> 🌐 **Visit the live demo**: [http://laurenci.ch](http://laurenci.ch)
+
 This project allows you to view a list of projects as a 3D representation of their semantic latent space.
 
 ![latent_portfolio preview](latent_portfolio/src/assets/latent_portfolio_prev.jpg)

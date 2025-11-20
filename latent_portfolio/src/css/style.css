@@ -522,7 +522,7 @@
         /* User Controls - 3 FABs with Progress Arc */
         .user-controls {
             position: fixed;
-            bottom: 30px;
+            bottom: 42px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
@@ -1340,5 +1340,77 @@
     
     .search-overlay-navbar .search-overlay-input {
         font-size: 15px;
+    }
+}
+
+/* Credit Text */
+#credit-text {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    z-index: 100;
+    max-width: 300px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#credit-text img {
+    flex-shrink: 0;
+}
+
+#credit-text p {
+    margin: 0;
+    line-height: 1.4;
+}
+
+#credit-text a {
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+}
+
+#credit-text a:hover {
+    color: rgba(255, 255, 255, 1);
+    text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+    #credit-text {
+        display: none;
+    }
+    
+    .navbar-mobile-menu .credit-text {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 11px;
+        text-align: center;
+        padding-top: 1rem;
+        margin-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .navbar-mobile-menu .credit-text img {
+        flex-shrink: 0;
+    }
+    
+    .navbar-mobile-menu .credit-text p {
+        margin: 0;
+        line-height: 1.4;
+    }
+    
+    .navbar-mobile-menu .credit-text a {
+        color: rgba(255, 255, 255, 0.7);
+        text-decoration: none;
+    }
+    
+    .navbar-mobile-menu .credit-text a:hover {
+        color: rgba(255, 255, 255, 0.9);
+        text-decoration: underline;
     }
 }
