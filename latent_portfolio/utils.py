@@ -427,3 +427,42 @@ def should_skip_regeneration(output_folder: str, embeddings_filename: str, data_
     except (json.JSONDecodeError, KeyError) as e:
         print(f"Error reading existing output file: {e}. Regenerating...")
         return False
+
+
+def apply_euler_rotation(reduced_embeddings: np.ndarray, rotation_angles: Union[List[float], np.ndarray]) -> np.ndarray:
+    """
+    Apply Euler rotation to the reduced embeddings.
+    
+    Args:
+        reduced_embeddings: Reduced embeddings array of shape (n_points, 3)
+        rotation_angles: Rotation angles in degrees [x, y, z] or numpy array
+        
+    Returns:
+        Rotated embeddings array
+    """
+    if reduced_embeddings.shape[1] != 3:
+        raise ValueError("Euler rotation can only be applied to 3D embeddings")
+
+    # Convert rotation angles from degrees to radians
+    rotation_angles = np.array(rotation_angles)
+    rotation_angles = np.radians(rotation_angles)
+
+    # For 3D, apply full Euler rotation (ZYX convention)
+    rx, ry, rz = rotation_angles
+    
+    # Rotation matrices for each axis
+    Rx = np.array([[1, 0, 0],
+                    [0, np.cos(rx), -np.sin(rx)],
+                    [0, np.sin(rx), np.cos(rx)]])
+    
+    Ry = np.array([[np.cos(ry), 0, np.sin(ry)],
+                    [0, 1, 0],
+                    [-np.sin(ry), 0, np.cos(ry)]])
+    
+    Rz = np.array([[np.cos(rz), -np.sin(rz), 0],
+                    [np.sin(rz), np.cos(rz), 0],
+                    [0, 0, 1]])
+    
+    # Combined rotation matrix (ZYX order)
+    rotation_matrix = Rz @ Ry @ Rx
+    return reduced_embeddings @ rotation_matrix.T

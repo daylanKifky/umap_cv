@@ -46,6 +46,13 @@ technologies = 3
 description = 1.2
 tags = 0.1
 
+[rotation]
+# Euler rotation angles in degrees for 3D reductions (X, Y, Z axes)
+# Applied after dimensionality reduction, only for 3D outputs
+x = 0
+y = 0
+z = 0
+
 [js-conf]
 # JavaScript configuration overrides
 # Uncomment and modify values as needed

@@ -12,7 +12,9 @@ from typing import List, Tuple, Dict
 
 from .embed import DEFAULT_EMBEDDING_MODEL, calculate_cross_similarity
 from .shapes import create_connecting_arc
-from .utils import standardize_embeddings, relax_clusters, calculate_article_checksum, calculate_combined_checksum, should_skip_regeneration
+from .utils import (standardize_embeddings, relax_clusters, 
+                    calculate_article_checksum, calculate_combined_checksum, 
+                    should_skip_regeneration, apply_euler_rotation)
 from .load import load_markdown_files
 
 try:
@@ -47,12 +49,13 @@ class ArticleEmbeddingGenerator:
     and good separation of concerns.
     """
     
-    def __init__(self, model_name: str = DEFAULT_EMBEDDING_MODEL):
+    def __init__(self, model_name: str = DEFAULT_EMBEDDING_MODEL, rotation: List[float] = None):
         """
         Initialize with a sentence transformer model.
         
         Args:
             model_name: Name of the sentence transformer model to use
+            rotation: Euler rotation angles in degrees [x, y, z] for 3D reductions (default: [0, 0, 0])
         """
         # Ensure we use the string value, not the enum
         if hasattr(model_name, 'value'):
@@ -60,6 +63,7 @@ class ArticleEmbeddingGenerator:
         print(f"Loading model: {model_name}")
         self.model = SentenceTransformer(model_name)
         self.embedding_dim = self.model.get_sentence_embedding_dimension()
+        self.rotation = rotation if rotation is not None else [0, 0, 0]
         print(f"Model loaded. Embedding dimension: {self.embedding_dim}")
 
     def generate_embeddings(self, articles: List[str]) -> np.ndarray:
@@ -106,6 +110,10 @@ class ArticleEmbeddingGenerator:
         pca = PCA(n_components=n_components, **pca_params)
         reduced_embeddings = pca.fit_transform(processed_embeddings)
         
+        # Apply rotation for 3D reductions
+        if n_components == 3 and any(angle != 0 for angle in self.rotation):
+            reduced_embeddings = apply_euler_rotation(reduced_embeddings, self.rotation)
+        
         explained_variance = pca.explained_variance_ratio_.sum()
         print(f"PCA reduction to {n_components}D complete. Explained variance: {explained_variance:.3f}")
         
@@ -147,6 +155,10 @@ class ArticleEmbeddingGenerator:
         tsne = TSNE(n_components=n_components, **tsne_params)
         reduced_embeddings = tsne.fit_transform(processed_embeddings)
         
+        # Apply rotation for 3D reductions
+        if n_components == 3 and any(angle != 0 for angle in self.rotation):
+            reduced_embeddings = apply_euler_rotation(reduced_embeddings, self.rotation)
+        
         print(f"t-SNE reduction to {n_components}D complete")
         return reduced_embeddings
         
@@ -179,11 +191,15 @@ class ArticleEmbeddingGenerator:
         reducer = umap.UMAP(n_components=n_components, **umap_params)
         reduced_embeddings = reducer.fit_transform(processed_embeddings)
         
+        # Apply rotation for 3D reductions
+        if n_components == 3 and any(angle != 0 for angle in self.rotation):
+            reduced_embeddings = apply_euler_rotation(reduced_embeddings, self.rotation)
+        
         print(f"UMAP reduction to {n_components}D complete")
         return reduced_embeddings, reducer
 
 
-def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, dimensions: List[int] = None, weights: Dict[str, float] = None) -> str:
+def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, dimensions: List[int] = None, weights: Dict[str, float] = None, rotation: List[float] = None) -> str:
     # Use provided weights or default to empty dict (will be populated from config)
     if weights is None:
         raise ValueError("weights must be provided")
@@ -195,6 +211,10 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
     # Ensure output_folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
+
+    # Default rotation to [0, 0, 0] if not provided
+    if rotation is None:
+        rotation = [0, 0, 0]
 
     data_values = list(data.values())
     
@@ -209,8 +229,8 @@ def main(data: Dict[str, Dict], output_folder: str, methods: List[str] = None, d
     if should_skip_regeneration(output_folder, embeddings_filename, data_values, article_checksums, methods, dimensions):
         return embeddings_filename
 
-    # Initialize the embedding generator
-    generator = ArticleEmbeddingGenerator()
+    # Initialize the embedding generator with rotation
+    generator = ArticleEmbeddingGenerator(rotation=rotation)
 
     ids = [i['id'] for i in data_values]
     thumbnails = [i.get('thumbnail', False) for i in data_values]

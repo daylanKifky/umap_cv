@@ -771,12 +771,20 @@ def build(
             # Pass pre-loaded data to process_main
             # Extract weights from config (default to empty dict if not present)
             weights = config.get('weights', {})
+            # Extract rotation from config (default to [0, 0, 0] if not present)
+            rotation_config = config.get('rotation', {})
+            rotation = [
+                rotation_config.get('x', 0),
+                rotation_config.get('y', 0),
+                rotation_config.get('z', 0)
+            ]
             embeddings_filename = process_main(
                 data=articles_data,
                 output_folder=str(output_path),
                 methods=methods,
                 dimensions=dimensions,
-                weights=weights
+                weights=weights,
+                rotation=rotation
             )
             
             # Update conf.js with the embeddings filename
