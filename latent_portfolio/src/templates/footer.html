@@ -1,6 +1,6 @@
 <footer class="article-footer">
     <div class="footer-content">
-        <p class="footer-copyright">&copy; {{ config.site.title }} - All rights reserved</p>
+        <p class="footer-copyright">&copy; {{ config.site.title }} - {{ config.site.copyright }}</p>
         <div class="footer-links">
             <a href="{{ 'home.html' | url }}#contact" class="footer-link">Contact</a>
         </div>
@@ -12,6 +12,11 @@
                 {% include 'icons/github_icon.html' %}
             </a>
         </div>
+    </div>
+
+    <div class="credit-text">
+        <img src="{{ 'favicon-16x16.png' | url }}" alt="" style="width: 16px; height: 16px;">
+        <p>made with <a href="https://github.com/daylanKifky/latent_portfolio">Latent Portfolio</a>.</p>
     </div>
 </footer>
 

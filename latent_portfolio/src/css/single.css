@@ -548,6 +548,10 @@
     margin: 0;
 }
 
+.article-footer a {
+    color: inherit;
+}
+
 .footer-content {
     display: flex;
     flex-direction: column;
