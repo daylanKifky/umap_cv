@@ -864,7 +864,7 @@
 .navbar-glass {
     width: 100%;
     max-width: 100%;
-    background: rgba(137, 137, 137, 0.08);
+    background: rgba(77, 76, 76, 0.5);
     -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     padding: 1rem 1.5rem;
