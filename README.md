@@ -12,10 +12,11 @@ This project allows you to view a list of projects as a 3D representation of the
 
 The easiest way to use this project is to **fork** the repository and configure Github pages.
 
-1. **Enable GitHub Pages**: Go to your repository Settings → Pages
-2. **Set source**: Select "GitHub Actions" as the publishing source
-3. **Set deployment branch**: Go to Settings → Environments → Deployment branches → Edit pattern to `public`
-4. **Push changes**: The workflow will automatically build and test your site when you push to the `public` branch
+1. **Fork the repository**: Press the fork button or follow this link: https://github.com/daylanKifky/latent_portfolio/fork
+2. **Enable GitHub Pages**: Go to your repository Settings → Pages
+3. **Set source**: Select "GitHub Actions" as the publishing source
+4. **Set deployment branch**: Go to Settings → Environments → Deployment branches → Edit pattern to `public`
+5. **Push changes**: The workflow will automatically build and test your site when you push to the `public` branch
 
 For detailed instructions, see the [GitHub Pages documentation on publishing with a custom GitHub Actions workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#publishing-with-a-custom-github-actions-workflow).
 
