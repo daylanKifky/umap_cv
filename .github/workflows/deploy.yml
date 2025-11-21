@@ -118,7 +118,14 @@ jobs:
 
       - name: Run tests
         run: |
-          python test.py
+          # Determine input folder (same logic as build step)
+          if [ -d articles ]; then
+            INPUT_FOLDER="articles"
+          else
+            INPUT_FOLDER="sample_articles"
+          fi
+          
+          python test.py --input $INPUT_FOLDER --output public
 
   deploy:
     if: github.ref == 'refs/heads/public'
