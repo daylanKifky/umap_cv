@@ -55,7 +55,8 @@ font-cards = "Space Grotesk"
 
 # == Background Pattern == 
 # Uncomment one of the following patterns or add your own:
-bg_pattern = "3px-tile.png"
+bg_pattern = "tileable-wood-colored.png"
+# bg_pattern = "3px-tile.png"
 #bg_pattern = "black-orchid.png"
 #bg_pattern = "black-twill.png"
 #bg_pattern = "wild-sea.png"
