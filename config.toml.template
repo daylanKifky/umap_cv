@@ -3,11 +3,6 @@ base_url = ""
 title = "John Doe"
 copyright = "All rights reserved"
 
-[style]
-font-general = "Noto Sans"
-font-cards = "Space Grotesk"
-bg_pattern = "diagonal.png"
-
 [meta]
 default_description = "Explore the latent space of my projects through an interactive 3D visualization. Discover connections between technologies, ideas, and implementations in an immersive experience."
 
@@ -15,12 +10,6 @@ default_description = "Explore the latent space of my projects through an intera
 github = "https://github.com/yourprofile"
 linkedin = "https://linkedin.com/in/yourprofile"
 email = "your.email@example.com"
-
-[bloom]
-enabled = true
-strength = 0.8
-radius = 0.4
-threshold = 0.5
 
 [startup_modal]
 enabled = true
@@ -53,6 +42,35 @@ tags = 0.1
 x = 0
 y = 0
 z = 0
+
+[style]
+# == Font Configuration ==
+
+font-general = "Noto Sans"
+font-cards = "Space Grotesk"
+
+# These fonts should be available in Google Fonts
+# - General font: supports italics and weights 400-700
+# - Cards font: supports weights 400-700
+
+# == Background Pattern == 
+# Uncomment one of the following patterns or add your own:
+bg_pattern = "3px-tile.png"
+#bg_pattern = "black-orchid.png"
+#bg_pattern = "black-twill.png"
+#bg_pattern = "wild-sea.png"
+
+# To use a custom pattern:
+# 1. Place your pattern file in latent_portfolio/src/assets/
+# 2. Set bg_pattern to your filename
+# 
+# Find more patterns at: https://www.transparenttextures.com/
+
+[bloom]
+enabled = true
+strength = 0.8
+radius = 0.4
+threshold = 0.5
 
 [js-conf]
 # JavaScript configuration overrides
