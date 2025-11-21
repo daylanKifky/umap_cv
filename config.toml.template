@@ -1,6 +1,7 @@
 [site]
 base_url = ""
 title = "John Doe"
+copyright = "All rights reserved"
 
 [style]
 font-general = "Noto Sans"
