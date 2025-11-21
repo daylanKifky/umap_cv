@@ -46,8 +46,8 @@ z = 0
 [style]
 # == Font Configuration ==
 
-font-general = "Noto Sans"
-font-cards = "Space Grotesk"
+font-general = "Roboto"
+font-cards = "Sansation"
 
 # These fonts should be available in Google Fonts
 # - General font: supports italics and weights 400-700
@@ -55,10 +55,9 @@ font-cards = "Space Grotesk"
 
 # == Background Pattern == 
 # Uncomment one of the following patterns or add your own:
-bg_pattern = "3px-tile.png"
-#bg_pattern = "black-orchid.png"
+bg_pattern = "black-orchid.png"
+#bg_pattern = "3px-tile.png"
 #bg_pattern = "black-twill.png"
-#bg_pattern = "wild-sea.png"
 
 # To use a custom pattern:
 # 1. Place your pattern file in latent_portfolio/src/assets/
