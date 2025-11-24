@@ -200,7 +200,7 @@ def test_local_images_exist(input_folder: Path, output_folder: Path, thumbnail_r
     Returns:
         Tuple of (success, list of error messages)
     """
-    print("\n🖼️  Testing local images from embeddings file...")
+    print(f"\n🖼️  Testing local images from embeddings file in output folder: {output_folder}")
     errors = []
     
     # Find embeddings file in output folder
@@ -230,12 +230,26 @@ def test_local_images_exist(input_folder: Path, output_folder: Path, thumbnail_r
     
     for article in data["articles"]:
         # Check both 'image' and 'thumbnail' fields
+        html_filepath = Path(article.get("html_filepath", ""))
+
+        if html_filepath:
+            html_file = output_folder / html_filepath.name
+            if html_file.exists():
+                print(f"  HTML file exists: {html_file}")
+            else:
+                errors.append(f"HTML file not found: {html_file}")
+                print(f"  ✗ HTML file not found: {html_file}")
+                continue
+
+        base_public_folder = html_filepath.parent
+
+        print(f"  Checking article: {article}")
         for field in ["image", "thumbnail"]:
             if field in article:
                 img_path = article[field]
-                # Skip URLs (http/https)
                 if not img_path.startswith(('http://', 'https://')):
-                    local_images.add(img_path)
+                    local_img_path = Path(img_path).relative_to(base_public_folder)
+                    local_images.add(local_img_path)
     
     if not local_images:
         print("  ℹ️  No local images referenced in embeddings file")
