@@ -63,98 +63,6 @@ def test_article_files_exist(input_folder: Path, output_folder: Path) -> Tuple[b
     return success, errors
 
 
-def test_local_images_exist(input_folder: Path, output_folder: Path, thumbnail_res: str = None) -> Tuple[bool, List[str]]:
-    """
-    Test that local images referenced in markdown files
-    are present in the output folder's images directory,
-    and that thumbnails with the specified resolution exist.
-    
-    Args:
-        input_folder: Path to input articles folder
-        output_folder: Path to output public folder
-        thumbnail_res: Thumbnail resolution (e.g., '400x210')
-        
-    Returns:
-        Tuple of (success, list of error messages)
-    """
-    print("\n🖼️  Testing local images...")
-    errors = []
-    
-    if not input_folder.exists():
-        errors.append(f"Input folder not found: {input_folder}")
-        return False, errors
-    
-    images_output = output_folder / "images"
-    
-    # Find all markdown files
-    md_files = list(input_folder.glob("*.md"))
-    
-    if not md_files:
-        print("  ⚠️  No markdown files found, skipping image test")
-        return True, []
-    
-    # Extract local image references from markdown files
-    local_images: Set[str] = set()
-    image_pattern = re.compile(r'!\[.*?\]\(([^)]+)\)')
-    
-    for md_file in md_files:
-        content = md_file.read_text(encoding='utf-8')
-        matches = image_pattern.findall(content)
-        
-        for match in matches:
-            # Skip URLs (http/https)
-            if match.startswith(('http://', 'https://')):
-                continue
-            
-            # Extract filename from path
-            filename = os.path.basename(match)
-            local_images.add(filename)
-    
-    if not local_images:
-        print("  ℹ️  No local images referenced in markdown files")
-        return True, []
-    
-    print(f"  Found {len(local_images)} unique local image references")
-    
-    # Check each image exists in output
-    for image_name in sorted(local_images):
-        image_path = images_output / image_name
-        
-        if image_path.exists():
-            print(f"  ✓ {image_name}")
-        else:
-            errors.append(f"Missing image: {image_name} (expected at {image_path})")
-            print(f"  ✗ {image_name} (missing)")
-    
-    # Check thumbnails if thumbnail_res is specified
-    if thumbnail_res:
-        print(f"\n🖼️  Testing thumbnails (resolution: {thumbnail_res})...")
-        
-        for image_name in sorted(local_images):
-            # Generate thumbnail filename
-            # E.g., "image.jpg" -> "image_400x210.jpg"
-            name_parts = image_name.rsplit('.', 1)
-            if len(name_parts) == 2:
-                thumbnail_name = f"{name_parts[0]}_{thumbnail_res}.{name_parts[1]}"
-            else:
-                thumbnail_name = f"{image_name}_{thumbnail_res}"
-            
-            thumbnail_path = images_output / thumbnail_name
-            
-            if thumbnail_path.exists():
-                print(f"  ✓ {thumbnail_name}")
-            else:
-                errors.append(f"Missing thumbnail: {thumbnail_name} (expected at {thumbnail_path})")
-                print(f"  ✗ {thumbnail_name} (missing)")
-    
-    success = len(errors) == 0
-    if success:
-        if thumbnail_res:
-            print(f"  ✅ All {len(local_images)} images and thumbnails present")
-        else:
-            print(f"  ✅ All {len(local_images)} images present")
-    
-    return success, errors
 
 
 def test_no_duplicate_indices(output_folder: Path) -> Tuple[bool, List[str]]:
@@ -277,6 +185,94 @@ def test_embeddings_file(output_folder: Path) -> Tuple[bool, List[str]]:
         errors.append(error_msg)
         print(f"  ✗ {error_msg}")
         return False, errors
+
+
+def test_local_images_exist(input_folder: Path, output_folder: Path, thumbnail_res: str = None) -> Tuple[bool, List[str]]:
+    """
+    Test that local images referenced in embeddings file
+    are present in the output folder.
+    
+    Args:
+        input_folder: Path to input articles folder (unused, kept for compatibility)
+        output_folder: Path to output public folder
+        thumbnail_res: Thumbnail resolution (e.g., '400x210') (unused, kept for compatibility)
+        
+    Returns:
+        Tuple of (success, list of error messages)
+    """
+    print(f"\n🖼️  Testing local images from embeddings file in output folder: {output_folder}")
+    errors = []
+    
+    # Find embeddings file in output folder
+    embeddings_files = list(output_folder.glob("embeddings_*.json"))
+    
+    if not embeddings_files:
+        errors.append(f"No embeddings file found in {output_folder}")
+        return False, errors
+    
+    embeddings_file = embeddings_files[0]
+    print(f"  Reading {embeddings_file.name}")
+    
+    # Load embeddings JSON
+    try:
+        with open(embeddings_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+    except Exception as e:
+        errors.append(f"Failed to read embeddings file: {e}")
+        return False, errors
+    
+    # Extract local image paths from articles
+    local_images: Set[str] = set()
+    
+    if "articles" not in data:
+        errors.append("No 'articles' field found in embeddings file")
+        return False, errors
+    
+    for article in data["articles"]:
+        # Check both 'image' and 'thumbnail' fields
+        html_filepath = Path(article.get("html_filepath", ""))
+
+        if html_filepath:
+            html_file = output_folder / html_filepath.name
+            if html_file.exists():
+                print(f"  HTML file exists: {html_file}")
+            else:
+                errors.append(f"HTML file not found: {html_file}")
+                print(f"  ✗ HTML file not found: {html_file}")
+                continue
+
+        base_public_folder = html_filepath.parent
+
+        print(f"  Checking article: {article}")
+        for field in ["image", "thumbnail"]:
+            if field in article:
+                img_path = article[field]
+                if not img_path.startswith(('http://', 'https://')):
+                    local_img_path = Path(img_path).relative_to(base_public_folder)
+                    local_images.add(local_img_path)
+    
+    if not local_images:
+        print("  ℹ️  No local images referenced in embeddings file")
+        return True, []
+    
+    print(f"  Found {len(local_images)} unique local image references")
+    
+    # Check each image exists in output
+    for image_path in sorted(local_images):
+        full_path = output_folder / image_path
+        
+        if full_path.exists():
+            print(f"  ✓ {image_path}")
+        else:
+            errors.append(f"Missing image: {image_path} (expected at {full_path})")
+            print(f"  ✗ {image_path} (missing)")
+    
+    success = len(errors) == 0
+    if success:
+        print(f"  ✅ All {len(local_images)} images present")
+    
+    return success, errors
+
 
 
 def run_tests(input_folder: Path, output_folder: Path, thumbnail_res: str = None) -> int:
