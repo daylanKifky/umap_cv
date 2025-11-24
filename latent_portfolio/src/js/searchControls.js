@@ -808,6 +808,18 @@ class SearchControls {
         
         // Click handler to navigate to article
         card.addEventListener('click', () => {
+            // Emit suggestion click event (single article page)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'single_click_suggestion',
+                    articleId: article.id,
+                    articleTitle: article.title,
+                    positionInList: index,
+                    query: this.searchInput?.value || '',
+                    fromArticleId: this.articleId
+                }
+            }));
+            
             if (article.html_filepath) {
                 window.location.href = article.html_filepath;
             }
@@ -974,6 +986,20 @@ class SearchControls {
             }
             
             if (articleToOpen && articleToOpen.html_filepath) {
+                // Emit perform search event (single article page)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'single_perform_search',
+                        query: query,
+                        articleId: articleToOpen.id,
+                        articleTitle: articleToOpen.title,
+                        resultsCount: this.results.length,
+                        selectedIndex: this.selectedIndex,
+                        wasRandom: this.selectedIndex < 0,
+                        fromArticleId: this.articleId
+                    }
+                }));
+                
                 // Navigate to the selected/random article
                 window.location.href = articleToOpen.html_filepath;
                 return;
@@ -1042,6 +1068,18 @@ class SearchControls {
         // Add click handler
         pill.addEventListener('click', (e) => {
             e.stopPropagation();
+            
+            // Emit pill click event (single article page)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'single_click_pill',
+                    pillType: type,
+                    pillValue: text,
+                    fromArticleId: this.articleId,
+                    searchPrefix: prefix
+                }
+            }));
+            
             const searchQuery = `${prefix}: ${text}`;
             this.openSearch();
             this.searchInput.value = searchQuery;

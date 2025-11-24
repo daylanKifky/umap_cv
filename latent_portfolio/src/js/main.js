@@ -276,6 +276,16 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             this.searchManager.addEventListener('performSearch', (event) => {
 
                 if (event.detail.results.length > 0) {
+                    // Emit search event (main 3D visualization)
+                    window.dispatchEvent(new CustomEvent('latent_user_events', {
+                        detail: {
+                            type: 'main_search',
+                            query: event.detail.query,
+                            resultsCount: event.detail.results.length,
+                            clearWinner: event.detail.results.clearWinner || false
+                        }
+                    }));
+                    
                     this.articleManager.handleSearch(event.detail.results);
                     // Mark scene as updated after search (object appearances change)
                     this._render_required = true;
@@ -298,6 +308,14 @@ class ArticleVisualizer extends BaseArticleVisualizer {
     }
 
     handleClearSearch() {
+        // Emit clear search event (main 3D visualization)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'main_clear_search',
+                previousHistoryLength: this.userControls.searchHistory.length
+            }
+        }));
+        
         this.userControls.searchHistory = [];
         this.userControls.pause();
         this.articleManager.handleClearSearch();
@@ -580,6 +598,15 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             const clickedSphere = intersects[0].object;
             const entity = clickedSphere.userData.entity;
             if (entity) {
+                // Emit sphere click event (main 3D visualization)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'main_sphere_click',
+                        articleId: entity.article.id,
+                        articleTitle: entity.article.title
+                    }
+                }));
+                
                 this.clearHover(clickedSphere);
                 this.hoveredObject = null;
                 this.userControls.searchFor(entity.article.title);
@@ -720,6 +747,18 @@ class ArticleVisualizer extends BaseArticleVisualizer {
             object.userData.prev_scale = pScale;
             object.material.opacity = 1.0;
             object.scale.setScalar(SIM_TO_SCALE_MAX);
+            
+            // Emit sphere hover event (main 3D visualization)
+            const entity = object.userData.entity;
+            if (entity && entity.article) {
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'main_sphere_hover',
+                        articleId: entity.article.id,
+                        articleTitle: entity.article.title
+                    }
+                }));
+            }
         }
         
         // Mark scene as updated after hover state change
