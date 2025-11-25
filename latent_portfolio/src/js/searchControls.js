@@ -39,6 +39,7 @@ class SearchControls {
         this.data = null;
         this.placeholderImage = null;
         this.results = [];
+        this.lastSuggestionsDisplayedTime = 0;
         
         // Preload placeholder image
         const placeholderImg = new Image();
@@ -414,6 +415,14 @@ class SearchControls {
     openSearch() {
         this.searchOpen = true;
         
+        // Emit search opened event (single article page)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'single_search_opened',
+                fromArticleId: this.articleId
+            }
+        }));
+        
         // Add open class to search overlay
         if (this.searchOverlay) {
             this.searchOverlay.classList.add('open');
@@ -628,6 +637,18 @@ class SearchControls {
         items.forEach(item => {
             item.addEventListener('click', () => {
                 const query = item.getAttribute('data-query');
+                const itemType = item.getAttribute('data-type');
+                
+                // Emit no-suggestions item click event (single article page)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'single_click_no_suggestion_item',
+                        itemType: itemType,
+                        itemValue: query,
+                        fromArticleId: this.articleId
+                    }
+                }));
+                
                 if (query && this.searchInput) {
                     this.searchInput.value = query;
                     this.onSearchInput(query);
@@ -656,6 +677,15 @@ class SearchControls {
      */
     showNoResultsMessage(query) {
         if (!this.suggestionsContainer) return;
+        
+        // Emit no results event (single article page)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'single_no_results',
+                query: query,
+                fromArticleId: this.articleId
+            }
+        }));
         
         // Clear existing suggestions
         this.suggestionsContainer.innerHTML = '';
@@ -718,6 +748,25 @@ class SearchControls {
             this.suggestionsContainer.appendChild(card);
             this.suggestionCards.push(card);
         });
+        
+        // Emit suggestions displayed event (single article page)
+        // Only emit if: query >= 2 chars, non-empty results, and at least 1 second since last event
+        const query = this.searchInput?.value || '';
+        const now = Date.now();
+        const timeSinceLastEvent = now - this.lastSuggestionsDisplayedTime;
+        
+        if (query.trim().length >= 2 && results.length > 0 && timeSinceLastEvent >= 1000) {
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'single_suggestions_displayed',
+                    query: query,
+                    suggestionsCount: results.length,
+                    fromArticleId: this.articleId,
+                    clearWinner: results.clearWinner || false
+                }
+            }));
+            this.lastSuggestionsDisplayedTime = now;
+        }
         
         // Update highlights after rendering
         this.updateSelectionHighlight();
@@ -808,6 +857,18 @@ class SearchControls {
         
         // Click handler to navigate to article
         card.addEventListener('click', () => {
+            // Emit suggestion click event (single article page)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'single_click_suggestion',
+                    articleId: article.id,
+                    articleTitle: article.title,
+                    positionInList: index,
+                    query: this.searchInput?.value || '',
+                    fromArticleId: this.articleId
+                }
+            }));
+            
             if (article.html_filepath) {
                 window.location.href = article.html_filepath;
             }
@@ -821,6 +882,15 @@ class SearchControls {
      */
     closeSearch() {
         this.searchOpen = false;
+        
+        // Emit search closed event (single article page)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'single_search_closed',
+                fromArticleId: this.articleId,
+                hadQuery: this.searchInput?.value?.trim() ? true : false
+            }
+        }));
         
         // Remove open class from search overlay
         if (this.searchOverlay) {
@@ -974,6 +1044,20 @@ class SearchControls {
             }
             
             if (articleToOpen && articleToOpen.html_filepath) {
+                // Emit perform search event (single article page)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'single_perform_search',
+                        query: query,
+                        articleId: articleToOpen.id,
+                        articleTitle: articleToOpen.title,
+                        resultsCount: this.results.length,
+                        selectedIndex: this.selectedIndex,
+                        wasRandom: this.selectedIndex < 0,
+                        fromArticleId: this.articleId
+                    }
+                }));
+                
                 // Navigate to the selected/random article
                 window.location.href = articleToOpen.html_filepath;
                 return;
@@ -1042,6 +1126,18 @@ class SearchControls {
         // Add click handler
         pill.addEventListener('click', (e) => {
             e.stopPropagation();
+            
+            // Emit pill click event (single article page)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'single_click_pill',
+                    pillType: type,
+                    pillValue: text,
+                    fromArticleId: this.articleId,
+                    searchPrefix: prefix
+                }
+            }));
+            
             const searchQuery = `${prefix}: ${text}`;
             this.openSearch();
             this.searchInput.value = searchQuery;
