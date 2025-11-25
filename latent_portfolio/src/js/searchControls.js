@@ -761,7 +761,6 @@ class SearchControls {
                     type: 'single_suggestions_displayed',
                     query: query,
                     suggestionsCount: results.length,
-                    articleIds: results.map(r => r.id),
                     fromArticleId: this.articleId,
                     clearWinner: results.clearWinner || false
                 }
