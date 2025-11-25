@@ -368,9 +368,27 @@ class UserControls {
         // Home/Back button - clear search or go back in history
         this.buttons.history.addEventListener('click', () => {
             if (this.buttons.history.isBack) {
+                // Emit button press event for back (main 3D visualization)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'main_button_press',
+                        button: 'back',
+                        historyDepth: this.searchHistory.length
+                    }
+                }));
+                
                 // Back button functionality
                 this.goBackInHistory();
             } else {
+                // Emit button press event for home (main 3D visualization)
+                window.dispatchEvent(new CustomEvent('latent_user_events', {
+                    detail: {
+                        type: 'main_button_press',
+                        button: 'home',
+                        hadHistory: this.searchHistory.length > 0
+                    }
+                }));
+                
                 // Home button functionality
                 this.pause();
                 if (!this._hintResumeShown && this.searchHistory.length > 0){
@@ -390,6 +408,16 @@ class UserControls {
         // Search button - toggle search overlay
         this.buttons.search.addEventListener('click', (e) => {
             e.stopPropagation();
+            
+            // Emit button press event (main 3D visualization)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'main_button_press',
+                    button: 'search',
+                    searchOpen: this.searchOpen
+                }
+            }));
+            
             this.toggleSearch();
         });
         
@@ -501,6 +529,15 @@ class UserControls {
         const previousSearch = this.searchHistory.pop();
         console.log('[NAV] Popped:', previousSearch);
 
+        // Emit go back in history event (main 3D visualization)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'main_go_back_history',
+                previousQuery: previousSearch,
+                remainingHistoryDepth: this.searchHistory.length
+            }
+        }));
+
         // Update button appearance
         this.updateHomeButtonAppearance();
 
@@ -522,6 +559,15 @@ class UserControls {
    
     // Main play/pause button click handler
     onPlayPauseClick() {
+        // Emit button press event (main 3D visualization)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'main_button_press',
+                button: this.state === 'playing' ? 'pause' : 'play',
+                previousState: this.state
+            }
+        }));
+        
         if (this.state === 'playing') {
             this.pause();
         } else {
@@ -540,6 +586,15 @@ class UserControls {
         this.state = 'playing';
         this.startTime = performance.now();
         this.elapsed = 0;
+        
+        // Emit start autoplay event (main 3D visualization)
+        window.dispatchEvent(new CustomEvent('latent_user_events', {
+            detail: {
+                type: 'main_start_autoplay',
+                interval: this.CHANGE_INTERVAL,
+                articlesCount: this.articles.length
+            }
+        }));
         
         // Update UI using factory
         this.factory.updatePlayButtonIcon(this.buttons.play, this.factory.getPauseSVG());
@@ -590,6 +645,16 @@ class UserControls {
         const article = this.selectRandomArticle();
         if (article && this.searchManager) {
             console.log('Autoplay: searching for article:', article.title);
+            
+            // Emit trigger auto search event (main 3D visualization)
+            window.dispatchEvent(new CustomEvent('latent_user_events', {
+                detail: {
+                    type: 'main_trigger_auto_search',
+                    articleTitle: article.title,
+                    articleId: article.id
+                }
+            }));
+            
             this.searchManager.performSearch(article.title);
                 this.showBubble(article.title, this.factory.getSearchSVG());
         }
